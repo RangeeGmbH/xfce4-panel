@@ -1,3 +1,9 @@
+xfce4-panel (4.12.2-2rangeeos2) rangeeos; urgency=medium
+
+  * Patched files for RangeeOS
+
+ -- Benajmin Manteufel <bmanteufel@rangee.com>  Fri, 12 Oct 2018 09:10:39 +0200
+
 xfce4-panel (4.12.2-1ubuntu1) devel; urgency=medium
 
   * Merge from Debian unstable. Remaining changes:
