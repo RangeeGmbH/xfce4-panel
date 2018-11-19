@@ -91,6 +91,8 @@ xfce_panel_plugin_realize (GtkWidget *widget);
 static gboolean
 xfce_panel_plugin_button_press_event (GtkWidget *widget,
                                       GdkEventButton *event);
+static gboolean
+xfce_panel_plugin_context_menu_enabled (XfcePanelPlugin *plugin);
 static void
 xfce_panel_plugin_menu_move (XfcePanelPlugin *plugin);
 static void
@@ -1031,6 +1033,23 @@ xfce_panel_plugin_realize (GtkWidget *widget)
 
 
 static gboolean
+xfce_panel_plugin_context_menu_enabled (XfcePanelPlugin *plugin)
+{
+  GtkWidget *toplevel;
+  gboolean enabled = TRUE;
+
+  toplevel = gtk_widget_get_toplevel (GTK_WIDGET (plugin));
+  if (toplevel != NULL
+      && g_object_class_find_property (G_OBJECT_GET_CLASS (toplevel),
+                                       "enable-context-menu") != NULL)
+    g_object_get (G_OBJECT (toplevel), "enable-context-menu", &enabled, NULL);
+
+  return enabled;
+}
+
+
+
+static gboolean
 xfce_panel_plugin_button_press_event (GtkWidget *widget,
                                       GdkEventButton *event)
 {
@@ -1047,6 +1066,9 @@ xfce_panel_plugin_button_press_event (GtkWidget *widget,
   if (event->button == 3
       || (event->button == 1 && modifiers == GDK_CONTROL_MASK))
     {
+      if (!xfce_panel_plugin_context_menu_enabled (plugin))
+        return FALSE;
+
       /* get the panel menu */
       menu = xfce_panel_plugin_menu_get (plugin);
 

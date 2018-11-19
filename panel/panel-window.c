@@ -267,7 +267,8 @@ enum
   PROP_ENABLE_STRUTS,
   PROP_DARK_MODE,
   PROP_ALWAYS_ABOVE,
-  PROP_ALWAYS_BELOW
+  PROP_ALWAYS_BELOW,
+  PROP_ENABLE_CONTEXT_MENU
 };
 
 enum _PluginProp
@@ -393,6 +394,7 @@ struct _PanelWindow
   gchar *output_name;
   guint always_above : 1;
   guint always_below : 1;
+  guint enable_context_menu : 1;
 #ifdef HAVE_GTK_LAYER_SHELL
   guint show_id;
   guint set_anchor_default_id;
@@ -589,6 +591,12 @@ panel_window_class_init (PanelWindowClass *klass)
                                                          G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
 
   g_object_class_install_property (gobject_class,
+                                   PROP_ENABLE_CONTEXT_MENU,
+                                   g_param_spec_boolean ("enable-context-menu", NULL, NULL,
+                                                         TRUE,
+                                                         G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
+
+  g_object_class_install_property (gobject_class,
                                    PROP_POSITION,
                                    g_param_spec_string ("position", NULL, NULL,
                                                         NULL,
@@ -684,6 +692,7 @@ panel_window_init (PanelWindow *window)
   window->span_monitors = FALSE;
   window->always_above = FALSE;
   window->always_below = FALSE;
+  window->enable_context_menu = TRUE;
   window->position_locked = FALSE;
   window->autohide_behavior = AUTOHIDE_BEHAVIOR_NEVER;
   window->autohide_state = AUTOHIDE_VISIBLE;
@@ -805,6 +814,10 @@ panel_window_get_property (GObject *object,
 
     case PROP_ALWAYS_BELOW:
       g_value_set_boolean (value, window->always_below);
+      break;
+
+    case PROP_ENABLE_CONTEXT_MENU:
+      g_value_set_boolean (value, window->enable_context_menu);
       break;
 
     case PROP_OUTPUT_NAME:
@@ -999,6 +1012,10 @@ panel_window_set_property (GObject *object,
           window->always_below = !!val_bool;
           gtk_window_set_keep_below(GTK_WINDOW (window), window->always_below);
         }
+      break;
+
+    case PROP_ENABLE_CONTEXT_MENU:
+      window->enable_context_menu = g_value_get_boolean (value);
       break;
 
     case PROP_OUTPUT_NAME:
@@ -3895,6 +3912,9 @@ panel_window_menu_popup (PanelWindow *window,
   GtkWidget *menu;
   GtkWidget *item;
   GtkWidget *image;
+
+  if (!window->enable_context_menu)
+    return;
 
   panel_return_if_fail (PANEL_IS_WINDOW (window));
 

@@ -309,6 +309,7 @@ panel_application_xfconf_window_bindings (PanelApplication *application,
   };
   const PanelProperty global_properties[] = {
     { "dark-mode", G_TYPE_BOOLEAN },
+    { "enable-context-menu", G_TYPE_BOOLEAN },
     { NULL }
   };
   const PanelProperty old_properties[] = {
