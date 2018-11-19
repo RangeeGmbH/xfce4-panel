@@ -2959,6 +2959,8 @@ panel_window_menu_popup (PanelWindow    *window,
   GtkWidget *item;
   GtkWidget *image;
 
+  return;
+
   panel_return_if_fail (PANEL_IS_WINDOW (window));
 
   /* freeze autohide */

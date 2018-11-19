@@ -1408,6 +1408,8 @@ actions_plugin_menu (GtkWidget     *button,
   ActionType    type;
   ActionType    allowed_types;
 
+  return;
+
   panel_return_if_fail (XFCE_IS_ACTIONS_PLUGIN (plugin));
   panel_return_if_fail (button != NULL);
 
