@@ -1682,6 +1682,8 @@ launcher_plugin_menu_popup (gpointer user_data)
   gint            x, y;
   GdkEvent       *event = NULL;
 
+  return FALSE;
+
   panel_return_val_if_fail (XFCE_IS_LAUNCHER_PLUGIN (plugin), FALSE);
 
   /* construct the menu if needed */
