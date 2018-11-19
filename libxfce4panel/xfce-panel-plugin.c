@@ -1017,6 +1017,8 @@ xfce_panel_plugin_button_press_event (GtkWidget      *widget,
   if (event->button == 3
       || (event->button == 1 && modifiers == GDK_CONTROL_MASK))
     {
+      return FALSE;
+
       /* get the panel menu */
       menu = xfce_panel_plugin_menu_get (plugin);
 
