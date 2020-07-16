@@ -1,3 +1,9 @@
+xfce4-panel (4.14.3-1rangeeos1) rangeeos; urgency=medium
+
+  * Patched files for RangeeOS
+
+ -- René Vögeli <rvoegeli@rangee.com>  Thu, 16 Jul 2020 13:32:22 +0200
+
 xfce4-panel (4.14.3-1) unstable; urgency=medium
 
   [ Mateusz Łukasik ]
