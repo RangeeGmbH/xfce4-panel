@@ -1,7 +1,284 @@
-4.12.2
+4.14.3
 ======
-- Feature: Support for RandR's "primary monitor"
-- Translation updates: Arabic, Asturian, Basque, Bengali, Bulgarian, Catalan, Chinese (China), Chinese (Hong Kong), Chinese (Taiwan), Croatian, Czech, Danish, Dutch (Flemish), English (Australia), English (Great Britain), Estonian, Finnish, French, Galician, German, Greek, Hebrew, Hungarian, Icelandic, Indonesian, Italian, Japanese, Kazakh, Korean, Lithuanian, Malay, Norwegian Bokmål, Norwegian Nynorsk, Occitan, Panjabi, Polish, Portuguese, Portuguese (Brazilian), Romanian, Russian, Serbian, Slovak, Slovenian, Spanish, Swedish, Telugu, Thai, Turkish, Ukrainian, Uyghur, Vietnamese
+- Always provide files for vala binding in dist tarball
+
+4.14.2
+======
+- plugins: Fix enter/leave opacity w/o compositing (Bug #14577)
+- tasklist: Fix drag&drop in deskbar mode (Bug #16298)
+- appmenu: Use panel's icon size
+- appmenu: Listen to icon theme changes (Bug #15861)
+- prefs: Plug memory leaks (Bug #16016)
+- Replace GtkStock icon
+- Translation Updates:
+  Albanian, Amharic, Arabic, Armenian (Armenia), Asturian, Basque,
+  Belarusian, Bengali, Bulgarian, Catalan, Chinese (China), Chinese (Hong
+  Kong), Chinese (Taiwan), Croatian, Czech, Danish, Dutch, English
+  (Australia), English (United Kingdom), Estonian, Finnish, French,
+  Galician, Georgian, German, Greek, Hebrew, Hungarian, Icelandic,
+  Indonesian, Interlingue, Italian, Japanese, Kazakh, Korean, Lithuanian,
+  Malay, Norwegian Bokmål, Norwegian Nynorsk, Occitan (post 1500),
+  Panjabi (Punjabi), Persian (Iran), Polish, Portuguese, Portuguese
+  (Brazil), Romanian, Russian, Serbian, Sinhala, Slovak, Slovenian,
+  Spanish, Swedish, Thai, Turkish, Uighur, Ukrainian, Vietnamese
+
+4.14.1
+======
+ - Draw panel border based on position and length
+ - windowlist: Make layout consistent with xfdesktop
+ - windowmenu: Replace deprecated gtk_widget_modify_font
+ - tasklist: Resize when windows get removed (Bug #14394)
+ - systray: Fix icons without compositing (Bug #14577)
+ - pager: Fix scrolling in pager-buttons (Bug #15614)
+ - launcher: Fix visual state of arrow-button (Bug #15818)
+ - launcher: Avoid excessive left padding on popup menu (Bug #15819)
+ - Translation Updates:
+   Albanian, Arabic, Armenian (Armenia), Belarusian, Chinese (China),
+   Chinese (Taiwan), Galician, Greek, Hebrew, Indonesian, Japanese, Malay,
+   Polish, Serbian, Slovak, Swedish, Thai
+
+4.14.0
+======
+ - tasklist: Keep panel visible on drag and drop (Bug #15703)
+ - pager: Keep panel visible on drag and drop (Bug #15703)
+ - launcher: Make dialog's context menu popup at pointer
+ - Make strings translatable
+ - Translation Updates:
+   Chinese (China), Danish, Finnish, Galician, German, Hungarian, Italian,
+   Japanese, Kazakh, Lithuanian, Norwegian Bokmål, Portuguese (Brazil)
+
+4.13.7
+======
+ - Make vala and gobject-introspection optional
+ - clock: Add short weekday to default clock string
+ - clock: Add date to default clock layout (Bug #15456)
+ - prefs: Improve position of panel profiles button (Bug #15657)
+ - tasklist: Fix position of group indicator in vertical mode
+ - tasklist: Fix overlapping vertical window titles (Bug #14901)
+ - tasklist: Add fallback for missing window icons (Bug #15511)
+ - directory-menu: Use natural order for sorting (Bug #15413)
+ - arrow-button: Remove timeout on dispose (Bug #15696)
+ - pager: Ensure bg color is set correctly (Bug #15690)
+ - show-desktop: Toggle also when DND-ing (Bug #15654)
+ - tic-tac-toe: Add mnemonic to Close button
+ - tic-tac-toe: Avoid use-after-free/double-free (Bug #15649)
+ - Translation Updates:
+   Albanian, Armenian (Armenia), Belarusian, Bulgarian, Catalan, Chinese
+   (China), Chinese (Taiwan), Croatian, Czech, Danish, Dutch, Finnish,
+   French, Galician, German, Hungarian, Italian, Japanese, Kazakh,
+   Lithuanian, Malay, Norwegian Bokmål, Polish, Portuguese, Portuguese
+   (Brazil), Russian, Serbian, Spanish, Thai, Ukrainian
+
+4.13.6
+======
+- Update default panel layout
+- Bugfixes:
+  - Retain original GDK_CORE_DEVICE_EVENTS setting for plugins (Bug
+  #15044)
+  - directorymenu: Fix plugin menu autohide behaviour
+  - prefs: Add missing mnemonic accelerators (Bug #15652)
+  - prefs: Improve window title (Bug #15653)
+  - prefs: Correct capitalization of labels (Bug #15651)
+  - arrow-button: Allow connect_after signals on draw
+  - tasklist: Draw grouped windows count indicator (Bug #10844)
+  - tasklist: Only base bg color of group indicator on Gtk theme
+  - tasklist: Avoid draw signal loop
+  - tasklist: Don't show actionsmenu in grouped windows (Bug #15622)
+  - Add more accelerators to dialog buttons (Bug #15490)
+  - AC_CONFIG_MACRO_DIR -> AC_CONFIG_MACRO_DIRS
+  - Fix typo in debug output
+- Translation updates:
+    Albanian, Bulgarian, Catalan, Chinese (China), Chinese (Taiwan),
+    Croatian, Czech, Danish, Dutch (Flemish), English (Australia), French,
+    German, Italian, Lithuanian, Polish, Portuguese, Portuguese
+    (Brazilian), Serbian, Spanish, Turkish
+
+4.13.5
+======
+- Bugfixes:
+  - Revert "Applications menu icon sizing fixes" (Bug #14976)
+  - Make sure panel plugin icons aren't clipped (LP #1756608)
+  - actions: use a different icon for hybrid sleep when possible (Bug #15204)
+  - Fix compiler error -Wcast-function-type (GCC 8)
+  - Fix alpha-transparent background images (Bug #14850)
+  - Fix this use of "defined" may not be portable
+  - Bump glib version to 2.42.0
+  - tasklist: Activate parent windows (Bug #15307)
+  - launcher: Fix tooltip icon size (Bug #15319)
+  - Hide systray frame in default panel config
+  - separator: Use symbolic icon for more clarity (Bug #15359)
+- Translation updates: Albanian, Arabic, Asturian, Basque, Belarusian, Bengali,
+    Bulgarian, Catalan, Chinese (China), Chinese (Hong Kong), Czech, Danish,
+    Dutch (Flemish), English (Australia), English (Great Britain), Estonian,
+    Finnish, Galician, German, Greek, Icelandic, Indonesian, Italian, Kazakh,
+    Korean, Lithuanian, Malay, Norwegian Bokmål, Norwegian Nynorsk, Occitan,
+    Panjabi, Portuguese, Portuguese (Brazilian), Romanian, Russian, Serbian,
+    Slovak, Slovenian, Spanish, Swedish, Thai, Turkish, Ukrainian, Uyghur,
+    Vietnamese
+
+4.13.4
+======
+- Add per-panel setting "icon-size"
+- Set minimum Gtk+3 version to 3.22
+- Bugfixes:
+  - Gtk+ deprecation fixes (all plugins)
+  - tasklist: Fix group-button states
+  - libxfce4panel: arrow button size fixes
+  - launcher: plugin sizing fixes
+  - appmenu: Add support for other menu editors (Bug #11684)
+  - tasklist: Fix urgency blinking for group buttons (Bug #6904)
+  - tasklist: Add 'group-button' styleclass
+  - Fix anchors for gtk_menu_popup_at_widget (Bug #14803)
+  - Fix struts on the bottom and right of the screen (Bug #14886)
+  - tasklist: Don't listen for monitor changes in the plugin (Bug #10725)
+  - tasklist: Use Gdk to to determine which monitor contains a window
+  - tasklist: Ensure pressed buttons with open menus
+  - tasklist: Replace exo-lucency with gtkcss
+  - tasklist: Make all-minimized group buttons translucent (Bug #10862)
+  - tasklist: Switch from wnck* icons to standard names
+  - tasklist: Keep groupbutton active after closing menu
+  - tasklist: Make sure icons in the group menu are 16px
+  - tasklist: Make grouped buttons active (Bug #9129)
+  - launcher: Rely on icon-size provided by panel
+  - Prevent crash on removing certain plugins (Bug #14418)
+  - Add "configure" button to composited infobar
+  - Make compositor info in settings dialog a GtkInfoBar
+  - directorymenu: Fix crash and drop deprecated call
+  - Fix unreadable panel items without compositing (Bug #14842)
+  - launcher: Fix arrows not being shown (Bug #14373)
+  - launcher: Fix tooltip icon size (Bug #14774)
+  - Re-introduce button images to plugin settings dialogs
+  - Make the settings dialog more HIG compliant
+  - launcher: Add 'New Link' button to properties (Bug #14855)
+  - Drop the panel's welcome dialog (Bug #14388)
+  - clock: Resolve deprecations and fix binary clock
+  - Workaround for xinput2's subpixel handling (LP #1795135)
+  - Ensure the orientation style classes are always applied
+  - Add orientation-related style classes for improved theming
+  - actions: Add support for dm-tool
+  - panel-window: set struts with monitor scaling
+-Translation updates: Albanian, Arabic, Asturian, Basque, Belarusian, Bengali,
+  Bulgarian, Catalan, Chinese (China), Chinese (Hong Kong), Chinese (Taiwan),
+  Croatian, Czech, Danish, Dutch (Flemish), English (Australia), English
+  (Great Britain), Estonian, Finnish, French, Galician, German, Greek, Hebrew,
+  Hungarian, Icelandic, Indonesian, Italian, Japanese, Kazakh, Korean, Lithuanian,
+  Malay, Norwegian Bokmål, Norwegian Nynorsk, Occitan, Panjabi, Polish,
+  Portuguese, Portuguese (Brazilian), Romanian, Russian, Serbian, Slovak,
+  Slovenian, Spanish, Swedish, Telugu, Thai, Turkish, Ukrainian, Uyghur,
+  Vietnamese
+
+4.13.3
+======
+- Bugfixes:
+  - Get the actual widget state flags to avoid constant redraws (Bug #14307)
+  -	launcher: Fix empty button in remove launcher dialog (Bug #13962)
+  -	launcher: Make sure icons are not oversize
+  - launcher: Make sure the appropriate icon size is used
+  - launcher: Fix resizing of pixbuf based icons (Bug #14138)
+  - Move "Separator" to the top of the "Add New Items..." menu (Bug #14086)
+  - Make a couple of strings translatable (Bug #14338)
+  - Make former GtkStock dialog buttons translateable (Bug #14338)
+  - Make double-click add plugin in the "Add item" dialog (Bug #9784)
+  - clock: Improve discoverability of tooltip help-texts (Bug #11708)
+  - Correctly initialize return value (Bug #10873)
+  - Gtk+3 fixes:
+    Fix various warnings with Gtk3 (Bug #14135)
+    Fix Gtk+3 version in ifdef
+    Use 'gdk_screen_is_composited' with Gtk3 (Bug #14128)
+  	Try to fix menu positioning with Gtk3.22
+  - Various icon fixes:
+    Switch to GtkIconTheme (Bug #14125)
+    Fix missing icons with Adwaita icon theme (Bug #14133)
+    Fix remaining deprecated icon names
+- Translation updates: Belarusian, Bulgarian, Catalan, Chinese (China),
+   Croatian, Czech, Danish, Dutch (Flemish), English (Australia), Finnish,
+   French, Galician, German, Greek, Hebrew, Hungarian, Italian, Japanese,
+   Lithuanian, Malay, Norwegian Bokmål, Polish, Portuguese (Brazilian),
+   Russian, Serbian, Turkish, Ukrainian
+
+4.13.2
+======
+- Add support for gobject-introspection (Vidar Haarr)
+- Bugfixes:
+  - actions: Fix GPtrArray usage (Bug #13981)
+  - actions: Show Hybrid Sleep option (Bug #12771)
+  - clock: Fix invalid datetime formats appearing in list (Bug #11527)
+  - clock: Use freedesktop.org compliant icon (Bug #13779)
+  - clock: Add a validator for digital custom formats (Bug #11527)
+  - clock: Fix format validation (Bug #11527)
+  - launcher: Fix custom images
+  - tasklist: Fix scrolling to cycle through open windows (Bug #13789)
+  - tasklist: Define cosmetic default padding for images (Bug #13865)
+  - tasklist: Fix alignment of labels when orientation is changed (Bug #13864)
+  - tasklist: Allow to hide label decorations (Bug #10546)
+  - systray: Fix crash when systray is empty (Bug #13927)
+  - systray: Don't lookup hash table for null keys (Bug #11929)
+  - systray: Add option to display icons with square sizing (Bug #12093)
+  - Pass socket id to D-Bus service to embed settings window (Bug #13854)
+  - Make "Automatic" the default selection in the panel config dialog
+  - Fix make distcheck (But #14040)
+  - Improve gtkdoc
+- Translation updates: Arabic, Asturian, Basque, Bengali, Bulgarian, Catalan,
+   Chinese (China), Chinese (Hong Kong), Chinese (Taiwan), Croatian, Czech,
+   Danish, Dutch (Flemish), English (Australia), English (Great Britain),
+   Estonian, Finnish, French, Galician, German, Greek, Hebrew, Hungarian,
+   Icelandic, Indonesian, Italian, Japanese, Kazakh, Korean, Lithuanian, Malay,
+   Norwegian Bokmål, Norwegian Nynorsk, Occitan, Panjabi, Polish, Portuguese,
+   Portuguese (Brazilian), Romanian, Russian, Serbian, Slovak, Slovenian,
+   Spanish, Swedish, Thai, Turkish, Ukrainian, Uyghur, Vietnamese
+
+4.13.1
+======
+- Port to GDBus (Ali)
+   This means the panel now depends on xfconf 4.13 - recommended is 4.13.3.
+- Features:
+  - systray: Allow ordering of items (Bug #11929)
+  - tasklist: Add styleclass to make life easier for themers
+- Bugfixes:
+  - Fix DND between external plugins (Bug #13687)
+  - Fix drag and drop for internal plugins (Bug #13642)
+  - Correct enter and leave opacity label positions (Bug #13594)
+  - Fix Gtk3 XfceArrowButtons not blinking (Bug #13599)
+  - Fix datarootdir declaration in .pc files (Bug #13589)
+  - Use fd.org terminal icon name (Bug #13592)
+  - Don't let the wrapper crash on unknown properties (Bug #13614)
+  - Set default panel-2 size of default settings
+  - windowmenu: Fix icon size in menu
+  - systray: Fix alignment of single non-square items (Bug #9095)
+  - clock: Make the default date and time format translatable (Bug #9637)
+- Translation updates: Arabic, Bengali, Bulgarian, Catalan, Chinese (China),
+   Chinese (Taiwan), Croatian, Czech, Danish, Dutch (Flemish), French, German,
+   Hebrew, Indonesian, Japanese, Kazakh, Korean, Lithuanian, Norwegian Bokmål,
+   Polish, Portuguese, Portuguese (Brazilian), Russian, Slovak, Spanish, Swedish,
+   Turkish, Ukrainian
+
+4.13.0
+======
+- Port to Gtk3:
+    The port is the result of the hard work Nick, Peter, Andrzejr, Simon and
+    many others that helped with testing, patches and translations.
+- Features:
+  - Support for the "primary" monitor option in RandR
+  - Gtk2 plugins are still supported and work almost completely fine
+    (see regressions below)
+- Deprecations:
+  - xfce_panel_image is deprecated, instead plugins shall use GtkImage and
+    xfce_panel_plugin_get_icon_size which introduces defined icon size-steps
+    to avoid fuzzy icons
+- Known regressions:
+  - The panel is not visually focused by default (fixed in Xfwm4>=4.12.4)
+  - Moving panel plugins via drag and drop on the panel directly via the plugins
+    context menu action "Move" is currently broken (works fine in preferences dialog)
+  - Small regression with intelligent hiding (when opening a menu, the panel
+    hides and comes back immediately while it should just remain visible)
+  - Enter/leave opacity does not work for Gtk2 plugins
+  - Not all panel settings may be kept as the configuration is not 100% backward
+    compatible (e.g. we're using GdkRGBA instead of GdkColor for the backgorund)
+- Known todos:
+  - Fix all bugs/regressions
+  - Remove more/all Gtk+ deprecations
+    (lots of warnings when compiling currently)
+- Lots of translations updates
 
 4.12.1
 ======

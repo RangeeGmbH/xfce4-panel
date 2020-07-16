@@ -21,7 +21,6 @@
 #endif
 
 #include <gmodule.h>
-#include <exo/exo.h>
 #include <glib/gstdio.h>
 #include <libxfce4util/libxfce4util.h>
 
@@ -318,8 +317,8 @@ panel_module_new_from_desktop_file (const gchar *filename,
   gboolean     found;
   gsize        i;
 
-  panel_return_val_if_fail (!exo_str_is_empty (filename), NULL);
-  panel_return_val_if_fail (!exo_str_is_empty (name), NULL);
+  panel_return_val_if_fail (!panel_str_is_empty (filename), NULL);
+  panel_return_val_if_fail (!panel_str_is_empty (name), NULL);
 
   rc = xfce_rc_simple_open (filename, TRUE);
   if (G_UNLIKELY (rc == NULL))
@@ -377,7 +376,8 @@ panel_module_new_from_desktop_file (const gchar *filename,
             {
               module->mode = WRAPPER;
               g_free (module->api);
-              module->api = g_strdup (xfce_rc_read_entry (rc, "X-XFCE-API", LIBXFCE4PANEL_VERSION_API));
+              //module->api = g_strdup (xfce_rc_read_entry (rc, "X-XFCE-API", LIBXFCE4PANEL_VERSION_API));
+              module->api = g_strdup (xfce_rc_read_entry (rc, "X-XFCE-API", "1.0"));
             }
           else
             module->mode = INTERNAL;
@@ -497,7 +497,9 @@ panel_module_new_plugin (PanelModule  *module,
         }
 
       /* fall-through (make wrapper plugin), probably a plugin with
-       * preinit_func which is not supported for internal plugins */
+       * preinit_func which is not supported for internal plugins
+       * note: next comment tells GCC7 to ignore the fallthrough */
+      /* fall through */
 
     case WRAPPER:
       plugin = panel_plugin_external_wrapper_new (module, unique_id, arguments);

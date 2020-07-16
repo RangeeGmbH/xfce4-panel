@@ -29,7 +29,6 @@
 #include <common/panel-private.h>
 #include <common/panel-xfconf.h>
 #include <common/panel-utils.h>
-#include <exo/exo.h>
 
 #include "separator.h"
 #include "separator-dialog_ui.h"
@@ -37,7 +36,9 @@
 
 #define SEPARATOR_OFFSET (0.15)
 #define SEPARATOR_SIZE   (8)
-#define DOTS_SIZE        (6)
+#define DOTS_OFFSET      (4)
+#define DOTS_SIZE        (3)
+#define HANDLE_SIZE      (4)
 
 
 
@@ -49,8 +50,8 @@ static void     separator_plugin_set_property              (GObject             
                                                             guint                  prop_id,
                                                             const GValue          *value,
                                                             GParamSpec            *pspec);
-static gboolean separator_plugin_expose_event              (GtkWidget             *widget,
-                                                            GdkEventExpose        *event);
+static gboolean separator_plugin_draw                      (GtkWidget             *widget,
+                                                            cairo_t               *cr);
 static void     separator_plugin_construct                 (XfcePanelPlugin       *panel_plugin);
 static gboolean separator_plugin_size_changed              (XfcePanelPlugin       *panel_plugin,
                                                             gint                   size);
@@ -98,15 +99,6 @@ enum
 
 
 
-static const gchar bits[3][6] =
-{
-  { 0x00, 0x0e, 0x02, 0x02, 0x00, 0x00 }, /* dark */
-  { 0x00, 0x00, 0x10, 0x10, 0x1c, 0x00 }, /* light */
-  { 0x00, 0x00, 0x0c, 0x0c, 0x00, 0x00 }  /* mid */
-};
-
-
-
 /* define the plugin */
 XFCE_PANEL_DEFINE_PLUGIN (SeparatorPlugin, separator_plugin)
 
@@ -124,7 +116,7 @@ separator_plugin_class_init (SeparatorPluginClass *klass)
   gobject_class->get_property = separator_plugin_get_property;
 
   widget_class = GTK_WIDGET_CLASS (klass);
-  widget_class->expose_event = separator_plugin_expose_event;
+  widget_class->draw = separator_plugin_draw;
 
   plugin_class = XFCE_PANEL_PLUGIN_CLASS (klass);
   plugin_class->construct = separator_plugin_construct;
@@ -139,14 +131,14 @@ separator_plugin_class_init (SeparatorPluginClass *klass)
                                                       SEPARATOR_PLUGIN_STYLE_MIN,
                                                       SEPARATOR_PLUGIN_STYLE_MAX,
                                                       SEPARATOR_PLUGIN_STYLE_DEFAULT,
-                                                      EXO_PARAM_READWRITE));
+                                                      G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
 
   g_object_class_install_property (gobject_class,
                                    PROP_EXPAND,
                                    g_param_spec_boolean ("expand",
                                                          NULL, NULL,
                                                          FALSE,
-                                                         EXO_PARAM_READWRITE));
+                                                         G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
 }
 
 
@@ -221,17 +213,23 @@ separator_plugin_set_property (GObject      *object,
 
 
 static gboolean
-separator_plugin_expose_event (GtkWidget      *widget,
-                               GdkEventExpose *event)
+separator_plugin_draw (GtkWidget *widget,
+                       cairo_t   *cr)
 {
-  SeparatorPlugin *plugin = XFCE_SEPARATOR_PLUGIN (widget);
-  GtkAllocation   *alloc = &(widget->allocation);
-  GdkBitmap       *bmap;
-  GdkGC           *gc;
-  GtkStateType     state = GTK_WIDGET_STATE (widget);
-  gint             x, y, w, h;
-  gint             rows, cols;
-  guint            i;
+  SeparatorPlugin  *plugin = XFCE_SEPARATOR_PLUGIN (widget);
+  GtkAllocation     alloc;
+  gdouble           x, y;
+  guint             dotcount, i;
+  GtkStyleContext  *ctx;
+  GdkRGBA           fg_rgba;
+
+  gtk_widget_get_allocation (widget, &alloc);
+
+  ctx = gtk_widget_get_style_context (widget);
+  gtk_style_context_get_color (ctx, gtk_widget_get_state_flags (widget), &fg_rgba);
+  /* Tone down the foreground color a bit for the separators */
+  fg_rgba.alpha = 0.5;
+  gdk_cairo_set_source_rgba (cr, &fg_rgba);
 
   switch (plugin->style)
     {
@@ -241,91 +239,74 @@ separator_plugin_expose_event (GtkWidget      *widget,
       break;
 
     case SEPARATOR_PLUGIN_STYLE_SEPARATOR:
+
       if (xfce_panel_plugin_get_orientation (XFCE_PANEL_PLUGIN (plugin)) ==
           GTK_ORIENTATION_HORIZONTAL)
         {
-          gtk_paint_vline (widget->style,
-                           widget->window,
-                           state,
-                           &(event->area),
-                           widget, "separator",
-                           alloc->y + alloc->height * SEPARATOR_OFFSET,
-                           alloc->y + alloc->height * (1.00 - SEPARATOR_OFFSET),
-                           alloc->x + alloc->width / 2 - 1);
+          gtk_render_line (ctx, cr,
+                           (gdouble) (alloc.width - 1.0) / 2.0,
+                           (gdouble) alloc.height * SEPARATOR_OFFSET,
+                           (gdouble) (alloc.width - 1.0) / 2.0,
+                           (gdouble) alloc.height * (1.0 - SEPARATOR_OFFSET));
         }
       else
         {
-          gtk_paint_hline (widget->style,
-                           widget->window,
-                           state,
-                           &(event->area),
-                           widget, "separator",
-                           alloc->x + alloc->width * SEPARATOR_OFFSET,
-                           alloc->x + alloc->width * (1.00 - SEPARATOR_OFFSET),
-                           alloc->y + alloc->height / 2 - 1);
+          gtk_render_line (ctx, cr,
+                           (gdouble) alloc.width * SEPARATOR_OFFSET,
+                           (gdouble) (alloc.height - 1.0) / 2.0,
+                           (gdouble) alloc.width * (1.0 - SEPARATOR_OFFSET),
+                           (gdouble) (alloc.height - 1.0) / 2.0);
         }
       break;
 
     case SEPARATOR_PLUGIN_STYLE_HANDLE:
-      gtk_paint_handle (widget->style,
-                        widget->window,
-                        state,
-                        GTK_SHADOW_NONE,
-                        &(event->area),
-                        widget, "handlebox",
-                        alloc->x, alloc->y,
-                        alloc->width,
-                        alloc->height,
-                        xfce_panel_plugin_get_orientation (XFCE_PANEL_PLUGIN (plugin)) ==
-                            GTK_ORIENTATION_HORIZONTAL ? GTK_ORIENTATION_VERTICAL
-                            : GTK_ORIENTATION_HORIZONTAL);
+      x = (alloc.width - HANDLE_SIZE) / 2;
+      y = (alloc.height - HANDLE_SIZE) / 2;
+      cairo_set_line_width (cr, 1.5);
+      /* draw the handle */
+      for (i = 0; i < 3; i++)
+        {
+          if (xfce_panel_plugin_get_orientation (XFCE_PANEL_PLUGIN (plugin)) ==
+              GTK_ORIENTATION_HORIZONTAL)
+            {
+              cairo_move_to (cr, x, y + (i * HANDLE_SIZE) - (HANDLE_SIZE / 2));
+              cairo_line_to (cr, x + HANDLE_SIZE, y + (i * HANDLE_SIZE) - (HANDLE_SIZE / 2));
+            }
+          else
+            {
+              cairo_move_to (cr, x + (i * HANDLE_SIZE) - (HANDLE_SIZE / 2), y);
+              cairo_line_to (cr, x + (i * HANDLE_SIZE) - (HANDLE_SIZE / 2), y + HANDLE_SIZE);
+            }
+          cairo_stroke (cr);
+        }
       break;
 
     case SEPARATOR_PLUGIN_STYLE_DOTS:
+      x = (alloc.width - DOTS_SIZE) / 2;
+      y = (alloc.height - DOTS_SIZE) / 2;
       if (xfce_panel_plugin_get_orientation (XFCE_PANEL_PLUGIN (plugin)) ==
           GTK_ORIENTATION_HORIZONTAL)
         {
-          rows = MAX (alloc->height / DOTS_SIZE, 1);
-          w = DOTS_SIZE;
-          h = rows * DOTS_SIZE;
+          dotcount = MAX(alloc.height / (DOTS_SIZE + DOTS_OFFSET), 1);
+          y = (alloc.height / (double) dotcount - DOTS_SIZE) / 2;
         }
       else
         {
-          cols = MAX (alloc->width / DOTS_SIZE, 1);
-          h = DOTS_SIZE;
-          w = cols * DOTS_SIZE;
+          dotcount = MAX(alloc.width / (DOTS_SIZE + DOTS_OFFSET), 1);
+          x = (alloc.width / (double) dotcount - DOTS_SIZE) / 2;
         }
 
-      x = alloc->x + (alloc->width - w) / 2;
-      y = alloc->y + (alloc->height - h) / 2;
-
-      for (i = 0; i < G_N_ELEMENTS (bits); i++)
+      /* draw the dots */
+      for (i = 0; i < dotcount; i++)
         {
-          /* pick color, but be same order as bits array */
-          if (i == 0)
-            gc = widget->style->dark_gc[state];
-          else if (i == 1)
-            gc = widget->style->light_gc[state];
+          if (xfce_panel_plugin_get_orientation (XFCE_PANEL_PLUGIN (plugin)) ==
+              GTK_ORIENTATION_HORIZONTAL)
+              cairo_arc (cr, x , y + (i * (alloc.height / (double) dotcount)) + (DOTS_SIZE / 2),
+                         DOTS_SIZE / 2, 0, 2 * 3.14);
           else
-            gc = widget->style->mid_gc[state];
-
-          /* clip to drawing area */
-          gdk_gc_set_clip_rectangle (gc, &(event->area));
-
-          /* set the stipple for the gc */
-          bmap = gdk_bitmap_create_from_data (widget->window, bits[i],
-                                              DOTS_SIZE, DOTS_SIZE);
-          gdk_gc_set_stipple (gc, bmap);
-          gdk_gc_set_fill (gc, GDK_STIPPLED);
-          g_object_unref (G_OBJECT (bmap));
-
-          /* draw the dots */
-          gdk_gc_set_ts_origin (gc, x, y);
-          gdk_draw_rectangle (widget->window, gc, TRUE, x, y, w, h);
-          gdk_gc_set_fill (gc, GDK_SOLID);
-
-          /* unset the clip */
-          gdk_gc_set_clip_rectangle (gc, NULL);
+              cairo_arc (cr, x + (i * (alloc.width / (double) dotcount)) + (DOTS_SIZE / 2), y,
+                         DOTS_SIZE / 2, 0, 2 * 3.14);
+          cairo_fill (cr);
         }
       break;
     }
@@ -396,12 +377,14 @@ separator_plugin_configure_plugin (XfcePanelPlugin *panel_plugin)
     return;
 
   style = gtk_builder_get_object (builder, "style");
-  exo_mutual_binding_new (G_OBJECT (plugin), "style",
-                          G_OBJECT (style), "active");
+  g_object_bind_property (G_OBJECT (plugin), "style",
+                          G_OBJECT (style), "active",
+                          G_BINDING_SYNC_CREATE | G_BINDING_BIDIRECTIONAL);
 
   expand = gtk_builder_get_object (builder, "expand");
-  exo_mutual_binding_new (G_OBJECT (plugin), "expand",
-                          G_OBJECT (expand), "active");
+  g_object_bind_property (G_OBJECT (plugin), "expand",
+                          G_OBJECT (expand), "active",
+                          G_BINDING_SYNC_CREATE | G_BINDING_BIDIRECTIONAL);
 
   gtk_widget_show (GTK_WIDGET (dialog));
 }

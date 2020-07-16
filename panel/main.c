@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2017 Ali Abdallah <ali@xfce.org>
  * Copyright (C) 2008-2010 Nick Schermer <nick@xfce.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -37,7 +38,7 @@
 #endif
 
 #include <glib.h>
-#include <dbus/dbus-glib.h>
+#include <gio/gio.h>
 #include <libxfce4util/libxfce4util.h>
 #include <libxfce4ui/libxfce4ui.h>
 #include <libwnck/libwnck.h>
@@ -50,7 +51,7 @@
 #include <panel/panel-dbus-client.h>
 #include <panel/panel-preferences-dialog.h>
 
-
+static PanelApplication *application = NULL;
 
 static gint       opt_preferences = -1;
 static gint       opt_add_items = -1;
@@ -62,7 +63,7 @@ static gboolean   opt_version = FALSE;
 static gboolean   opt_disable_wm_check = FALSE;
 static gchar     *opt_plugin_event = NULL;
 static gchar    **opt_arguments = NULL;
-static gchar     *opt_socket_id = NULL;
+static guint      opt_socket_id = 0;
 
 
 
@@ -86,7 +87,7 @@ static GOptionEntry option_entries[] =
   { "disable-wm-check", 'd', 0, G_OPTION_ARG_NONE, &opt_disable_wm_check, N_("Do not wait for a window manager on startup"), NULL },
   { "version", 'V', 0, G_OPTION_ARG_NONE, &opt_version, N_("Print version information and exit"), NULL },
   { "plugin-event", '\0', G_OPTION_FLAG_HIDDEN, G_OPTION_ARG_STRING, &opt_plugin_event, NULL, NULL },
-  { "socket-id", '\0', G_OPTION_FLAG_HIDDEN, G_OPTION_ARG_STRING, &opt_socket_id, NULL, NULL },
+  { "socket-id", '\0', G_OPTION_FLAG_HIDDEN, G_OPTION_ARG_INT, &opt_socket_id, NULL, NULL },
   { G_OPTION_REMAINING, '\0', 0, G_OPTION_ARG_STRING_ARRAY, &opt_arguments, NULL, NULL },
   { NULL }
 };
@@ -198,11 +199,32 @@ panel_debug_notify_proxy (void)
 
 
 
+static void
+panel_dbus_name_lost (GDBusConnection *connection,
+                      const gchar     *name,
+                      gpointer         user_data)
+{
+  g_critical (_("Name %s lost on the message dbus, exiting."), name);
+  gtk_main_quit ();
+}
+
+
+
+static void
+panel_dbus_name_acquired (GDBusConnection *connection,
+                          const gchar     *name,
+                          gpointer         user_data)
+{
+  application = panel_application_get ();
+  panel_application_load (application, opt_disable_wm_check);
+}
+
+
+
 gint
 main (gint argc, gchar **argv)
 {
   GOptionContext   *context;
-  PanelApplication *application;
   GError           *error = NULL;
   PanelDBusService *dbus_service;
   gboolean          succeed = FALSE;
@@ -231,6 +253,16 @@ main (gint argc, gchar **argv)
    * fix your code instead! */
   g_log_set_always_fatal (G_LOG_LEVEL_CRITICAL | G_LOG_LEVEL_WARNING);
 #endif
+
+  /* Workaround for xinput2's subpixel handling triggering unwanted enter/leave-notify events:
+   * https://bugs.freedesktop.org/show_bug.cgi?id=92681
+   * We retain the original env var in our own custom env var which we use to re-set the
+   * original value for plugins. If the env var is not set we treat that as "0", which is Gtk+'s
+   * default behavior as well. */
+  if (!g_getenv ("GDK_CORE_DEVICE_EVENTS"))
+    g_setenv ("PANEL_GDK_CORE_DEVICE_EVENTS", "0", TRUE);
+
+  g_setenv ("GDK_CORE_DEVICE_EVENTS", "1", TRUE);
 
   /* parse context options */
   context = g_option_context_new (_("[ARGUMENTS...]"));
@@ -311,9 +343,17 @@ main (gint argc, gchar **argv)
 
   launch_panel:
 
+  g_bus_own_name (G_BUS_TYPE_SESSION,
+                  PANEL_DBUS_NAME,
+                  G_BUS_NAME_OWNER_FLAGS_NONE,
+                  NULL,
+                  panel_dbus_name_acquired,
+                  panel_dbus_name_lost,
+                  NULL, NULL);
+
   /* start dbus service */
   dbus_service = panel_dbus_service_get ();
-  if (!panel_dbus_service_is_owner (dbus_service))
+  if (!panel_dbus_service_is_exported (dbus_service))
     {
       /* quit without error if an instance is running */
       succeed = TRUE;
@@ -342,22 +382,20 @@ main (gint argc, gchar **argv)
   /* set EWMH source indication */
   wnck_set_client_type (WNCK_CLIENT_TYPE_PAGER);
 
-  application = panel_application_get ();
-  panel_application_load (application, opt_disable_wm_check);
-
-  /* open dialog if we started from launch_panel */
-  if (opt_preferences >= 0)
-    panel_preferences_dialog_show_from_id (opt_preferences, opt_socket_id);
-
   gtk_main ();
 
   /* make sure there are no incomming events when we close */
   g_object_unref (G_OBJECT (dbus_service));
 
-  /* destroy all the opened dialogs */
-  panel_application_destroy_dialogs (application);
+  /* Application is set on name acquired, otherwise it is NULL */
+  if (application)
+    {
+      /* destroy all the opened dialogs */
+      panel_application_destroy_dialogs (application);
 
-  g_object_unref (G_OBJECT (application));
+      g_object_unref (G_OBJECT (application));
+    }
+
   g_object_unref (G_OBJECT (sm_client));
 
   if (panel_dbus_service_get_restart ())
@@ -393,14 +431,14 @@ dbus_return:
         error_msg = _("Failed to send D-Bus message");
 
       /* show understandable message for this common error */
-      if (error->code == DBUS_GERROR_NAME_HAS_NO_OWNER)
+      if (error->code == G_DBUS_ERROR_NAME_HAS_NO_OWNER)
         {
           /* normally start the panel */
           if (opt_preferences >= 0 || opt_restart)
             {
               g_clear_error (&error);
 
-              if (xfce_dialog_confirm (NULL, GTK_STOCK_EXECUTE, NULL,
+              if (xfce_dialog_confirm (NULL, "system-run", _("Execute"),
                                        _("Do you want to start the panel? If you do, make sure "
                                          "you save the session on logout, so the panel is "
                                          "automatically started the next time you login."),

@@ -20,8 +20,8 @@
 #include <config.h>
 #endif
 
-#include <gio/gio.h>
 #include <exo/exo.h>
+#include <gio/gio.h>
 #include <libxfce4ui/libxfce4ui.h>
 #include <libxfce4util/libxfce4util.h>
 #include <libxfce4panel/libxfce4panel.h>
@@ -102,7 +102,6 @@ XFCE_PANEL_DEFINE_PLUGIN (DirectoryMenuPlugin, directory_menu_plugin)
 
 
 static GQuark menu_file = 0;
-static GtkIconSize menu_icon_size = GTK_ICON_SIZE_INVALID;
 
 
 static void
@@ -127,34 +126,30 @@ directory_menu_plugin_class_init (DirectoryMenuPluginClass *klass)
                                    g_param_spec_string ("base-directory",
                                                         NULL, NULL,
                                                         NULL,
-                                                        EXO_PARAM_READWRITE));
+                                                        G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
 
   g_object_class_install_property (gobject_class,
                                    PROP_ICON_NAME,
                                    g_param_spec_string ("icon-name",
                                                         NULL, NULL,
                                                         NULL,
-                                                        EXO_PARAM_READWRITE));
+                                                        G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
 
   g_object_class_install_property (gobject_class,
                                    PROP_FILE_PATTERN,
                                    g_param_spec_string ("file-pattern",
                                                         NULL, NULL,
                                                         "",
-                                                        EXO_PARAM_READWRITE));
+                                                        G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
 
   g_object_class_install_property (gobject_class,
                                    PROP_HIDDEN_FILES,
                                    g_param_spec_boolean ("hidden-files",
                                                          NULL, NULL,
                                                          FALSE,
-                                                         EXO_PARAM_READWRITE));
+                                                         G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
 
   menu_file = g_quark_from_static_string ("dir-menu-file");
-
-  menu_icon_size = gtk_icon_size_from_name ("panel-directory-menu");
-  if (menu_icon_size == GTK_ICON_SIZE_INVALID)
-    menu_icon_size = gtk_icon_size_register ("panel-directory-menu", 16, 16);
 }
 
 
@@ -170,7 +165,7 @@ directory_menu_plugin_init (DirectoryMenuPlugin *plugin)
   g_signal_connect (G_OBJECT (plugin->button), "toggled",
       G_CALLBACK (directory_menu_plugin_menu), plugin);
 
-  plugin->icon = xfce_panel_image_new_from_source (DEFAULT_ICON_NAME);
+  plugin->icon = gtk_image_new_from_icon_name (DEFAULT_ICON_NAME, GTK_ICON_SIZE_BUTTON);
   gtk_container_add (GTK_CONTAINER (plugin->button), plugin->icon);
   gtk_widget_show (plugin->icon);
 }
@@ -201,7 +196,7 @@ directory_menu_plugin_get_property (GObject    *object,
       break;
 
     case PROP_FILE_PATTERN:
-      g_value_set_string (value, exo_str_is_empty (plugin->file_pattern) ?
+      g_value_set_string (value, panel_str_is_empty (plugin->file_pattern) ?
           "" : plugin->file_pattern);
       break;
 
@@ -227,13 +222,14 @@ directory_menu_plugin_set_property (GObject      *object,
   gchar                *display_name;
   gchar               **array;
   guint                 i;
+  gint                  icon_size;
   const gchar          *path;
 
   switch (prop_id)
     {
     case PROP_BASE_DIRECTORY:
       path = g_value_get_string (value);
-      if (exo_str_is_empty (path))
+      if (panel_str_is_empty (path))
         path = g_get_home_dir ();
 
       if (plugin->base_directory != NULL)
@@ -251,8 +247,10 @@ directory_menu_plugin_set_property (GObject      *object,
     case PROP_ICON_NAME:
       g_free (plugin->icon_name);
       plugin->icon_name = g_value_dup_string (value);
-      xfce_panel_image_set_from_source (XFCE_PANEL_IMAGE (plugin->icon),
-          exo_str_is_empty (plugin->icon_name) ? DEFAULT_ICON_NAME : plugin->icon_name);
+      icon_size = xfce_panel_plugin_get_icon_size (XFCE_PANEL_PLUGIN (object));
+      gtk_image_set_from_icon_name (GTK_IMAGE (plugin->icon),
+          panel_str_is_empty (plugin->icon_name) ? DEFAULT_ICON_NAME : plugin->icon_name,
+          icon_size);
       break;
 
     case PROP_FILE_PATTERN:
@@ -265,7 +263,7 @@ directory_menu_plugin_set_property (GObject      *object,
       if (G_LIKELY (array != NULL))
         {
           for (i = 0; array[i] != NULL; i++)
-            if (!exo_str_is_empty (array[i]))
+            if (!panel_str_is_empty (array[i]))
                 plugin->patterns = g_slist_prepend (plugin->patterns,
                     g_pattern_spec_new (array[i]));
 
@@ -349,9 +347,14 @@ static gboolean
 directory_menu_plugin_size_changed (XfcePanelPlugin *panel_plugin,
                                     gint             size)
 {
+  DirectoryMenuPlugin *plugin = XFCE_DIRECTORY_MENU_PLUGIN (panel_plugin);
+  gint icon_size;
+
   /* force a square button */
   size /= xfce_panel_plugin_get_nrows (panel_plugin);
   gtk_widget_set_size_request (GTK_WIDGET (panel_plugin), size, size);
+  icon_size = xfce_panel_plugin_get_icon_size (panel_plugin);
+  gtk_image_set_pixel_size (GTK_IMAGE (plugin->icon), icon_size);
 
   return TRUE;
 }
@@ -379,34 +382,33 @@ static void
 directory_menu_plugin_configure_plugin_icon_chooser (GtkWidget           *button,
                                                      DirectoryMenuPlugin *plugin)
 {
+#ifdef EXO_CHECK_VERSION
   GtkWidget *chooser;
   gchar     *icon;
 
   panel_return_if_fail (XFCE_IS_DIRECTORY_MENU_PLUGIN (plugin));
-  panel_return_if_fail (XFCE_IS_PANEL_IMAGE (plugin->dialog_icon));
+  panel_return_if_fail (GTK_IS_IMAGE (plugin->dialog_icon));
 
   chooser = exo_icon_chooser_dialog_new (_("Select An Icon"),
                                          GTK_WINDOW (gtk_widget_get_toplevel (button)),
-                                         GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL,
-                                         GTK_STOCK_OK, GTK_RESPONSE_ACCEPT,
+                                         _("_Cancel"), GTK_RESPONSE_CANCEL,
+                                         _("_OK"), GTK_RESPONSE_ACCEPT,
                                          NULL);
   gtk_dialog_set_default_response (GTK_DIALOG (chooser), GTK_RESPONSE_ACCEPT);
-  gtk_dialog_set_alternative_button_order (GTK_DIALOG (chooser),
-                                           GTK_RESPONSE_ACCEPT,
-                                           GTK_RESPONSE_CANCEL, -1);
 
-  if (!exo_str_is_empty (plugin->icon_name))
+  if (!panel_str_is_empty (plugin->icon_name))
   exo_icon_chooser_dialog_set_icon (EXO_ICON_CHOOSER_DIALOG (chooser), plugin->icon_name);
 
   if (gtk_dialog_run (GTK_DIALOG (chooser)) == GTK_RESPONSE_ACCEPT)
     {
       icon = exo_icon_chooser_dialog_get_icon (EXO_ICON_CHOOSER_DIALOG (chooser));
       g_object_set (G_OBJECT (plugin), "icon-name", icon, NULL);
-      xfce_panel_image_set_from_source (XFCE_PANEL_IMAGE (plugin->dialog_icon), icon);
+      gtk_image_set_from_icon_name (GTK_IMAGE (plugin->dialog_icon), icon, GTK_ICON_SIZE_DIALOG);
       g_free (icon);
     }
 
   gtk_widget_destroy (chooser);
+#endif
 }
 
 
@@ -419,7 +421,7 @@ directory_menu_plugin_configure_plugin (XfcePanelPlugin *panel_plugin)
   GObject             *dialog, *object;
   const gchar         *icon_name = plugin->icon_name;
 
-  if (exo_str_is_empty (icon_name))
+  if (panel_str_is_empty (icon_name))
     icon_name = DEFAULT_ICON_NAME;
 
   /* setup the dialog */
@@ -442,21 +444,22 @@ directory_menu_plugin_configure_plugin (XfcePanelPlugin *panel_plugin)
   g_signal_connect (G_OBJECT (object), "clicked",
      G_CALLBACK (directory_menu_plugin_configure_plugin_icon_chooser), plugin);
 
-  plugin->dialog_icon = xfce_panel_image_new_from_source (icon_name);
-  xfce_panel_image_set_size (XFCE_PANEL_IMAGE (plugin->dialog_icon), 48);
+  plugin->dialog_icon = gtk_image_new_from_icon_name (icon_name, GTK_ICON_SIZE_DIALOG);
   gtk_container_add (GTK_CONTAINER (object), plugin->dialog_icon);
   g_object_add_weak_pointer (G_OBJECT (plugin->dialog_icon), (gpointer) &plugin->dialog_icon);
   gtk_widget_show (plugin->dialog_icon);
 
   object = gtk_builder_get_object (builder, "file-pattern");
   panel_return_if_fail (GTK_IS_ENTRY (object));
-  exo_mutual_binding_new (G_OBJECT (plugin), "file-pattern",
-                          G_OBJECT (object), "text");
+  g_object_bind_property (G_OBJECT (plugin), "file-pattern",
+                          G_OBJECT (object), "text",
+                          G_BINDING_BIDIRECTIONAL | G_BINDING_SYNC_CREATE);
 
   object = gtk_builder_get_object (builder, "hidden-files");
   panel_return_if_fail (GTK_IS_CHECK_BUTTON (object));
-  exo_mutual_binding_new (G_OBJECT (plugin), "hidden-files",
-                          G_OBJECT (object), "active");
+  g_object_bind_property (G_OBJECT (plugin), "hidden-files",
+                          G_OBJECT (object), "active",
+                          G_BINDING_BIDIRECTIONAL | G_BINDING_SYNC_CREATE);
 
   gtk_widget_show (GTK_WIDGET (dialog));
 }
@@ -473,7 +476,7 @@ directory_menu_plugin_remote_event (XfcePanelPlugin *panel_plugin,
   panel_return_val_if_fail (value == NULL || G_IS_VALUE (value), FALSE);
 
   if (strcmp (name, "popup") == 0
-      && GTK_WIDGET_VISIBLE (panel_plugin)
+      && gtk_widget_get_visible (GTK_WIDGET (panel_plugin))
       && !gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (plugin->button))
       && panel_utils_grab_available ())
     {
@@ -500,17 +503,19 @@ directory_menu_plugin_remote_event (XfcePanelPlugin *panel_plugin,
 
 
 static void
-directory_menu_plugin_selection_done (GtkWidget *menu,
-                                      GtkWidget *button)
+directory_menu_plugin_selection_done (GtkWidget           *menu,
+                                      DirectoryMenuPlugin *plugin)
 {
-  panel_return_if_fail (button == NULL || GTK_IS_TOGGLE_BUTTON (button));
+  panel_return_if_fail (plugin->button == NULL || GTK_IS_TOGGLE_BUTTON (plugin->button));
   panel_return_if_fail (GTK_IS_MENU (menu));
 
-  if (button != NULL)
-    gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (button), FALSE);
+  xfce_panel_plugin_block_autohide (XFCE_PANEL_PLUGIN (plugin), FALSE);
+
+  if (plugin->button != NULL)
+    gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (plugin->button), FALSE);
 
   /* delay destruction so we can handle the activate event first */
-  exo_gtk_object_destroy_later (GTK_OBJECT (menu));
+  panel_utils_destroy_later (GTK_WIDGET (menu));
 }
 
 
@@ -522,6 +527,9 @@ directory_menu_plugin_menu_sort (gconstpointer a,
   GFileType type_a = g_file_info_get_file_type (G_FILE_INFO (a));
   GFileType type_b = g_file_info_get_file_type (G_FILE_INFO (b));
   gboolean  hidden_a, hidden_b;
+  const gchar *display_name_a, *display_name_b;
+  gchar *sort_display_name_a, *sort_display_name_b;
+  gint sort_value;
 
   if (type_a != type_b)
     {
@@ -539,8 +547,15 @@ directory_menu_plugin_menu_sort (gconstpointer a,
   if (hidden_a != hidden_b)
     return hidden_a ? -1 : 1;
 
-  return g_utf8_collate (g_file_info_get_display_name (G_FILE_INFO (a)),
-                         g_file_info_get_display_name (G_FILE_INFO (b)));
+  display_name_a = g_file_info_get_display_name (G_FILE_INFO (a));
+  display_name_b = g_file_info_get_display_name (G_FILE_INFO (b));
+  sort_display_name_a = g_utf8_collate_key_for_filename (display_name_a, -1);
+  sort_display_name_b = g_utf8_collate_key_for_filename (display_name_b, -1);
+  sort_value = strcmp (sort_display_name_a,
+                       sort_display_name_b);
+  g_free (sort_display_name_a);
+  g_free (sort_display_name_b);
+  return sort_value;
 }
 
 
@@ -553,11 +568,13 @@ directory_menu_plugin_menu_launch_desktop_file (GtkWidget *mi,
   GdkAppLaunchContext *context;
   GIcon               *icon;
   GError              *error = NULL;
+  GdkDisplay          *display;
 
   panel_return_if_fail (G_IS_APP_INFO (info));
   panel_return_if_fail (GTK_IS_WIDGET (mi));
 
-  context = gdk_app_launch_context_new ();
+  display = gtk_widget_get_display (mi);
+  context = gdk_display_get_app_launch_context (display);
   gdk_app_launch_context_set_screen (context, gtk_widget_get_screen (mi));
   gdk_app_launch_context_set_timestamp (context, gtk_get_current_event_time ());
   icon = g_app_info_get_icon (info);
@@ -589,6 +606,7 @@ directory_menu_plugin_menu_launch (GtkWidget *mi,
   GFileInfo           *info;
   const gchar         *message;
   gboolean             result;
+  GdkDisplay          *display;
 
   panel_return_if_fail (G_IS_FILE (file));
   panel_return_if_fail (GTK_IS_WIDGET (mi));
@@ -612,7 +630,8 @@ directory_menu_plugin_menu_launch (GtkWidget *mi,
 
   fake_list.data = file;
 
-  context = gdk_app_launch_context_new ();
+  display = gtk_widget_get_display (mi);
+  context = gdk_display_get_app_launch_context (display);
   gdk_app_launch_context_set_screen (context, gtk_widget_get_screen (mi));
   gdk_app_launch_context_set_timestamp (context, gtk_get_current_event_time ());
 
@@ -709,11 +728,14 @@ directory_menu_plugin_menu_open (GtkWidget   *mi,
     }
 
   if (!result
+#ifdef EXO_CHECK_VERSION
       && !exo_execute_preferred_application_on_screen (category,
                                                        path_as_arg ? working_dir : NULL,
                                                        working_dir,
                                                        NULL,
-                                                       gtk_widget_get_screen (mi), &error))
+                                                       gtk_widget_get_screen (mi), &error)
+#endif
+     )
     {
       xfce_dialog_show_error (NULL, error,
           _("Failed to execute the preferred application for category \"%s\""), category);
@@ -754,7 +776,7 @@ directory_menu_plugin_menu_unload (GtkWidget *menu)
 {
   /* delay destruction so we can handle the activate event first */
   gtk_container_foreach (GTK_CONTAINER (menu),
-     (GtkCallback) exo_gtk_object_destroy_later, NULL);
+     (GtkCallback) (void (*)(void)) panel_utils_destroy_later, NULL);
 }
 
 
@@ -789,26 +811,34 @@ directory_menu_plugin_menu_load (GtkWidget           *menu,
   if (G_UNLIKELY (dir == NULL))
     return;
 
+G_GNUC_BEGIN_IGNORE_DEPRECATIONS
   mi = gtk_image_menu_item_new_with_label (_("Open Folder"));
+G_GNUC_END_IGNORE_DEPRECATIONS
   gtk_menu_shell_append (GTK_MENU_SHELL (menu), mi);
   g_signal_connect_data (G_OBJECT (mi), "activate",
       G_CALLBACK (directory_menu_plugin_menu_open_folder),
-      g_object_ref (dir), (GClosureNotify) g_object_unref, 0);
+      g_object_ref (dir), (GClosureNotify) (void (*)(void)) g_object_unref, 0);
   gtk_widget_show (mi);
 
-  image = gtk_image_new_from_stock (GTK_STOCK_OPEN, menu_icon_size);
+  image = gtk_image_new_from_icon_name ("folder-open", GTK_ICON_SIZE_MENU);
+G_GNUC_BEGIN_IGNORE_DEPRECATIONS
   gtk_image_menu_item_set_image (GTK_IMAGE_MENU_ITEM (mi), image);
+G_GNUC_END_IGNORE_DEPRECATIONS
   gtk_widget_show (image);
 
+G_GNUC_BEGIN_IGNORE_DEPRECATIONS
   mi = gtk_image_menu_item_new_with_label (_("Open in Terminal"));
+G_GNUC_END_IGNORE_DEPRECATIONS
   gtk_menu_shell_append (GTK_MENU_SHELL (menu), mi);
   g_signal_connect_data (G_OBJECT (mi), "activate",
       G_CALLBACK (directory_menu_plugin_menu_open_terminal),
-      g_object_ref (dir), (GClosureNotify) g_object_unref, 0);
+      g_object_ref (dir), (GClosureNotify) (void (*)(void)) g_object_unref, 0);
   gtk_widget_show (mi);
 
-  image = gtk_image_new_from_icon_name ("terminal", menu_icon_size);
+  image = gtk_image_new_from_icon_name ("utilities-terminal", GTK_ICON_SIZE_MENU);
+G_GNUC_BEGIN_IGNORE_DEPRECATIONS
   gtk_image_menu_item_set_image (GTK_IMAGE_MENU_ITEM (mi), image);
+G_GNUC_END_IGNORE_DEPRECATIONS
   gtk_widget_show (image);
 
   iter = g_file_enumerate_children (dir, G_FILE_ATTRIBUTE_STANDARD_DISPLAY_NAME
@@ -901,7 +931,7 @@ directory_menu_plugin_menu_load (GtkWidget           *menu,
                   icon = g_app_info_get_icon (G_APP_INFO (desktopinfo));
 
                   /* ignore invalid or hidden files */
-                  if (exo_str_is_empty (display_name)
+                  if (panel_str_is_empty (display_name)
                       || g_desktop_app_info_get_is_hidden (desktopinfo))
                     {
                       g_object_unref (G_OBJECT (desktopinfo));
@@ -913,7 +943,9 @@ directory_menu_plugin_menu_load (GtkWidget           *menu,
             }
 #endif
 
+G_GNUC_BEGIN_IGNORE_DEPRECATIONS
           mi = gtk_image_menu_item_new_with_label (display_name);
+G_GNUC_END_IGNORE_DEPRECATIONS
           gtk_menu_shell_append (GTK_MENU_SHELL (menu), mi);
           gtk_widget_show (mi);
 
@@ -921,8 +953,10 @@ directory_menu_plugin_menu_load (GtkWidget           *menu,
             icon = g_file_info_get_icon (info);
           if (G_LIKELY (icon != NULL))
             {
-              image = gtk_image_new_from_gicon (icon, menu_icon_size);
+              image = gtk_image_new_from_gicon (icon, GTK_ICON_SIZE_MENU);
+G_GNUC_BEGIN_IGNORE_DEPRECATIONS
               gtk_image_menu_item_set_image (GTK_IMAGE_MENU_ITEM (mi), image);
+G_GNUC_END_IGNORE_DEPRECATIONS
               gtk_widget_show (image);
             }
 
@@ -942,12 +976,12 @@ directory_menu_plugin_menu_load (GtkWidget           *menu,
           else if (G_UNLIKELY (desktopinfo != NULL))
             {
               description = g_app_info_get_description (G_APP_INFO (desktopinfo));
-              if (!exo_str_is_empty (description))
+              if (!panel_str_is_empty (description))
                 gtk_widget_set_tooltip_text (mi, description);
 
               g_signal_connect_data (G_OBJECT (mi), "activate",
                   G_CALLBACK (directory_menu_plugin_menu_launch_desktop_file),
-                  desktopinfo, (GClosureNotify) g_object_unref, 0);
+                  desktopinfo, (GClosureNotify) (void (*)(void)) g_object_unref, 0);
 
               g_object_unref (G_OBJECT (file));
             }
@@ -956,7 +990,7 @@ directory_menu_plugin_menu_load (GtkWidget           *menu,
             {
               g_signal_connect_data (G_OBJECT (mi), "activate",
                   G_CALLBACK (directory_menu_plugin_menu_launch), file,
-                  (GClosureNotify) g_object_unref, 0);
+                  (GClosureNotify) (void (*)(void)) g_object_unref, 0);
             }
 
           g_object_unref (G_OBJECT (info));
@@ -983,14 +1017,16 @@ directory_menu_plugin_menu (GtkWidget           *button,
 
   menu = gtk_menu_new ();
   g_signal_connect (G_OBJECT (menu), "deactivate",
-      G_CALLBACK (directory_menu_plugin_selection_done), button);
+      G_CALLBACK (directory_menu_plugin_selection_done), plugin);
 
   g_object_set_qdata_full (G_OBJECT (menu), menu_file,
                            g_object_ref (plugin->base_directory),
                            g_object_unref);
   directory_menu_plugin_menu_load (menu, plugin);
-
-  gtk_menu_popup (GTK_MENU (menu), NULL, NULL,
-                  button != NULL ? xfce_panel_plugin_position_menu : NULL,
-                  plugin, 1, gtk_get_current_event_time ());
+  gtk_menu_popup_at_widget (GTK_MENU (menu), button,
+                            xfce_panel_plugin_get_orientation (XFCE_PANEL_PLUGIN (plugin)) == GTK_ORIENTATION_VERTICAL
+                            ? GDK_GRAVITY_NORTH_EAST : GDK_GRAVITY_SOUTH_WEST,
+                            GDK_GRAVITY_NORTH_WEST,
+                            NULL);
+  xfce_panel_plugin_block_autohide (XFCE_PANEL_PLUGIN (plugin), TRUE);
 }

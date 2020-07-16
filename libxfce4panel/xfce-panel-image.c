@@ -148,7 +148,7 @@ static GdkPixbuf *xfce_panel_image_scale_pixbuf         (GdkPixbuf       *source
 
 
 
-G_DEFINE_TYPE (XfcePanelImage, xfce_panel_image, GTK_TYPE_WIDGET)
+G_DEFINE_TYPE_WITH_PRIVATE (XfcePanelImage, xfce_panel_image, GTK_TYPE_WIDGET)
 
 
 
@@ -157,8 +157,6 @@ xfce_panel_image_class_init (XfcePanelImageClass *klass)
 {
   GObjectClass   *gobject_class;
   GtkWidgetClass *gtkwidget_class;
-
-  g_type_class_add_private (klass, sizeof (XfcePanelImagePrivate));
 
   gobject_class = G_OBJECT_CLASS (klass);
   gobject_class->set_property = xfce_panel_image_set_property;
@@ -224,7 +222,7 @@ xfce_panel_image_init (XfcePanelImage *image)
 {
   gtk_widget_set_has_window (GTK_WIDGET (image), FALSE);
 
-  image->priv = G_TYPE_INSTANCE_GET_PRIVATE (image, XFCE_TYPE_PANEL_IMAGE, XfcePanelImagePrivate);
+  image->priv = xfce_panel_image_get_instance_private (image);
 
   image->priv->pixbuf = NULL;
   image->priv->cache = NULL;
@@ -308,7 +306,6 @@ xfce_panel_image_finalize (GObject *object)
 
 
 
-//#if GTK_CHECK_VERSION (3, 0, 0) && !GTK_CHECK_VERSION (3, 10, 0)
 #if GTK_CHECK_VERSION (3, 0, 0)
 #define GTK_BUTTON_SIZING_FIX
 #endif
@@ -501,10 +498,12 @@ xfce_panel_image_draw (GtkWidget *widget,
   XfcePanelImagePrivate *priv = XFCE_PANEL_IMAGE (widget)->priv;
   gint                   source_width, source_height;
   gint                   dest_x, dest_y;
-  GtkIconSource         *source;
   GdkPixbuf             *rendered = NULL;
   GdkPixbuf             *pixbuf = priv->cache;
   GtkStyleContext       *context;
+  GdkScreen             *screen;
+  GtkIconTheme          *icon_theme;
+  GtkIconInfo           *icon_info;
 
   if (G_LIKELY (pixbuf != NULL))
     {
@@ -520,10 +519,10 @@ xfce_panel_image_draw (GtkWidget *widget,
 
       if (!gtk_widget_is_sensitive (widget))
         {
-          source = gtk_icon_source_new ();
-          gtk_icon_source_set_pixbuf (source, pixbuf);
-          rendered = gtk_render_icon_pixbuf (context, source, -1);
-          gtk_icon_source_free (source);
+          screen = gtk_widget_get_screen (widget);
+          icon_theme = gtk_icon_theme_get_for_screen (screen);
+          icon_info = gtk_icon_info_new_for_pixbuf (icon_theme, pixbuf);
+          rendered = gtk_icon_info_load_icon (icon_info, NULL);
 
           if (G_LIKELY (rendered != NULL))
             pixbuf = rendered;
@@ -702,7 +701,7 @@ xfce_panel_image_load (gpointer data)
   if (priv->pixbuf != NULL)
     {
       /* use the pixbuf set by the user */
-      pixbuf = g_object_ref (G_OBJECT (priv->pixbuf));
+      pixbuf = (GdkPixbuf *) g_object_ref (G_OBJECT (priv->pixbuf));
 
       if (G_LIKELY (pixbuf != NULL))
         {
@@ -756,7 +755,7 @@ xfce_panel_image_scale_pixbuf (GdkPixbuf *source,
 
   /* check if we need to scale */
   if (source_width <= dest_width && source_height <= dest_height)
-    return g_object_ref (G_OBJECT (source));
+    return (GdkPixbuf *) g_object_ref (G_OBJECT (source));
 
   /* calculate the new dimensions */
 
@@ -792,7 +791,7 @@ xfce_panel_image_new (void)
 
 /**
  * xfce_panel_image_new_from_pixbuf:
- * @pixbuf : a #GdkPixbuf, or %NULL.
+ * @pixbuf : (allow-none): a #GdkPixbuf, or %NULL.
  *
  * Creates a new #XfcePanelImage displaying @pixbuf. #XfcePanelImage
  * will add its own reference rather than adopting yours. You don't
@@ -817,7 +816,7 @@ xfce_panel_image_new_from_pixbuf (GdkPixbuf *pixbuf)
 
 /**
  * xfce_panel_image_new_from_source:
- * @source : source of the image. This can be an absolute path or
+ * @source : (allow-none): source of the image. This can be an absolute path or
  *           an icon-name or %NULL.
  *
  * Creates a new #XfcePanelImage displaying @source. #XfcePanelImage
@@ -844,7 +843,7 @@ xfce_panel_image_new_from_source (const gchar *source)
 /**
  * xfce_panel_image_set_from_pixbuf:
  * @image  : an #XfcePanelImage.
- * @pixbuf : a #GdkPixbuf, or %NULL.
+ * @pixbuf : (allow-none): a #GdkPixbuf, or %NULL.
  *
  * See xfce_panel_image_new_from_pixbuf() for details.
  *
@@ -871,7 +870,7 @@ xfce_panel_image_set_from_pixbuf (XfcePanelImage *image,
 /**
  * xfce_panel_image_set_from_source:
  * @image  : an #XfcePanelImage.
- * @source : source of the image. This can be an absolute path or
+ * @source : (allow-none): source of the image. This can be an absolute path or
  *           an icon-name or %NULL.
  *
  * See xfce_panel_image_new_from_source() for details.

@@ -29,6 +29,10 @@
 
 
 
+#define DRAG_ACTIVATE_TIMEOUT (500)
+
+
+
 static void     show_desktop_plugin_screen_changed          (GtkWidget              *widget,
                                                              GdkScreen              *previous_screen);
 static void     show_desktop_plugin_construct               (XfcePanelPlugin        *panel_plugin);
@@ -41,6 +45,16 @@ static gboolean show_desktop_plugin_button_release_event    (GtkToggleButton    
                                                              GdkEventButton         *event,
                                                              ShowDesktopPlugin      *plugin);
 static void     show_desktop_plugin_showing_desktop_changed (WnckScreen             *wnck_screen,
+                                                             ShowDesktopPlugin      *plugin);
+static void     show_desktop_plugin_drag_leave              (GtkWidget              *widget,
+                                                             GdkDragContext         *context,
+                                                             guint                   time,
+                                                             ShowDesktopPlugin      *plugin);
+static gboolean show_desktop_plugin_drag_motion             (GtkWidget              *widget,
+                                                             GdkDragContext         *context,
+                                                             gint                    x,
+                                                             gint                    y,
+                                                             guint                   time,
                                                              ShowDesktopPlugin      *plugin);
 
 
@@ -56,6 +70,10 @@ struct _ShowDesktopPlugin
 
   /* the toggle button */
   GtkWidget  *button;
+  GtkWidget  *icon;
+
+  /* Dnd timeout */
+  guint       drag_timeout;
 
   /* the wnck screen */
   WnckScreen *wnck_screen;
@@ -84,7 +102,7 @@ show_desktop_plugin_class_init (ShowDesktopPluginClass *klass)
 static void
 show_desktop_plugin_init (ShowDesktopPlugin *plugin)
 {
-  GtkWidget *button, *image;
+  GtkWidget *button;
 
   plugin->wnck_screen = NULL;
 
@@ -104,9 +122,16 @@ show_desktop_plugin_init (ShowDesktopPlugin *plugin)
   xfce_panel_plugin_add_action_widget (XFCE_PANEL_PLUGIN (plugin), button);
   gtk_widget_show (button);
 
-  image = xfce_panel_image_new_from_source ("user-desktop");
-  gtk_container_add (GTK_CONTAINER (button), image);
-  gtk_widget_show (image);
+  /* allow toggle the button when drag something.*/
+  gtk_drag_dest_set (GTK_WIDGET (plugin->button), 0, NULL, 0, 0);
+  g_signal_connect (G_OBJECT (plugin->button), "drag_motion",
+      G_CALLBACK (show_desktop_plugin_drag_motion), plugin);
+  g_signal_connect (G_OBJECT (plugin->button), "drag_leave",
+      G_CALLBACK (show_desktop_plugin_drag_leave), plugin);
+
+  plugin->icon = gtk_image_new_from_icon_name ("user-desktop", GTK_ICON_SIZE_MENU);
+  gtk_container_add (GTK_CONTAINER (button), plugin->icon);
+  gtk_widget_show (plugin->icon);
 }
 
 
@@ -131,7 +156,9 @@ show_desktop_plugin_screen_changed (GtkWidget *widget,
 
   /* get the new wnck screen */
   screen = gtk_widget_get_screen (widget);
+G_GNUC_BEGIN_IGNORE_DEPRECATIONS
   wnck_screen = wnck_screen_get (gdk_screen_get_number (screen));
+G_GNUC_END_IGNORE_DEPRECATIONS
   panel_return_if_fail (WNCK_IS_SCREEN (wnck_screen));
 
   /* leave when the wnck screen did not change */
@@ -179,11 +206,16 @@ static gboolean
 show_desktop_plugin_size_changed (XfcePanelPlugin *panel_plugin,
                                   gint             size)
 {
+  ShowDesktopPlugin *plugin = XFCE_SHOW_DESKTOP_PLUGIN (panel_plugin);
+  gint  icon_size;
+
   panel_return_val_if_fail (XFCE_IS_SHOW_DESKTOP_PLUGIN (panel_plugin), FALSE);
 
   /* keep the button squared */
   size /= xfce_panel_plugin_get_nrows (panel_plugin);
   gtk_widget_set_size_request (GTK_WIDGET (panel_plugin), size, size);
+  icon_size = xfce_panel_plugin_get_icon_size (panel_plugin);
+  gtk_image_set_pixel_size (GTK_IMAGE (plugin->icon), icon_size);
 
   return TRUE;
 }
@@ -265,4 +297,58 @@ show_desktop_plugin_showing_desktop_changed (WnckScreen        *wnck_screen,
   /* update button to user action */
   gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (plugin->button),
       wnck_screen_get_showing_desktop (wnck_screen));
+}
+
+
+
+static gboolean
+show_desktop_plugin_drag_timeout (gpointer data)
+{
+  ShowDesktopPlugin *plugin = (ShowDesktopPlugin *) data;
+
+  plugin->drag_timeout = 0;
+
+  /* activate button to toggle show desktop */
+  g_signal_emit_by_name (G_OBJECT (plugin->button), "clicked", plugin);
+
+  return FALSE;
+}
+
+
+
+static void
+show_desktop_plugin_drag_leave (GtkWidget         *widget,
+                                GdkDragContext    *context,
+                                guint              time,
+                                ShowDesktopPlugin *plugin)
+{
+  if (plugin->drag_timeout != 0)
+    {
+      g_source_remove (plugin->drag_timeout);
+      plugin->drag_timeout = 0;
+    }
+
+  gtk_drag_unhighlight (GTK_WIDGET (widget));
+}
+
+
+
+static gboolean
+show_desktop_plugin_drag_motion (GtkWidget         *widget,
+                                 GdkDragContext    *context,
+                                 gint               x,
+                                 gint               y,
+                                 guint              time,
+                                 ShowDesktopPlugin *plugin)
+{
+  if (plugin->drag_timeout == 0)
+    plugin->drag_timeout = g_timeout_add (DRAG_ACTIVATE_TIMEOUT,
+                                          show_desktop_plugin_drag_timeout,
+                                          plugin);
+
+  gtk_drag_highlight (GTK_WIDGET (widget));
+
+  gdk_drag_status (context, 0, time);
+
+  return TRUE;
 }

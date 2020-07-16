@@ -28,7 +28,7 @@
 #endif
 
 #include <gtk/gtk.h>
-#include <exo/exo.h>
+#include <libxfce4ui/libxfce4ui.h>
 #include <libwnck/libwnck.h>
 #include <libxfce4panel/libxfce4panel.h>
 #include <common/panel-private.h>
@@ -40,13 +40,13 @@
 #include <X11/extensions/shape.h>
 #endif
 
+
 #include "tasklist-widget.h"
 
 
 
 #define DEFAULT_BUTTON_SIZE          (25)
 #define DEFAULT_MAX_BUTTON_LENGTH    (200)
-#define DEFAULT_MENU_ICON_SIZE       (16)
 #define DEFAULT_MIN_BUTTON_LENGTH    (DEFAULT_MAX_BUTTON_LENGTH / 4)
 #define DEFAULT_ICON_LUCENCY         (50)
 #define DEFAULT_ELLIPSIZE_MODE       (PANGO_ELLIPSIZE_END)
@@ -72,7 +72,6 @@
 #define xfce_tasklist_vertical(tasklist) ((tasklist)->mode == XFCE_PANEL_PLUGIN_MODE_VERTICAL)
 #define xfce_tasklist_deskbar(tasklist) ((tasklist)->mode == XFCE_PANEL_PLUGIN_MODE_DESKBAR)
 #define xfce_tasklist_filter_monitors(tasklist) (!(tasklist)->all_monitors && (tasklist)->n_monitors > 1)
-#define xfce_tasklist_geometry_set_invalid(tasklist) ((tasklist)->n_monitors = 0)
 
 
 
@@ -92,7 +91,8 @@ enum
   PROP_WINDOW_SCROLLING,
   PROP_WRAP_WINDOWS,
   PROP_INCLUDE_ALL_BLINKING,
-  PROP_MIDDLE_CLICK
+  PROP_MIDDLE_CLICK,
+  PROP_LABEL_DECORATIONS
 };
 
 struct _XfceTasklistClass
@@ -109,7 +109,7 @@ struct _XfceTasklist
 
   /* the screen of this tasklist */
   WnckScreen           *screen;
-  GdkScreen            *gdk_screen;
+  GdkDisplay           *display;
 
   /* window children in the tasklist */
   GList                *windows;
@@ -161,12 +161,13 @@ struct _XfceTasklist
   /* action to preform when middle clicking */
   XfceTasklistMClick    middle_click;
 
+  /* whether decorate labels when window is not visible */
+  guint                 label_decorations : 1;
+
   /* whether we only show windows that are in the geometry of
    * the monitor the tasklist is on */
   guint                 all_monitors : 1;
   guint                 n_monitors;
-  guint                 my_monitor;
-  GdkRectangle         *all_monitors_geometry;
 
   /* whether we show wireframes when hovering a button in
    * the tasklist */
@@ -198,7 +199,6 @@ struct _XfceTasklist
   gint                  max_button_size;
   PangoEllipsizeMode    ellipsize_mode;
   gint                  minimized_icon_lucency;
-  gint                  menu_icon_size;
   gint                  menu_max_width_chars;
 
   gint n_windows;
@@ -241,6 +241,7 @@ struct _XfceTasklistChild
 
   /* list of windows in case of a group button */
   GSList                 *windows;
+  gint                    n_windows;
 
   /* wnck information */
   WnckWindow             *window;
@@ -263,8 +264,15 @@ static void               xfce_tasklist_set_property                     (GObjec
                                                                           const GValue         *value,
                                                                           GParamSpec           *pspec);
 static void               xfce_tasklist_finalize                         (GObject              *object);
-static void               xfce_tasklist_size_request                     (GtkWidget            *widget,
-                                                                          GtkRequisition       *requisition);
+static void               xfce_tasklist_get_preferred_length             (GtkWidget            *widget,
+                                                                          gint                 *minimum_length,
+                                                                          gint                 *natural_length);
+static void               xfce_tasklist_get_preferred_width              (GtkWidget            *widget,
+                                                                          gint                 *minimum_width,
+                                                                          gint                 *natural_width);
+static void               xfce_tasklist_get_preferred_height             (GtkWidget            *widget,
+                                                                          gint                 *minimum_height,
+                                                                          gint                 *natural_height);
 static void               xfce_tasklist_size_allocate                    (GtkWidget            *widget,
                                                                           GtkAllocation        *allocation);
 static void               xfce_tasklist_style_set                        (GtkWidget            *widget,
@@ -284,7 +292,8 @@ static void               xfce_tasklist_arrow_button_toggled             (GtkWid
                                                                           XfceTasklist         *tasklist);
 static void               xfce_tasklist_connect_screen                   (XfceTasklist         *tasklist);
 static void               xfce_tasklist_disconnect_screen                (XfceTasklist         *tasklist);
-static void               xfce_tasklist_gdk_screen_changed               (GdkScreen            *gdk_screen,
+static gboolean           xfce_tasklist_configure_event                  (GtkWidget            *widget,
+                                                                          GdkEvent             *event,
                                                                           XfceTasklist         *tasklist);
 static void               xfce_tasklist_active_window_changed            (WnckScreen           *screen,
                                                                           WnckWindow           *previous_window,
@@ -330,9 +339,14 @@ static XfceTasklistChild *xfce_tasklist_button_new                       (WnckWi
                                                                           XfceTasklist         *tasklist);
 
 /* tasklist group buttons */
+static gboolean           xfce_tasklist_group_button_button_draw         (GtkWidget            *widget,
+                                                                          cairo_t         *cr,
+                                                                          XfceTasklistChild    *group_child);
 static void               xfce_tasklist_group_button_remove              (XfceTasklistChild    *group_child);
 static void               xfce_tasklist_group_button_add_window          (XfceTasklistChild    *group_child,
                                                                           XfceTasklistChild    *window_child);
+static void               xfce_tasklist_group_button_icon_changed        (WnckClassGroup       *class_group,
+                                                                          XfceTasklistChild    *group_child);
 static XfceTasklistChild *xfce_tasklist_group_button_new                 (WnckClassGroup       *class_group,
                                                                           XfceTasklist         *tasklist);
 
@@ -349,15 +363,13 @@ static void               xfce_tasklist_set_show_only_minimized          (XfceTa
                                                                           gboolean              only_minimized);
 static void               xfce_tasklist_set_show_wireframes              (XfceTasklist         *tasklist,
                                                                           gboolean              show_wireframes);
+static void               xfce_tasklist_set_label_decorations            (XfceTasklist         *tasklist,
+                                                                          gboolean              label_decorations);
 static void               xfce_tasklist_set_grouping                     (XfceTasklist         *tasklist,
                                                                           XfceTasklistGrouping  grouping);
 
 
 G_DEFINE_TYPE (XfceTasklist, xfce_tasklist, GTK_TYPE_CONTAINER)
-
-
-
-static GtkIconSize menu_icon_size = GTK_ICON_SIZE_INVALID;
 
 
 
@@ -374,7 +386,8 @@ xfce_tasklist_class_init (XfceTasklistClass *klass)
   gobject_class->finalize = xfce_tasklist_finalize;
 
   gtkwidget_class = GTK_WIDGET_CLASS (klass);
-  gtkwidget_class->size_request = xfce_tasklist_size_request;
+  gtkwidget_class->get_preferred_width = xfce_tasklist_get_preferred_width;
+  gtkwidget_class->get_preferred_height = xfce_tasklist_get_preferred_height;
   gtkwidget_class->size_allocate = xfce_tasklist_size_allocate;
   gtkwidget_class->style_set = xfce_tasklist_style_set;
   gtkwidget_class->realize = xfce_tasklist_realize;
@@ -394,63 +407,63 @@ xfce_tasklist_class_init (XfceTasklistClass *klass)
                                                       XFCE_TASKLIST_GROUPING_MIN,
                                                       XFCE_TASKLIST_GROUPING_MAX + 1 /* TODO drop this later */,
                                                       XFCE_TASKLIST_GROUPING_DEFAULT,
-                                                      EXO_PARAM_READWRITE));
+                                                      G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
 
   g_object_class_install_property (gobject_class,
                                    PROP_INCLUDE_ALL_WORKSPACES,
                                    g_param_spec_boolean ("include-all-workspaces",
                                                          NULL, NULL,
                                                          FALSE,
-                                                         EXO_PARAM_READWRITE));
+                                                         G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
 
   g_object_class_install_property (gobject_class,
                                    PROP_INCLUDE_ALL_MONITORS,
                                    g_param_spec_boolean ("include-all-monitors",
                                                          NULL, NULL,
                                                          TRUE,
-                                                         EXO_PARAM_READWRITE));
+                                                         G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
 
   g_object_class_install_property (gobject_class,
                                    PROP_FLAT_BUTTONS,
                                    g_param_spec_boolean ("flat-buttons",
                                                          NULL, NULL,
                                                          FALSE,
-                                                         EXO_PARAM_READWRITE));
+                                                         G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
 
   g_object_class_install_property (gobject_class,
                                    PROP_SWITCH_WORKSPACE_ON_UNMINIMIZE,
                                    g_param_spec_boolean ("switch-workspace-on-unminimize",
                                                          NULL, NULL,
                                                          TRUE,
-                                                         EXO_PARAM_READWRITE));
+                                                         G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
 
   g_object_class_install_property (gobject_class,
                                    PROP_SHOW_LABELS,
                                    g_param_spec_boolean ("show-labels",
                                                          NULL, NULL,
                                                          TRUE,
-                                                         EXO_PARAM_READWRITE));
+                                                         G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
 
   g_object_class_install_property (gobject_class,
                                    PROP_SHOW_ONLY_MINIMIZED,
                                    g_param_spec_boolean ("show-only-minimized",
                                                          NULL, NULL,
                                                          FALSE,
-                                                         EXO_PARAM_READWRITE));
+                                                         G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
 
   g_object_class_install_property (gobject_class,
                                    PROP_SHOW_WIREFRAMES,
                                    g_param_spec_boolean ("show-wireframes",
                                                          NULL, NULL,
                                                          FALSE,
-                                                         EXO_PARAM_READWRITE));
+                                                         G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
 
   g_object_class_install_property (gobject_class,
                                    PROP_SHOW_HANDLE,
                                    g_param_spec_boolean ("show-handle",
                                                          NULL, NULL,
                                                          TRUE,
-                                                         EXO_PARAM_READWRITE));
+                                                         G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
 
   g_object_class_install_property (gobject_class,
                                    PROP_SORT_ORDER,
@@ -459,28 +472,28 @@ xfce_tasklist_class_init (XfceTasklistClass *klass)
                                                       XFCE_TASKLIST_SORT_ORDER_MIN,
                                                       XFCE_TASKLIST_SORT_ORDER_MAX,
                                                       XFCE_TASKLIST_SORT_ORDER_DEFAULT,
-                                                      EXO_PARAM_READWRITE));
+                                                      G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
 
   g_object_class_install_property (gobject_class,
                                    PROP_WINDOW_SCROLLING,
                                    g_param_spec_boolean ("window-scrolling",
                                                          NULL, NULL,
                                                          TRUE,
-                                                         EXO_PARAM_READWRITE));
+                                                         G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
 
   g_object_class_install_property (gobject_class,
                                    PROP_WRAP_WINDOWS,
                                    g_param_spec_boolean ("wrap-windows",
                                                          NULL, NULL,
                                                          FALSE,
-                                                         EXO_PARAM_READWRITE));
+                                                         G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
 
   g_object_class_install_property (gobject_class,
                                    PROP_INCLUDE_ALL_BLINKING,
                                    g_param_spec_boolean ("include-all-blinking",
                                                          NULL, NULL,
                                                          TRUE,
-                                                         EXO_PARAM_READWRITE));
+                                                         G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
 
   g_object_class_install_property (gobject_class,
                                    PROP_MIDDLE_CLICK,
@@ -489,7 +502,14 @@ xfce_tasklist_class_init (XfceTasklistClass *klass)
                                                       XFCE_TASKLIST_MIDDLE_CLICK_MIN,
                                                       XFCE_TASKLIST_MIDDLE_CLICK_MAX,
                                                       XFCE_TASKLIST_MIDDLE_CLICK_DEFAULT,
-                                                      EXO_PARAM_READWRITE));
+                                                      G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
+
+  g_object_class_install_property (gobject_class,
+                                   PROP_LABEL_DECORATIONS,
+                                   g_param_spec_boolean ("label-decorations",
+                                                         NULL, NULL,
+                                                         TRUE,
+                                                         G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
 
   gtk_widget_class_install_style_property (gtkwidget_class,
                                            g_param_spec_int ("max-button-length",
@@ -497,7 +517,7 @@ xfce_tasklist_class_init (XfceTasklistClass *klass)
                                                              "The maximum length of a window button",
                                                              -1, G_MAXINT,
                                                              DEFAULT_MAX_BUTTON_LENGTH,
-                                                             EXO_PARAM_READABLE));
+                                                             G_PARAM_READABLE | G_PARAM_STATIC_STRINGS));
 
   gtk_widget_class_install_style_property (gtkwidget_class,
                                            g_param_spec_int ("min-button-length",
@@ -505,7 +525,7 @@ xfce_tasklist_class_init (XfceTasklistClass *klass)
                                                              "The minimum length of a window button",
                                                              1, G_MAXINT,
                                                              DEFAULT_MIN_BUTTON_LENGTH,
-                                                             EXO_PARAM_READABLE));
+                                                             G_PARAM_READABLE | G_PARAM_STATIC_STRINGS));
 
   gtk_widget_class_install_style_property (gtkwidget_class,
                                            g_param_spec_int ("max-button-size",
@@ -513,7 +533,7 @@ xfce_tasklist_class_init (XfceTasklistClass *klass)
                                                              "The maximum size of a window button",
                                                              1, G_MAXINT,
                                                              DEFAULT_BUTTON_SIZE,
-                                                             EXO_PARAM_READABLE));
+                                                             G_PARAM_READABLE | G_PARAM_STATIC_STRINGS));
 
   gtk_widget_class_install_style_property (gtkwidget_class,
                                            g_param_spec_enum ("ellipsize-mode",
@@ -521,7 +541,7 @@ xfce_tasklist_class_init (XfceTasklistClass *klass)
                                                               "The ellipsize mode used for the button label",
                                                               PANGO_TYPE_ELLIPSIZE_MODE,
                                                               DEFAULT_ELLIPSIZE_MODE,
-                                                              EXO_PARAM_READABLE));
+                                                              G_PARAM_READABLE | G_PARAM_STATIC_STRINGS));
 
   gtk_widget_class_install_style_property (gtkwidget_class,
                                            g_param_spec_int ("minimized-icon-lucency",
@@ -529,20 +549,15 @@ xfce_tasklist_class_init (XfceTasklistClass *klass)
                                                              "Lucent percentage of minimized icons",
                                                              0, 100,
                                                              DEFAULT_ICON_LUCENCY,
-                                                             EXO_PARAM_READABLE));
+                                                             G_PARAM_READABLE | G_PARAM_STATIC_STRINGS));
   gtk_widget_class_install_style_property (gtkwidget_class,
                                            g_param_spec_int ("menu-max-width-chars",
                                                              NULL,
                                                              "Maximum chars in the overflow menu labels",
                                                              0, G_MAXINT,
                                                              DEFAULT_MENU_MAX_WIDTH_CHARS,
-                                                             EXO_PARAM_READABLE));
+                                                             G_PARAM_READABLE | G_PARAM_STATIC_STRINGS));
 
-  menu_icon_size = gtk_icon_size_from_name ("panel-tasklist-menu");
-  if (menu_icon_size == GTK_ICON_SIZE_INVALID)
-    menu_icon_size = gtk_icon_size_register ("panel-tasklist-menu",
-                                             DEFAULT_MENU_ICON_SIZE,
-                                             DEFAULT_MENU_ICON_SIZE);
 }
 
 
@@ -550,7 +565,9 @@ xfce_tasklist_class_init (XfceTasklistClass *klass)
 static void
 xfce_tasklist_init (XfceTasklist *tasklist)
 {
-  GTK_WIDGET_SET_FLAGS (tasklist, GTK_NO_WINDOW);
+  GtkStyleContext *context;
+
+  gtk_widget_set_has_window (GTK_WIDGET (tasklist), FALSE);
 
   tasklist->locked = 0;
   tasklist->screen = NULL;
@@ -567,12 +584,11 @@ xfce_tasklist_init (XfceTasklist *tasklist)
   tasklist->show_handle = TRUE;
   tasklist->all_monitors = TRUE;
   tasklist->n_monitors = 0;
-  tasklist->all_monitors_geometry = NULL;
   tasklist->window_scrolling = TRUE;
   tasklist->wrap_windows = FALSE;
   tasklist->all_blinking = TRUE;
   tasklist->middle_click = XFCE_TASKLIST_MIDDLE_CLICK_DEFAULT;
-  xfce_tasklist_geometry_set_invalid (tasklist);
+  tasklist->label_decorations = TRUE;
 #ifdef GDK_WINDOWING_X11
   tasklist->wireframe_window = 0;
 #endif
@@ -585,11 +601,14 @@ xfce_tasklist_init (XfceTasklist *tasklist)
   tasklist->ellipsize_mode = DEFAULT_ELLIPSIZE_MODE;
   tasklist->grouping = XFCE_TASKLIST_GROUPING_DEFAULT;
   tasklist->sort_order = XFCE_TASKLIST_SORT_ORDER_DEFAULT;
-  tasklist->menu_icon_size = DEFAULT_MENU_ICON_SIZE;
   tasklist->menu_max_width_chars = DEFAULT_MENU_MAX_WIDTH_CHARS;
   tasklist->class_groups = g_hash_table_new_full (g_direct_hash, g_direct_equal,
                                                   (GDestroyNotify) g_object_unref,
                                                   (GDestroyNotify) xfce_tasklist_group_button_remove);
+
+  /* add style class for the tasklist widget */
+  context = gtk_widget_get_style_context (GTK_WIDGET (tasklist));
+  gtk_style_context_add_class (context, "tasklist");
 
   /* widgets for the overflow menu */
   /* TODO support drag-motion and drag-leave */
@@ -600,6 +619,48 @@ xfce_tasklist_init (XfceTasklist *tasklist)
   g_signal_connect (G_OBJECT (tasklist->arrow_button), "toggled",
       G_CALLBACK (xfce_tasklist_arrow_button_toggled), tasklist);
   gtk_widget_show (tasklist->arrow_button);
+}
+
+
+
+static GdkPixbuf *
+xfce_tasklist_get_window_icon_from_theme (WnckWindow *window,
+                                          GdkPixbuf  *fallback)
+{
+  GdkPixbuf    *pixbuf;
+  int           size = gdk_pixbuf_get_width (fallback);
+  GtkIconTheme *theme = gtk_icon_theme_get_default ();
+  const char   *name = wnck_window_get_class_instance_name (window);
+
+  /* return the most likely icon if found */
+  pixbuf = gtk_icon_theme_load_icon (theme, name, size, GTK_ICON_LOOKUP_FORCE_SIZE, NULL);
+
+  if (pixbuf)
+    return pixbuf;
+
+  return fallback;
+}
+
+
+
+static GdkPixbuf *
+xfce_tasklist_get_window_icon (WnckWindow *window,
+                               gboolean    show_labels,
+                               int         size,
+                               int         type)
+{
+  GdkPixbuf *pixbuf;
+
+  if (show_labels || type == CHILD_TYPE_GROUP_MENU || size <= 31)
+    pixbuf = wnck_window_get_mini_icon (window);
+  else
+    pixbuf = wnck_window_get_icon (window);
+
+  /* check if the icon is fallback, in that case just try with the theme */
+  if (wnck_window_get_icon_is_fallback (window))
+    pixbuf = xfce_tasklist_get_window_icon_from_theme (window, pixbuf);
+
+  return pixbuf;
 }
 
 
@@ -668,6 +729,10 @@ xfce_tasklist_get_property (GObject    *object,
 
     case PROP_MIDDLE_CLICK:
       g_value_set_uint (value, tasklist->middle_click);
+      break;
+
+    case PROP_LABEL_DECORATIONS:
+      g_value_set_boolean (value, tasklist->label_decorations);
       break;
 
     default:
@@ -752,6 +817,10 @@ xfce_tasklist_set_property (GObject      *object,
       tasklist->middle_click= g_value_get_uint (value);
       break;
 
+    case PROP_LABEL_DECORATIONS:
+      xfce_tasklist_set_label_decorations (tasklist, g_value_get_boolean (value));
+      break;
+
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -790,8 +859,55 @@ xfce_tasklist_finalize (GObject *object)
 
 
 static void
-xfce_tasklist_size_request (GtkWidget      *widget,
-                            GtkRequisition *requisition)
+xfce_tasklist_get_preferred_width (GtkWidget *widget,
+                                   gint      *minimum_width,
+                                   gint      *natural_width)
+{
+  XfceTasklist *tasklist = XFCE_TASKLIST (widget);
+
+  if (xfce_tasklist_horizontal (tasklist))
+    {
+      xfce_tasklist_get_preferred_length (widget, minimum_width, natural_width);
+    }
+  else
+    {
+      if (minimum_width != NULL)
+        *minimum_width = tasklist->size;
+
+      if (natural_width != NULL)
+        *natural_width = tasklist->size;
+    }
+}
+
+
+
+static void
+xfce_tasklist_get_preferred_height (GtkWidget *widget,
+                                    gint      *minimum_height,
+                                    gint      *natural_height)
+{
+  XfceTasklist *tasklist = XFCE_TASKLIST (widget);
+
+  if (!xfce_tasklist_horizontal (tasklist))
+    {
+      xfce_tasklist_get_preferred_length (widget, minimum_height, natural_height);
+    }
+  else
+    {
+      if (minimum_height != NULL)
+        *minimum_height = tasklist->size;
+
+      if (natural_height != NULL)
+        *natural_height = tasklist->size;
+    }
+}
+
+
+
+static void
+xfce_tasklist_get_preferred_length (GtkWidget *widget,
+                                    gint      *minimum_length,
+                                    gint      *natural_length)
 {
   XfceTasklist      *tasklist = XFCE_TASKLIST (widget);
   gint               rows, cols;
@@ -806,9 +922,9 @@ xfce_tasklist_size_request (GtkWidget      *widget,
     {
       child = li->data;
 
-      if (GTK_WIDGET_VISIBLE (child->button))
+      if (gtk_widget_get_visible (child->button))
         {
-          gtk_widget_size_request (child->button, &child_req);
+          gtk_widget_get_preferred_size (child->button, NULL, &child_req);
 
           /* child_height = MAX (child_height, child_req.height); */
           child_height = MAX (child_height, tasklist->size / tasklist->nrows);
@@ -847,22 +963,15 @@ xfce_tasklist_size_request (GtkWidget      *widget,
         length = cols * DEFAULT_MAX_BUTTON_LENGTH;
     }
 
-  /* set the requested sizes */
   if (xfce_tasklist_deskbar (tasklist) && tasklist->show_labels)
-    {
-      requisition->height = child_height * n_windows;
-      requisition->width = tasklist->size;
-    }
-  else if (xfce_tasklist_horizontal (tasklist))
-    {
-      requisition->width = length;
-      requisition->height = tasklist->size;
-    }
-  else
-    {
-      requisition->width = tasklist->size;
-      requisition->height = length;
-    }
+    length = child_height * n_windows;
+
+  /* set the requested sizes */
+  if (natural_length != NULL)
+    *natural_length = length;
+
+  if (minimum_length != NULL)
+    *minimum_length = (n_windows == 0) ? 0 : ARROW_BUTTON_SIZE;
 }
 
 
@@ -949,7 +1058,7 @@ xfce_tasklist_size_layout (XfceTasklist  *tasklist,
       for (li = tasklist->windows; li != NULL; li = li->next)
         {
           child = li->data;
-          if (GTK_WIDGET_VISIBLE (child->button))
+          if (gtk_widget_get_visible (child->button))
             {
               windows_scored = g_slist_insert_sorted (windows_scored, child,
                                                       xfce_tasklist_size_sort_window);
@@ -1035,10 +1144,10 @@ xfce_tasklist_size_allocate (GtkWidget     *widget,
   gint               arrow_position;
   GtkRequisition     child_req;
 
-  panel_return_if_fail (GTK_WIDGET_VISIBLE (tasklist->arrow_button));
+  panel_return_if_fail (gtk_widget_get_visible (tasklist->arrow_button));
 
   /* set widget allocation */
-  widget->allocation = *allocation;
+  gtk_widget_set_allocation (widget, allocation);
 
   /* swap integers with vertical orientation */
   if (!xfce_tasklist_horizontal (tasklist))
@@ -1090,7 +1199,7 @@ xfce_tasklist_size_allocate (GtkWidget     *widget,
       child = li->data;
 
       /* skip hidden buttons */
-      if (!GTK_WIDGET_VISIBLE (child->button))
+      if (!gtk_widget_get_visible (child->button))
         continue;
 
       if (G_LIKELY (child->type == CHILD_TYPE_WINDOW
@@ -1146,7 +1255,7 @@ xfce_tasklist_size_allocate (GtkWidget     *widget,
         }
       else
         {
-          gtk_widget_get_child_requisition (child->button, &child_req);
+          gtk_widget_get_preferred_size (child->button, NULL, &child_req);
 
           /* move the button offscreen */
           child_alloc.y = child_alloc.x = -9999;
@@ -1173,7 +1282,6 @@ xfce_tasklist_style_set (GtkWidget *widget,
   gint          max_button_length;
   gint          max_button_size;
   gint          min_button_length;
-  gint          w, h;
 
   /* let gtk update the widget style */
   (*GTK_WIDGET_CLASS (xfce_tasklist_parent_class)->style_set) (widget, previous_style);
@@ -1187,9 +1295,6 @@ xfce_tasklist_style_set (GtkWidget *widget,
                         "minimized-icon-lucency", &tasklist->minimized_icon_lucency,
                         "menu-max-width-chars", &tasklist->menu_max_width_chars,
                         NULL);
-
-  if (gtk_icon_size_lookup (menu_icon_size, &w, &h))
-    tasklist->menu_icon_size = MIN (w, h);
 
   /* update the widget */
   if (tasklist->max_button_length != max_button_length
@@ -1246,9 +1351,10 @@ static gboolean
 xfce_tasklist_scroll_event (GtkWidget      *widget,
                             GdkEventScroll *event)
 {
-  XfceTasklist      *tasklist = XFCE_TASKLIST (widget);
-  XfceTasklistChild *child = NULL;
-  GList             *li, *lnew = NULL;
+  XfceTasklist        *tasklist = XFCE_TASKLIST (widget);
+  XfceTasklistChild   *child = NULL;
+  GList               *li, *lnew = NULL;
+  GdkScrollDirection  scrolling_direction;
 
   if (!tasklist->window_scrolling)
     return TRUE;
@@ -1258,7 +1364,7 @@ xfce_tasklist_scroll_event (GtkWidget      *widget,
     {
       child = li->data;
 
-      if (GTK_WIDGET_VISIBLE (child->button)
+      if (gtk_widget_get_visible (child->button)
           && gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (child->button)))
         break;
     }
@@ -1266,7 +1372,23 @@ xfce_tasklist_scroll_event (GtkWidget      *widget,
   if (G_UNLIKELY (li == NULL))
     return TRUE;
 
-  switch (event->direction)
+  if (event->direction != GDK_SCROLL_SMOOTH)
+    scrolling_direction = event->direction;
+  else if (event->delta_y < 0)
+    scrolling_direction = GDK_SCROLL_UP;
+  else if (event->delta_y > 0)
+    scrolling_direction = GDK_SCROLL_DOWN;
+  else if (event->delta_x < 0)
+    scrolling_direction = GDK_SCROLL_LEFT;
+  else if (event->delta_x > 0)
+    scrolling_direction = GDK_SCROLL_RIGHT;
+  else
+    {
+      panel_debug_filtered (PANEL_DEBUG_TASKLIST, "scrolling event with no delta happened");
+      return TRUE;
+    }
+
+  switch (scrolling_direction)
     {
     case GDK_SCROLL_UP:
       /* find previous button on the tasklist */
@@ -1274,7 +1396,7 @@ xfce_tasklist_scroll_event (GtkWidget      *widget,
         {
           child = lnew->data;
           if (child->window != NULL
-              && GTK_WIDGET_VISIBLE (child->button))
+              && gtk_widget_get_visible (child->button))
             break;
         }
 
@@ -1288,7 +1410,7 @@ xfce_tasklist_scroll_event (GtkWidget      *widget,
         {
           child = lnew->data;
           if (child->window != NULL
-              && GTK_WIDGET_VISIBLE (child->button))
+              && gtk_widget_get_visible (child->button))
             break;
         }
 
@@ -1303,6 +1425,11 @@ xfce_tasklist_scroll_event (GtkWidget      *widget,
     case GDK_SCROLL_RIGHT:
       /* TODO */
       break;
+
+    default:
+      panel_debug_filtered (PANEL_DEBUG_TASKLIST, "unknown scrolling event type");
+      break;
+
     }
 
   if (lnew != NULL)
@@ -1330,7 +1457,7 @@ xfce_tasklist_remove (GtkContainer *container,
         {
           tasklist->windows = g_list_delete_link (tasklist->windows, li);
 
-          was_visible = GTK_WIDGET_VISIBLE (widget);
+          was_visible = gtk_widget_get_visible (widget);
 
           gtk_widget_unparent (child->button);
 
@@ -1434,10 +1561,11 @@ xfce_tasklist_arrow_button_toggled (GtkWidget    *button,
         }
 
       gtk_menu_attach_to_widget (GTK_MENU (menu), button, NULL);
-      gtk_menu_popup (GTK_MENU (menu), NULL, NULL,
-                      xfce_panel_plugin_position_menu,
-                      xfce_tasklist_get_panel_plugin (tasklist),
-                      1, gtk_get_current_event_time ());
+      gtk_menu_popup_at_widget (GTK_MENU (menu), button,
+                                xfce_tasklist_vertical (tasklist)
+                                ? GDK_GRAVITY_NORTH_EAST : GDK_GRAVITY_SOUTH_WEST,
+                                GDK_GRAVITY_NORTH_WEST,
+                                NULL);
     }
 }
 
@@ -1446,26 +1574,33 @@ xfce_tasklist_arrow_button_toggled (GtkWidget    *button,
 static void
 xfce_tasklist_connect_screen (XfceTasklist *tasklist)
 {
-  GList *windows, *li;
+  GList     *windows, *li;
+  GdkScreen *screen;
 
   panel_return_if_fail (XFCE_IS_TASKLIST (tasklist));
   panel_return_if_fail (tasklist->screen == NULL);
-  panel_return_if_fail (tasklist->gdk_screen == NULL);
+  panel_return_if_fail (tasklist->display == NULL);
+
+  /* set the display */
+  tasklist->display = gtk_widget_get_display (GTK_WIDGET (tasklist));
 
   /* set the new screen */
-  tasklist->gdk_screen = gtk_widget_get_screen (GTK_WIDGET (tasklist));
-  tasklist->screen = wnck_screen_get (gdk_screen_get_number (tasklist->gdk_screen));
+  /* We need the screen number for Wnck. We could use wnck_screen_get_default
+     but that might not be correct everywhere. */
+G_GNUC_BEGIN_IGNORE_DEPRECATIONS
+  screen = gtk_widget_get_screen (GTK_WIDGET (tasklist));
+  tasklist->screen = wnck_screen_get (gdk_screen_get_number (screen));
+G_GNUC_END_IGNORE_DEPRECATIONS
 
   /* add all existing windows on this screen */
   windows = wnck_screen_get_windows (tasklist->screen);
   for (li = windows; li != NULL; li = li->next)
     xfce_tasklist_window_added (tasklist->screen, li->data, tasklist);
 
-  /* monitor gdk changes */
-  g_signal_connect (G_OBJECT (tasklist->gdk_screen), "monitors-changed",
-      G_CALLBACK (xfce_tasklist_gdk_screen_changed), tasklist);
-  g_signal_connect (G_OBJECT (tasklist->gdk_screen), "size-changed",
-      G_CALLBACK (xfce_tasklist_gdk_screen_changed), tasklist);
+  /* monitor window movement */
+  g_signal_connect (G_OBJECT (gtk_widget_get_toplevel (GTK_WIDGET (tasklist))),
+                    "configure-event",
+                    G_CALLBACK (xfce_tasklist_configure_event), tasklist);
 
   /* monitor screen changes */
   g_signal_connect (G_OBJECT (tasklist->screen), "active-window-changed",
@@ -1480,7 +1615,11 @@ xfce_tasklist_connect_screen (XfceTasklist *tasklist)
       G_CALLBACK (xfce_tasklist_viewports_changed), tasklist);
 
   /* update the viewport if not all monitors are shown */
-  xfce_tasklist_gdk_screen_changed (tasklist->gdk_screen, tasklist);
+  if (!tasklist->all_monitors)
+  {
+    /* update the monitor geometry */
+    xfce_tasklist_update_monitor_geometry (tasklist);
+  }
 }
 
 
@@ -1495,16 +1634,16 @@ xfce_tasklist_disconnect_screen (XfceTasklist *tasklist)
 
   panel_return_if_fail (XFCE_IS_TASKLIST (tasklist));
   panel_return_if_fail (WNCK_IS_SCREEN (tasklist->screen));
-  panel_return_if_fail (GDK_IS_SCREEN (tasklist->gdk_screen));
+
+  /* disconnect configure-event signal */
+  g_signal_handlers_disconnect_by_func (
+      G_OBJECT (gtk_widget_get_toplevel (GTK_WIDGET (tasklist))),
+      G_CALLBACK (xfce_tasklist_configure_event), tasklist);
 
   /* disconnect monitor signals */
   n = g_signal_handlers_disconnect_matched (G_OBJECT (tasklist->screen),
       G_SIGNAL_MATCH_DATA, 0, 0, NULL, NULL, tasklist);
   panel_return_if_fail (n == 5);
-
-  /* disconnect geometry changed signals */
-  g_signal_handlers_disconnect_by_func (G_OBJECT (tasklist->gdk_screen),
-      G_CALLBACK (xfce_tasklist_gdk_screen_changed), tasklist);
 
   /* delete all known class groups (and their buttons) */
   g_hash_table_remove_all (tasklist->class_groups);
@@ -1533,24 +1672,24 @@ xfce_tasklist_disconnect_screen (XfceTasklist *tasklist)
   panel_assert (tasklist->skipped_windows == NULL);
 
   tasklist->screen = NULL;
-  tasklist->gdk_screen = NULL;
+  tasklist->display = NULL;
 }
 
 
 
-static void
-xfce_tasklist_gdk_screen_changed (GdkScreen    *gdk_screen,
-                                  XfceTasklist *tasklist)
+static gboolean
+xfce_tasklist_configure_event (GtkWidget    *widget,
+                               GdkEvent     *event,
+                               XfceTasklist *tasklist)
 {
-  panel_return_if_fail (XFCE_IS_TASKLIST (tasklist));
-  panel_return_if_fail (GDK_IS_SCREEN (gdk_screen));
-  panel_return_if_fail (tasklist->gdk_screen == gdk_screen);
+  panel_return_val_if_fail (XFCE_IS_TASKLIST (tasklist), FALSE);
 
   if (!tasklist->all_monitors)
     {
       /* update the monitor geometry */
       xfce_tasklist_update_monitor_geometry (tasklist);
     }
+  return FALSE;
 }
 
 
@@ -1561,6 +1700,7 @@ xfce_tasklist_active_window_changed (WnckScreen   *screen,
                                      XfceTasklist *tasklist)
 {
   WnckWindow        *active_window;
+  WnckClassGroup    *class_group = NULL;
   GList             *li;
   XfceTasklistChild *child;
 
@@ -1581,11 +1721,34 @@ xfce_tasklist_active_window_changed (WnckScreen   *screen,
 
       /* update timestamp for window */
       if (child->window == active_window)
-        g_get_current_time (&child->last_focused);
+        {
+          g_get_current_time (&child->last_focused);
+          /* the active window is in a group, so find the group button */
+          if (child->type == CHILD_TYPE_GROUP_MENU)
+            {
+              class_group = child->class_group;
+            }
+        }
 
       /* set the toggle button state */
       gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (child->button),
                                     !!(child->window == active_window));
+    }
+  /* set the toggle button state for the group button */
+  if (class_group)
+    {
+      for (li = tasklist->windows; li != NULL; li = li->next)
+      {
+        child = li->data;
+        if (child->type == CHILD_TYPE_GROUP
+          && child->class_group == class_group)
+          {
+            /* update the button's state and icon, the latter makes sure it is rendered correctly
+               if all previous group windows were minimized */
+            xfce_tasklist_group_button_icon_changed (child->class_group, child);
+            gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (child->button), TRUE);
+          }
+      }
     }
 
   /* release the lock */
@@ -1783,6 +1946,8 @@ xfce_tasklist_window_removed (WnckScreen   *screen,
           break;
         }
     }
+
+    gtk_widget_queue_resize (GTK_WIDGET (tasklist));
 }
 
 
@@ -1851,7 +2016,7 @@ xfce_tasklist_update_icon_geometries (gpointer data)
   XfceTasklist      *tasklist = XFCE_TASKLIST (data);
   GList             *li;
   XfceTasklistChild *child, *child2;
-  GtkAllocation     *alloc;
+  GtkAllocation      alloc;
   GSList            *lp;
   gint               root_x, root_y;
   GtkWidget         *toplevel;
@@ -1867,31 +2032,31 @@ xfce_tasklist_update_icon_geometries (gpointer data)
       switch (child->type)
         {
         case CHILD_TYPE_WINDOW:
-          alloc = &child->button->allocation;
+          gtk_widget_get_allocation (child->button, &alloc);
           panel_return_val_if_fail (WNCK_IS_WINDOW (child->window), FALSE);
-          wnck_window_set_icon_geometry (child->window, alloc->x + root_x,
-                                         alloc->y + root_y, alloc->width,
-                                         alloc->height);
+          wnck_window_set_icon_geometry (child->window, alloc.x + root_x,
+                                         alloc.y + root_y, alloc.width,
+                                         alloc.height);
           break;
 
         case CHILD_TYPE_GROUP:
-          alloc = &child->button->allocation;
+          gtk_widget_get_allocation (child->button, &alloc);
           for (lp = child->windows; lp != NULL; lp = lp->next)
             {
               child2 = lp->data;
               panel_return_val_if_fail (WNCK_IS_WINDOW (child2->window), FALSE);
-              wnck_window_set_icon_geometry (child2->window, alloc->x + root_x,
-                                             alloc->y + root_y, alloc->width,
-                                             alloc->height);
+              wnck_window_set_icon_geometry (child2->window, alloc.x + root_x,
+                                             alloc.y + root_y, alloc.width,
+                                             alloc.height);
             }
           break;
 
         case CHILD_TYPE_OVERFLOW_MENU:
-          alloc = &tasklist->arrow_button->allocation;
+          gtk_widget_get_allocation (tasklist->arrow_button, &alloc);
           panel_return_val_if_fail (WNCK_IS_WINDOW (child->window), FALSE);
-          wnck_window_set_icon_geometry (child->window, alloc->x + root_x,
-                                         alloc->y + root_y, alloc->width,
-                                         alloc->height);
+          wnck_window_set_icon_geometry (child->window, alloc.x + root_x,
+                                         alloc.y + root_y, alloc.width,
+                                         alloc.height);
           break;
 
         case CHILD_TYPE_GROUP_MENU:
@@ -1917,50 +2082,16 @@ static gboolean
 xfce_tasklist_update_monitor_geometry_idle (gpointer data)
 {
   XfceTasklist *tasklist = XFCE_TASKLIST (data);
-  GdkScreen    *screen;
-  gboolean      geometry_set = FALSE;
-  GdkWindow    *window;
-  guint         tmp;
 
   panel_return_val_if_fail (XFCE_IS_TASKLIST (tasklist), FALSE);
+  panel_return_val_if_fail (GDK_IS_DISPLAY (tasklist->display), FALSE);
 
-  GDK_THREADS_ENTER ();
-
-  if (!tasklist->all_monitors)
-    {
-      screen = gtk_widget_get_screen (GTK_WIDGET (tasklist));
-      window = gtk_widget_get_window (GTK_WIDGET (tasklist));
-
-      if (G_LIKELY (screen != NULL
-          && window != NULL
-          && (tasklist->n_monitors = gdk_screen_get_n_monitors (screen)) > 1))
-        {
-          /* set the monitor geometry */
-          tasklist->my_monitor = gdk_screen_get_monitor_at_window (screen, window);
-
-          if (tasklist->all_monitors_geometry)
-            tasklist->all_monitors_geometry = g_renew (GdkRectangle, tasklist->all_monitors_geometry, tasklist->n_monitors);
-          else
-            tasklist->all_monitors_geometry = g_new (GdkRectangle, tasklist->n_monitors);
-
-          for(tmp = 0; tmp < tasklist->n_monitors; tmp++)
-            gdk_screen_get_monitor_geometry (screen, tmp, &tasklist->all_monitors_geometry[tmp]);
-
-          geometry_set = TRUE;
-        }
-    }
-
-  /* make sure we never poke the window geometry unneeded
-   * in the visibility function */
-  if (!geometry_set)
-    xfce_tasklist_geometry_set_invalid (tasklist);
+  tasklist->n_monitors = gdk_display_get_n_monitors (tasklist->display);
 
   /* update visibility of buttons */
   if (tasklist->screen != NULL)
     xfce_tasklist_active_workspace_changed (tasklist->screen,
                                             NULL, tasklist);
-
-  GDK_THREADS_LEAVE ();
 
   return FALSE;
 }
@@ -1983,8 +2114,6 @@ xfce_tasklist_child_drag_motion_timeout (gpointer data)
   panel_return_val_if_fail (XFCE_IS_TASKLIST (child->tasklist), FALSE);
   panel_return_val_if_fail (WNCK_IS_SCREEN (child->tasklist->screen), FALSE);
 
-  GDK_THREADS_ENTER ();
-
   if (child->type == CHILD_TYPE_WINDOW)
     {
       xfce_tasklist_button_activate (child, child->motion_timestamp);
@@ -1993,8 +2122,6 @@ xfce_tasklist_child_drag_motion_timeout (gpointer data)
     {
        /* TODO popup menu */
     }
-
-  GDK_THREADS_LEAVE ();
 
   return FALSE;
 }
@@ -2033,9 +2160,9 @@ xfce_tasklist_child_drag_motion (XfceTasklistChild *child,
       if (child->motion_timeout_id == 0
           && !gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (child->button)))
         {
-          child->motion_timeout_id = g_timeout_add_full (G_PRIORITY_LOW, DRAG_ACTIVATE_TIMEOUT,
-                                                         xfce_tasklist_child_drag_motion_timeout, child,
-                                                         xfce_tasklist_child_drag_motion_timeout_destroyed);
+          child->motion_timeout_id = gdk_threads_add_timeout_full (G_PRIORITY_LOW, DRAG_ACTIVATE_TIMEOUT,
+                                                                   xfce_tasklist_child_drag_motion_timeout, child,
+                                                                   xfce_tasklist_child_drag_motion_timeout_destroyed);
         }
 
       /* keep emitting the signal */
@@ -2071,28 +2198,74 @@ xfce_tasklist_child_drag_leave (XfceTasklistChild *child,
 
 
 
+static void
+xfce_tasklist_child_drag_begin_event (GtkWidget      *widget,
+                                      GdkDragContext *context,
+                                      gpointer        user_data)
+{
+  GtkWidget *plugin = user_data;
+
+  panel_return_if_fail (XFCE_IS_PANEL_PLUGIN (plugin));
+  xfce_panel_plugin_block_autohide (XFCE_PANEL_PLUGIN (plugin), TRUE);
+}
+
+
+
+static void
+xfce_tasklist_child_drag_end_event (GtkWidget      *widget,
+                                    GdkDragContext *context,
+                                    gpointer        user_data)
+{
+  GtkWidget *plugin = user_data;
+
+  panel_return_if_fail (XFCE_IS_PANEL_PLUGIN (plugin));
+  xfce_panel_plugin_block_autohide (XFCE_PANEL_PLUGIN (plugin), FALSE);
+}
+
+
+
 static XfceTasklistChild *
 xfce_tasklist_child_new (XfceTasklist *tasklist)
 {
   XfceTasklistChild *child;
+  GtkCssProvider    *provider;
+  gchar             *css_string;
+  GtkWidget         *plugin;
 
   panel_return_val_if_fail (XFCE_IS_TASKLIST (tasklist), NULL);
 
   child = g_slice_new0 (XfceTasklistChild);
   child->tasklist = tasklist;
 
+  plugin = xfce_tasklist_get_panel_plugin (tasklist);
+
   /* create the window button */
   child->button = xfce_arrow_button_new (GTK_ARROW_NONE);
   gtk_widget_set_parent (child->button, GTK_WIDGET (tasklist));
   gtk_button_set_relief (GTK_BUTTON (child->button),
                          tasklist->button_relief);
+  gtk_widget_add_events (GTK_WIDGET(child->button), GDK_SCROLL_MASK
+                                                  | GDK_SMOOTH_SCROLL_MASK);
 
-  child->box = xfce_hvbox_new (!xfce_tasklist_vertical (tasklist) ?
-      GTK_ORIENTATION_HORIZONTAL : GTK_ORIENTATION_VERTICAL, FALSE, 6);
+  child->box = gtk_box_new (!xfce_tasklist_vertical (tasklist) ?
+      GTK_ORIENTATION_HORIZONTAL : GTK_ORIENTATION_VERTICAL, 6);
   gtk_container_add (GTK_CONTAINER (child->button), child->box);
   gtk_widget_show (child->box);
 
-  child->icon = xfce_panel_image_new ();
+  provider = gtk_css_provider_new ();
+  /* silly workaround for gtkcss only accepting "." as decimal separator and floats returning
+     with "," as decimal separator in some locales */
+  css_string = g_strdup_printf ("image { padding: 3px; } image.minimized { opacity: %d.%02d; }",
+                                tasklist->minimized_icon_lucency / 100,
+                                tasklist->minimized_icon_lucency % 100);
+  gtk_css_provider_load_from_data (provider, css_string, -1, NULL);
+  child->icon = gtk_image_new ();
+  gtk_style_context_add_provider (gtk_widget_get_style_context (child->icon),
+                                  GTK_STYLE_PROVIDER (provider),
+                                  GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
+  g_object_unref (provider);
+  g_free (css_string);
+
   if (tasklist->show_labels)
     gtk_box_pack_start (GTK_BOX (child->box), child->icon, FALSE, TRUE, 0);
   else
@@ -2105,16 +2278,25 @@ xfce_tasklist_child_new (XfceTasklist *tasklist)
   if (!xfce_tasklist_vertical (tasklist))
     {
       /* gtk_box_reorder_child (GTK_BOX (child->box), child->icon, 0); */
-      gtk_misc_set_alignment (GTK_MISC (child->label), 0.0, 0.5);
+      gtk_label_set_xalign (GTK_LABEL (child->label), 0.0);
+      gtk_label_set_yalign (GTK_LABEL (child->label), 0.5);
       gtk_label_set_ellipsize (GTK_LABEL (child->label), tasklist->ellipsize_mode);
     }
   else
     {
       /* gtk_box_reorder_child (GTK_BOX (child->box), child->icon, -1); */
+      gtk_label_set_yalign (GTK_LABEL (child->label), 0.0);
+      gtk_label_set_xalign (GTK_LABEL (child->label), 0.5);
       gtk_label_set_angle (GTK_LABEL (child->label), 270);
-      gtk_misc_set_alignment (GTK_MISC (child->label), 0.50, 0.00);
       /* TODO can we already ellipsize here yet? */
     }
+
+  provider = gtk_css_provider_new ();
+  gtk_css_provider_load_from_data (provider, ".label-hidden { opacity: 0.75; }", -1, NULL);
+  gtk_style_context_add_provider (gtk_widget_get_style_context (child->label),
+                                  GTK_STYLE_PROVIDER (provider),
+                                  GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
+  g_object_unref (provider);
 
   /* don't show the label if we're in iconbox style */
   if (tasklist->show_labels)
@@ -2123,9 +2305,13 @@ xfce_tasklist_child_new (XfceTasklist *tasklist)
   gtk_drag_dest_set (GTK_WIDGET (child->button), 0,
                      NULL, 0, GDK_ACTION_DEFAULT);
   g_signal_connect_swapped (G_OBJECT (child->button), "drag-motion",
-     G_CALLBACK (xfce_tasklist_child_drag_motion), child);
+                            G_CALLBACK (xfce_tasklist_child_drag_motion), child);
   g_signal_connect_swapped (G_OBJECT (child->button), "drag-leave",
-     G_CALLBACK (xfce_tasklist_child_drag_leave), child);
+                            G_CALLBACK (xfce_tasklist_child_drag_leave), child);
+  g_signal_connect_after (G_OBJECT (child->button), "drag-begin",
+                          G_CALLBACK (xfce_tasklist_child_drag_begin_event), XFCE_PANEL_PLUGIN (plugin));
+  g_signal_connect_after (G_OBJECT (child->button), "drag-end",
+                          G_CALLBACK (xfce_tasklist_child_drag_end_event), XFCE_PANEL_PLUGIN (plugin));
 
   return child;
 }
@@ -2265,30 +2451,26 @@ xfce_tasklist_button_visible (XfceTasklistChild *child,
                               WnckWorkspace     *active_ws)
 {
   XfceTasklist *tasklist = XFCE_TASKLIST (child->tasklist);
-  GdkRectangle  window, intersection;
-  guint         best_size = 0, best_monitor = 0, size, tmp;
+  gint          x, y, w, h;
+  GdkWindow    *window;
 
   panel_return_val_if_fail (active_ws == NULL || WNCK_IS_WORKSPACE (active_ws), FALSE);
   panel_return_val_if_fail (XFCE_IS_TASKLIST (tasklist), FALSE);
   panel_return_val_if_fail (WNCK_IS_WINDOW (child->window), FALSE);
+  panel_return_val_if_fail (GDK_IS_DISPLAY (tasklist->display), FALSE);
 
   if (xfce_tasklist_filter_monitors (tasklist))
     {
-      /* center of the window must be on this screen */
-      wnck_window_get_geometry (child->window, &window.x, &window.y, &window.width, &window.height);
+      /* The tasklist itself. */
+      window = gtk_widget_get_window (GTK_WIDGET (tasklist));
 
-      for (tmp = 0; tmp < tasklist->n_monitors; tmp++)
-        {
-          gdk_rectangle_intersect(&tasklist->all_monitors_geometry[tmp], &window, &intersection);
-          size = intersection.width * intersection.height;
-          if (size > best_size)
-            {
-              best_size = size;
-              best_monitor = tmp;
-            }
-        }
-      if (best_monitor != tasklist->my_monitor)
-        return FALSE;
+      /* The window we are making a button for. */
+      wnck_window_get_geometry (child->window, &x, &y, &w, &h);
+
+      /* Ask Gdk if they are on the same monitor. */
+      if (gdk_display_get_monitor_at_window(tasklist->display, window) !=
+          gdk_display_get_monitor_at_point(tasklist->display, x+(w/2), y+(h/2)))
+         return FALSE;
     }
 
   if (tasklist->all_workspaces
@@ -2375,10 +2557,10 @@ xfce_tasklist_button_compare (gconstpointer child_a,
             name_b = wnck_class_group_get_name (class_group_b);
 
           /* if there is no class group name, use the window name */
-          if (exo_str_is_empty (name_a)
+          if (panel_str_is_empty (name_a)
               && a->window != NULL)
             name_a = wnck_window_get_name (a->window);
-          if (exo_str_is_empty (name_b)
+          if (panel_str_is_empty (name_b)
               && b->window != NULL)
             name_b = wnck_window_get_name (b->window) ;
 
@@ -2435,12 +2617,13 @@ static void
 xfce_tasklist_button_icon_changed (WnckWindow        *window,
                                    XfceTasklistChild *child)
 {
-  GdkPixbuf    *pixbuf;
-  GdkPixbuf    *lucent = NULL;
-  XfceTasklist *tasklist = child->tasklist;
+  GtkStyleContext *context;
+  GdkPixbuf       *pixbuf;
+  XfceTasklist    *tasklist = child->tasklist;
+  gint             icon_size;
 
   panel_return_if_fail (XFCE_IS_TASKLIST (tasklist));
-  panel_return_if_fail (XFCE_IS_PANEL_IMAGE (child->icon));
+  panel_return_if_fail (GTK_IS_WIDGET (child->icon));
   panel_return_if_fail (WNCK_IS_WINDOW (window));
   panel_return_if_fail (child->window == window);
 
@@ -2448,16 +2631,15 @@ xfce_tasklist_button_icon_changed (WnckWindow        *window,
   if (tasklist->minimized_icon_lucency == 0)
     return;
 
-  /* get the window icon */
-  if (tasklist->show_labels)
-    pixbuf = wnck_window_get_mini_icon (window);
-  else
-    pixbuf = wnck_window_get_icon (window);
+  icon_size = xfce_panel_plugin_get_icon_size (XFCE_PANEL_PLUGIN (xfce_tasklist_get_panel_plugin (tasklist)));
+  context = gtk_widget_get_style_context (GTK_WIDGET (child->icon));
 
+  /* get the window icon */
+  pixbuf = xfce_tasklist_get_window_icon (child->window, tasklist->show_labels, icon_size, child->type);
   /* leave when there is no valid pixbuf */
   if (G_UNLIKELY (pixbuf == NULL))
     {
-      xfce_panel_image_clear (XFCE_PANEL_IMAGE (child->icon));
+      gtk_image_clear (GTK_IMAGE (child->icon));
       return;
     }
 
@@ -2466,15 +2648,16 @@ xfce_tasklist_button_icon_changed (WnckWindow        *window,
       && tasklist->minimized_icon_lucency < 100
       && wnck_window_is_minimized (window))
     {
-      lucent = exo_gdk_pixbuf_lucent (pixbuf, tasklist->minimized_icon_lucency);
-      if (G_UNLIKELY (lucent != NULL))
-        pixbuf = lucent;
+      if (!gtk_style_context_has_class (context, "minimized"))
+        gtk_style_context_add_class (context, "minimized");
+    }
+  else
+    {
+      if (gtk_style_context_has_class (context, "minimized"))
+        gtk_style_context_remove_class (context, "minimized");
     }
 
-  xfce_panel_image_set_from_pixbuf (XFCE_PANEL_IMAGE (child->icon), pixbuf);
-
-  if (lucent != NULL && lucent != pixbuf)
-    g_object_unref (G_OBJECT (lucent));
+  gtk_image_set_from_pixbuf (GTK_IMAGE (child->icon), pixbuf);
 }
 
 
@@ -2483,8 +2666,9 @@ static void
 xfce_tasklist_button_name_changed (WnckWindow        *window,
                                    XfceTasklistChild *child)
 {
-  const gchar *name;
-  gchar       *label = NULL;
+  const gchar     *name;
+  gchar           *label = NULL;
+  GtkStyleContext *ctx;
 
   panel_return_if_fail (window == NULL || child->window == window);
   panel_return_if_fail (WNCK_IS_WINDOW (child->window));
@@ -2493,14 +2677,28 @@ xfce_tasklist_button_name_changed (WnckWindow        *window,
   name = wnck_window_get_name (child->window);
   gtk_widget_set_tooltip_text (GTK_WIDGET (child->button), name);
 
-  /* create the button label */
-  if (!child->tasklist->only_minimized
-      && wnck_window_is_minimized (child->window))
-    name = label = g_strdup_printf ("[%s]", name);
-  else if (wnck_window_is_shaded (child->window))
-    name = label = g_strdup_printf ("=%s=", name);
+  ctx = gtk_widget_get_style_context (child->label);
+  gtk_style_context_remove_class (ctx, "label-hidden");
+
+  if (child->tasklist->label_decorations)
+    {
+      /* create the button label */
+      if (!child->tasklist->only_minimized
+          && wnck_window_is_minimized (child->window))
+        name = label = g_strdup_printf ("[%s]", name);
+      else if (wnck_window_is_shaded (child->window))
+        name = label = g_strdup_printf ("=%s=", name);
+    }
+  else
+    {
+      if ((!child->tasklist->only_minimized
+          && wnck_window_is_minimized (child->window))
+          || wnck_window_is_shaded (child->window))
+        gtk_style_context_add_class (ctx, "label-hidden");
+    }
 
   gtk_label_set_text (GTK_LABEL (child->label), name);
+  gtk_label_set_ellipsize (GTK_LABEL (child->label), child->tasklist->ellipsize_mode);
 
   g_free (label);
 
@@ -2518,10 +2716,11 @@ xfce_tasklist_button_state_changed (WnckWindow        *window,
                                     WnckWindowState    new_state,
                                     XfceTasklistChild *child)
 {
-  gboolean       blink;
-  WnckScreen    *screen;
-  XfceTasklist  *tasklist;
-  WnckWorkspace *active_ws;
+  gboolean           blink;
+  WnckScreen        *screen;
+  XfceTasklist      *tasklist;
+  WnckWorkspace     *active_ws;
+  XfceTasklistChild *group_child;
 
   panel_return_if_fail (WNCK_IS_WINDOW (window));
   panel_return_if_fail (child->window == window);
@@ -2559,8 +2758,20 @@ xfce_tasklist_button_state_changed (WnckWindow        *window,
         }
       else
         {
-          /* update the icon (lucent) */
+          /* update the icon opacity */
           xfce_tasklist_button_icon_changed (window, child);
+          if (child->class_group != NULL)
+            {
+              /* find the child for the group */
+              g_hash_table_lookup_extended (child->tasklist->class_groups,
+                                            child->class_group,
+                                            NULL, (gpointer *) &group_child);
+
+              if (group_child
+                  && group_child->type == CHILD_TYPE_GROUP) {
+                xfce_tasklist_group_button_icon_changed (child->class_group, group_child);
+              }
+            }
         }
     }
 
@@ -2583,7 +2794,19 @@ xfce_tasklist_button_state_changed (WnckWindow        *window,
               gtk_widget_show (child->button);
             }
 
-          xfce_arrow_button_set_blinking (XFCE_ARROW_BUTTON (child->button), blink);
+
+          /* make sure the group button can blink too */
+          if (child->type == CHILD_TYPE_GROUP_MENU)
+            {
+              /* find the child for the group */
+              g_hash_table_lookup_extended (child->tasklist->class_groups,
+                                            child->class_group,
+                                            NULL, (gpointer *) &group_child);
+              xfce_arrow_button_set_blinking (XFCE_ARROW_BUTTON (group_child->button), blink);
+            }
+          /* otherwise just let the window button blink */
+          else
+            xfce_arrow_button_set_blinking (XFCE_ARROW_BUTTON (child->button), blink);
 
           if (child->tasklist->all_blinking
               && !xfce_tasklist_button_visible (child, active_ws))
@@ -2633,6 +2856,20 @@ xfce_tasklist_button_geometry_changed2 (WnckWindow        *window,
       else
         gtk_widget_hide (child->button);
     }
+}
+
+
+
+static gboolean
+xfce_tasklist_button_size_allocate (GtkWidget         *widget,
+                                    GdkRectangle      *allocation,
+                                    gpointer           user_data)
+{
+  XfceTasklistChild *child = user_data;
+  /* Make sure the icons have the correct size */
+  xfce_tasklist_button_icon_changed (child->window, child);
+
+  return TRUE;
 }
 
 
@@ -2705,6 +2942,20 @@ xfce_tasklist_button_enter_notify_event (GtkWidget         *button,
 
 
 
+static void
+xfce_tasklist_button_menu_destroy (GtkWidget         *menu,
+                                   XfceTasklistChild *child)
+{
+  panel_return_if_fail (XFCE_IS_TASKLIST (child->tasklist));
+  panel_return_if_fail (GTK_IS_TOGGLE_BUTTON (child->button));
+  panel_return_if_fail (GTK_IS_WIDGET (menu));
+
+  gtk_widget_destroy (menu);
+  gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (child->button), FALSE);
+}
+
+
+
 static gboolean
 xfce_tasklist_button_button_press_event (GtkWidget         *button,
                                          GdkEventButton    *event,
@@ -2730,20 +2981,26 @@ xfce_tasklist_button_button_press_event (GtkWidget         *button,
       return TRUE;
     }
 
-  if (event->button == 3)
+  if (event->button == 3 && !GTK_IS_MENU_ITEM (button))
     {
       menu = wnck_action_menu_new (child->window);
       g_signal_connect (G_OBJECT (menu), "selection-done",
-          G_CALLBACK (gtk_widget_destroy), NULL);
+          G_CALLBACK (xfce_tasklist_button_menu_destroy), child);
 
       gtk_menu_attach_to_widget (GTK_MENU (menu), button, NULL);
-      gtk_menu_popup (GTK_MENU (menu), NULL, NULL,
-                      child->type == CHILD_TYPE_WINDOW ? xfce_panel_plugin_position_menu : NULL,
-                      xfce_tasklist_get_panel_plugin (child->tasklist),
-                      event->button,
-                      event->time);
+      gtk_menu_popup_at_widget (GTK_MENU (menu), button,
+                                xfce_tasklist_vertical (child->tasklist)
+                                ? GDK_GRAVITY_NORTH_EAST : GDK_GRAVITY_SOUTH_WEST,
+                                GDK_GRAVITY_NORTH_WEST,
+                                (GdkEvent *) event);
 
+      gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (button), TRUE);
       return TRUE;
+    }
+  else if (event->button == 3 && GTK_IS_MENU_ITEM (button))
+    {
+      xfce_tasklist_button_activate (child, event->time);
+      return FALSE;
     }
 
   return FALSE;
@@ -2756,15 +3013,19 @@ xfce_tasklist_button_button_release_event (GtkWidget         *button,
                                            GdkEventButton    *event,
                                            XfceTasklistChild *child)
 {
+  GtkAllocation allocation;
+
   panel_return_val_if_fail (XFCE_IS_TASKLIST (child->tasklist), FALSE);
   panel_return_val_if_fail (child->type != CHILD_TYPE_GROUP, FALSE);
+
+  gtk_widget_get_allocation (button, &allocation);
 
   /* only respond to in-button events */
   if (event->type == GDK_BUTTON_RELEASE
       && !xfce_taskbar_is_locked (child->tasklist)
       && !(event->x == 0 && event->y == 0) /* 0,0 = outside the widget in Gtk */
-      && event->x >= 0 && event->x < button->allocation.width
-      && event->y >= 0 && event->y < button->allocation.height)
+      && event->x >= 0 && event->x < allocation.width
+      && event->y >= 0 && event->y < allocation.height)
     {
       if (event->button == 1)
         {
@@ -2819,10 +3080,14 @@ static GtkWidget *
 xfce_tasklist_button_proxy_menu_item (XfceTasklistChild *child,
                                       gboolean           allow_wireframe)
 {
-  GtkWidget    *mi;
-  GtkWidget    *image;
-  GtkWidget    *label;
-  XfceTasklist *tasklist = child->tasklist;
+  GtkWidget       *mi;
+  GtkWidget       *image;
+  GtkWidget       *label;
+  GtkStyleContext *context_button;
+  GtkStyleContext *context_menuitem;
+  GtkCssProvider  *provider;
+  gchar           *css_string;
+  XfceTasklist    *tasklist = child->tasklist;
 
   panel_return_val_if_fail (XFCE_IS_TASKLIST (child->tasklist), NULL);
   panel_return_val_if_fail (child->type == CHILD_TYPE_OVERFLOW_MENU
@@ -2830,23 +3095,53 @@ xfce_tasklist_button_proxy_menu_item (XfceTasklistChild *child,
   panel_return_val_if_fail (GTK_IS_LABEL (child->label), NULL);
   panel_return_val_if_fail (WNCK_IS_WINDOW (child->window), NULL);
 
+G_GNUC_BEGIN_IGNORE_DEPRECATIONS
   mi = gtk_image_menu_item_new ();
-  exo_binding_new (G_OBJECT (child->label), "label", G_OBJECT (mi), "label");
-  exo_binding_new (G_OBJECT (child->label), "label", G_OBJECT (mi), "tooltip-text");
+G_GNUC_END_IGNORE_DEPRECATIONS
+  g_object_bind_property (G_OBJECT (child->label), "label",
+                          G_OBJECT (mi), "label",
+                          G_BINDING_SYNC_CREATE);
+  g_object_bind_property (G_OBJECT (child->label), "label",
+                          G_OBJECT (mi), "tooltip-text",
+                          G_BINDING_SYNC_CREATE);
 
   label = gtk_bin_get_child (GTK_BIN (mi));
   panel_return_val_if_fail (GTK_IS_LABEL (label), NULL);
   gtk_label_set_max_width_chars (GTK_LABEL (label), tasklist->menu_max_width_chars);
   gtk_label_set_ellipsize (GTK_LABEL (label), tasklist->ellipsize_mode);
 
-  if (G_LIKELY (tasklist->menu_icon_size > 0))
-    {
-      image = xfce_panel_image_new ();
-      gtk_image_menu_item_set_image (GTK_IMAGE_MENU_ITEM (mi), image);
-      xfce_panel_image_set_size (XFCE_PANEL_IMAGE (image), tasklist->menu_icon_size);
-      exo_binding_new (G_OBJECT (child->icon), "pixbuf", G_OBJECT (image), "pixbuf");
-      gtk_widget_show (image);
-    }
+  image = gtk_image_new ();
+G_GNUC_BEGIN_IGNORE_DEPRECATIONS
+  gtk_image_menu_item_set_image (GTK_IMAGE_MENU_ITEM (mi), image);
+G_GNUC_END_IGNORE_DEPRECATIONS
+  /* sync the minimized state css style class between the button and the menuitem */
+  context_button = gtk_widget_get_style_context (GTK_WIDGET (child->icon));
+  context_menuitem = gtk_widget_get_style_context (GTK_WIDGET (image));
+
+  provider = gtk_css_provider_new ();
+  /* silly workaround for gtkcss only accepting "." as decimal separator and floats returning
+     with "," as decimal separator in some locales */
+  css_string = g_strdup_printf ("image { padding: 3px; } image.minimized { opacity: %d.%02d; }",
+                                tasklist->minimized_icon_lucency / 100,
+                                tasklist->minimized_icon_lucency % 100);
+  gtk_css_provider_load_from_data (provider, css_string, -1, NULL);
+  gtk_style_context_add_provider (context_menuitem,
+                                  GTK_STYLE_PROVIDER (provider),
+                                  GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
+  g_object_unref (provider);
+  g_free (css_string);
+
+  if (gtk_style_context_has_class (context_button, "minimized"))
+    gtk_style_context_add_class (context_menuitem, "minimized");
+  else if (!gtk_style_context_has_class (context_button, "minimized")
+           && gtk_style_context_has_class (context_menuitem, "minimized"))
+    gtk_style_context_remove_class (context_menuitem, "minimized");
+
+  gtk_image_set_pixel_size (GTK_IMAGE (image), GTK_ICON_SIZE_MENU);
+  g_object_bind_property (G_OBJECT (child->icon), "pixbuf",
+                          G_OBJECT (image), "pixbuf",
+                          G_BINDING_SYNC_CREATE);
+  gtk_widget_show (image);
 
   if (allow_wireframe)
     {
@@ -2883,8 +3178,7 @@ xfce_tasklist_button_activate (XfceTasklistChild *child,
   panel_return_if_fail (WNCK_IS_WINDOW (child->window));
   panel_return_if_fail (WNCK_IS_SCREEN (child->tasklist->screen));
 
-  if (wnck_window_is_active (child->window)
-      || wnck_window_transient_is_most_recently_activated (child->window))
+  if (wnck_window_is_active (child->window))
     {
       /* minimize does not work when this is assigned to the
        * middle mouse button */
@@ -2991,7 +3285,7 @@ xfce_tasklist_button_activate (XfceTasklistChild *child,
             }
         }
 
-      wnck_window_activate_transient (child->window, timestamp);
+      wnck_window_activate (child->window, timestamp);
     }
 }
 
@@ -3023,10 +3317,12 @@ xfce_tasklist_button_drag_begin (GtkWidget         *button,
                                  XfceTasklistChild *child)
 {
   GdkPixbuf *pixbuf;
-  GdkPixmap *pixmap;
+  /* GdkPixmap *pixmap; */
 
   panel_return_if_fail (WNCK_IS_WINDOW (child->window));
 
+  /* not available in Gtk3 */
+#if 0
   if (child->tasklist->show_labels)
     {
       /* FIXME Triggers specific repaint error (bug 11283) */
@@ -3042,8 +3338,9 @@ xfce_tasklist_button_drag_begin (GtkWidget         *button,
           return;
         }
     }
+#endif
 
-  pixbuf = wnck_window_get_icon (child->window);
+  pixbuf = xfce_tasklist_get_window_icon (child->window, FALSE, 32, CHILD_TYPE_WINDOW);
   if (G_LIKELY (pixbuf != NULL))
     gtk_drag_set_icon_pixbuf (context, pixbuf, 0, 0);
 }
@@ -3064,17 +3361,20 @@ xfce_tasklist_button_drag_data_received (GtkWidget         *button,
   gulong             xid;
   XfceTasklistChild *child;
   XfceTasklist      *tasklist = XFCE_TASKLIST (child2->tasklist);
+  GtkAllocation      allocation;
 
   panel_return_if_fail (XFCE_IS_TASKLIST (tasklist));
 
   if (tasklist->sort_order != XFCE_TASKLIST_SORT_ORDER_DND)
     return;
 
+  gtk_widget_get_allocation (button, &allocation);
+
   sibling = g_list_find (tasklist->windows, child2);
   panel_return_if_fail (sibling != NULL);
 
-  if ((!xfce_tasklist_vertical (tasklist) && x >= button->allocation.width / 2)
-      || (xfce_tasklist_vertical (tasklist) && y >= button->allocation.height / 2))
+  if ((xfce_tasklist_horizontal (tasklist) && x >= allocation.width / 2)
+      || (!xfce_tasklist_horizontal (tasklist) && y >= allocation.height / 2))
     sibling = g_list_next (sibling);
 
   xid = *((gulong *) gtk_selection_data_get_data (selection_data));
@@ -3144,6 +3444,8 @@ xfce_tasklist_button_new (WnckWindow   *window,
       G_CALLBACK (xfce_tasklist_button_button_release_event), child);
 
   /* monitor window changes */
+  g_signal_connect (G_OBJECT (child->button), "size-allocate",
+      G_CALLBACK (xfce_tasklist_button_size_allocate), child);
   g_signal_connect (G_OBJECT (window), "icon-changed",
       G_CALLBACK (xfce_tasklist_button_icon_changed), child);
   g_signal_connect (G_OBJECT (window), "name-changed",
@@ -3184,7 +3486,7 @@ xfce_tasklist_group_button_menu_minimize_all (XfceTasklistChild *group_child)
   for (li = group_child->windows; li != NULL; li = li->next)
     {
       child = li->data;
-      if (GTK_WIDGET_VISIBLE (child->button)
+      if (gtk_widget_get_visible (child->button)
           && child->type == CHILD_TYPE_GROUP_MENU)
         {
           panel_return_if_fail (WNCK_IS_WINDOW (child->window));
@@ -3207,7 +3509,7 @@ xfce_tasklist_group_button_menu_unminimize_all (XfceTasklistChild *group_child)
   for (li = group_child->windows; li != NULL; li = li->next)
     {
       child = li->data;
-      if (GTK_WIDGET_VISIBLE (child->button)
+      if (gtk_widget_get_visible (child->button)
           && child->type == CHILD_TYPE_GROUP_MENU)
         {
           panel_return_if_fail (WNCK_IS_WINDOW (child->window));
@@ -3230,7 +3532,7 @@ xfce_tasklist_group_button_menu_maximize_all (XfceTasklistChild *group_child)
   for (li = group_child->windows; li != NULL; li = li->next)
     {
       child = li->data;
-      if (GTK_WIDGET_VISIBLE (child->button)
+      if (gtk_widget_get_visible (child->button)
           && child->type == CHILD_TYPE_GROUP_MENU)
         {
           panel_return_if_fail (WNCK_IS_WINDOW (child->window));
@@ -3253,7 +3555,7 @@ xfce_tasklist_group_button_menu_unmaximize_all (XfceTasklistChild *group_child)
   for (li = group_child->windows; li != NULL; li = li->next)
     {
       child = li->data;
-      if (GTK_WIDGET_VISIBLE (child->button)
+      if (gtk_widget_get_visible (child->button)
           && child->type == CHILD_TYPE_GROUP_MENU)
         {
           panel_return_if_fail (WNCK_IS_WINDOW (child->window));
@@ -3275,7 +3577,7 @@ xfce_tasklist_group_button_menu_close_all (XfceTasklistChild *group_child)
   for (li = group_child->windows; li != NULL; li = li->next)
     {
       child = li->data;
-      if (GTK_WIDGET_VISIBLE (child->button)
+      if (gtk_widget_get_visible (child->button)
           && child->type == CHILD_TYPE_GROUP_MENU)
         {
           panel_return_if_fail (WNCK_IS_WINDOW (child->window));
@@ -3304,7 +3606,7 @@ xfce_tasklist_group_button_menu (XfceTasklistChild *group_child,
   for (li = group_child->windows; li != NULL; li = li->next)
     {
       child = li->data;
-      if (GTK_WIDGET_VISIBLE (child->button)
+      if (gtk_widget_get_visible (child->button)
           && child->type == CHILD_TYPE_GROUP_MENU)
         {
           mi = xfce_tasklist_button_proxy_menu_item (child, !action_menu_entries);
@@ -3323,31 +3625,33 @@ xfce_tasklist_group_button_menu (XfceTasklistChild *group_child,
       gtk_menu_shell_append (GTK_MENU_SHELL (menu), mi);
       gtk_widget_show (mi);
 
+      image = gtk_image_new_from_icon_name ("window-minimize-symbolic", GTK_ICON_SIZE_MENU);
+G_GNUC_BEGIN_IGNORE_DEPRECATIONS
       mi = gtk_image_menu_item_new_with_mnemonic (_("Mi_nimize All"));
+      gtk_image_menu_item_set_image (GTK_IMAGE_MENU_ITEM (mi), image);
+G_GNUC_END_IGNORE_DEPRECATIONS
       gtk_menu_shell_append (GTK_MENU_SHELL (menu), mi);
       g_signal_connect_swapped (G_OBJECT (mi), "activate",
           G_CALLBACK (xfce_tasklist_group_button_menu_minimize_all), group_child);
-      gtk_widget_show (mi);
-      image = gtk_image_new_from_stock ("wnck-stock-minimize", GTK_ICON_SIZE_MENU);
-      gtk_image_menu_item_set_image (GTK_IMAGE_MENU_ITEM (mi), image);
-      gtk_widget_show (image);
+      gtk_widget_show_all (mi);
 
-      mi =  gtk_image_menu_item_new_with_mnemonic (_("Un_minimize All"));
+      mi =  gtk_menu_item_new_with_mnemonic (_("Un_minimize All"));
       gtk_menu_shell_append (GTK_MENU_SHELL (menu), mi);
       g_signal_connect_swapped (G_OBJECT (mi), "activate",
           G_CALLBACK (xfce_tasklist_group_button_menu_unminimize_all), group_child);
       gtk_widget_show (mi);
 
+      image = gtk_image_new_from_icon_name ("window-maximize-symbolic", GTK_ICON_SIZE_MENU);
+G_GNUC_BEGIN_IGNORE_DEPRECATIONS
       mi = gtk_image_menu_item_new_with_mnemonic (_("Ma_ximize All"));
+      gtk_image_menu_item_set_image (GTK_IMAGE_MENU_ITEM (mi), image);
+G_GNUC_END_IGNORE_DEPRECATIONS
       gtk_menu_shell_append (GTK_MENU_SHELL (menu), mi);
       g_signal_connect_swapped (G_OBJECT (mi), "activate",
           G_CALLBACK (xfce_tasklist_group_button_menu_maximize_all), group_child);
-      gtk_widget_show (mi);
-      image = gtk_image_new_from_stock ("wnck-stock-maximize", GTK_ICON_SIZE_MENU);
-      gtk_image_menu_item_set_image (GTK_IMAGE_MENU_ITEM (mi), image);
-      gtk_widget_show (image);
+      gtk_widget_show_all (mi);
 
-      mi =  gtk_image_menu_item_new_with_mnemonic (_("_Unmaximize All"));
+      mi =  gtk_menu_item_new_with_mnemonic (_("_Unmaximize All"));
       gtk_menu_shell_append (GTK_MENU_SHELL (menu), mi);
       g_signal_connect_swapped (G_OBJECT (mi), "activate",
           G_CALLBACK (xfce_tasklist_group_button_menu_unmaximize_all), group_child);
@@ -3357,15 +3661,15 @@ xfce_tasklist_group_button_menu (XfceTasklistChild *group_child,
       gtk_menu_shell_append (GTK_MENU_SHELL (menu), mi);
       gtk_widget_show (mi);
 
+      image = gtk_image_new_from_icon_name ("window-close-symbolic", GTK_ICON_SIZE_MENU);
+G_GNUC_BEGIN_IGNORE_DEPRECATIONS
       mi = gtk_image_menu_item_new_with_mnemonic(_("_Close All"));
+      gtk_image_menu_item_set_image (GTK_IMAGE_MENU_ITEM (mi), image);
+G_GNUC_END_IGNORE_DEPRECATIONS
       gtk_menu_shell_append (GTK_MENU_SHELL (menu), mi);
       g_signal_connect_swapped (G_OBJECT (mi), "activate",
           G_CALLBACK (xfce_tasklist_group_button_menu_close_all), group_child);
-      gtk_widget_show (mi);
-
-      image = gtk_image_new_from_stock ("wnck-stock-delete", GTK_ICON_SIZE_MENU);
-      gtk_image_menu_item_set_image (GTK_IMAGE_MENU_ITEM (mi), image);
-      gtk_widget_show (image);
+      gtk_widget_show_all (mi);
     }
 
   return menu;
@@ -3382,13 +3686,110 @@ xfce_tasklist_group_button_menu_destroy (GtkWidget         *menu,
   panel_return_if_fail (GTK_IS_WIDGET (menu));
 
   gtk_widget_destroy (menu);
-
   gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (group_child->button), FALSE);
 
 #ifdef GDK_WINDOWING_X11
   /* make sure the wireframe is hidden */
   xfce_tasklist_wireframe_hide (group_child->tasklist);
 #endif
+}
+
+
+
+static gboolean
+xfce_tasklist_group_button_button_draw (GtkWidget         *widget,
+                                        cairo_t           *cr,
+                                        XfceTasklistChild *group_child)
+{
+  if (group_child->n_windows > 1)
+    {
+      GtkStyleContext *context;
+      GtkAllocation *allocation = g_new0 (GtkAllocation, 1);
+      PangoRectangle ink_extent, log_extent;
+      PangoFontDescription *desc;
+      PangoLayout *n_windows_layout;
+      gchar *n_windows;
+      GdkRGBA fg, bg;
+      gdouble radius, x, y;
+      gint icon_size;
+
+      gtk_widget_get_allocation (GTK_WIDGET (widget), allocation);
+      cairo_set_operator (cr, CAIRO_OPERATOR_SOURCE);
+      /* Get the theme fg color for drawing the circle background. We then use a
+         simple calculation to decide whether the background color - which is ironically
+         used for the text - should be white or black.
+         We use the theme fg color alpha for the fg and the bg for consistency. */
+      context = gtk_widget_get_style_context (widget);
+      gtk_style_context_get_color (context, gtk_style_context_get_state (context), &fg);
+      /* The magical number 1.5 is a third of the sum of the max rgb values */
+      if ((fg.red + fg.green + fg.blue) < 1.5)
+        gdk_rgba_parse (&bg, "#ffffff");
+      else
+        gdk_rgba_parse (&bg, "#000000");
+
+      n_windows = g_strdup_printf ("%d", group_child->n_windows);
+      n_windows_layout = gtk_widget_create_pango_layout (GTK_WIDGET (widget), n_windows);
+      desc = pango_font_description_from_string ("Mono Bold 8");
+      if (desc)
+      {
+          pango_layout_set_font_description (n_windows_layout, desc);
+          pango_font_description_free (desc);
+      }
+
+      pango_layout_get_pixel_extents (n_windows_layout, &ink_extent, &log_extent);
+      icon_size = xfce_panel_plugin_get_icon_size (XFCE_PANEL_PLUGIN (xfce_tasklist_get_panel_plugin (group_child->tasklist)));
+      radius = log_extent.height / 2;
+      if (group_child->tasklist->show_labels || icon_size <= 31)
+        {
+          if (xfce_tasklist_vertical (group_child->tasklist))
+            {
+              x = allocation->width / 2 + radius;
+              if ((x + radius) > allocation->width)
+                x = allocation->width - radius;
+              if (group_child->tasklist->show_labels)
+                y = 24 - radius;
+              else
+                y = allocation->height / 2 + 8 - radius / 2;
+            }
+          else
+            {
+              y = allocation->height / 2 + radius;
+              if ((y + radius) > allocation->height)
+                y = allocation->height - radius;
+              if (group_child->tasklist->show_labels)
+                x = 24 - radius;
+              else
+                x = allocation->width / 2 + 8 - radius / 2;
+            }
+        }
+      else
+        {
+          x = allocation->width / 2 + 16 - radius;
+          y = allocation->height / 2 + 16 - radius;
+        }
+
+      /* Draw the background circle */
+      cairo_move_to (cr, x, y);
+      cairo_arc (cr, x, y, radius, 0.0, 2 * M_PI);
+      cairo_close_path (cr);
+      cairo_set_line_width (cr, 1.0);
+      cairo_set_source_rgba (cr, bg.red, bg.green, bg.blue, fg.alpha);
+      cairo_stroke_preserve (cr);
+      cairo_set_source_rgba (cr, fg.red, fg.green, fg.blue, fg.alpha);
+      cairo_fill (cr);
+
+      /* Draw the number of windows */
+      cairo_move_to (cr,
+                     x - (log_extent.width / 2),
+                     y - (log_extent.height / 2) + 0.25);
+      cairo_set_source_rgba (cr, bg.red, bg.green, bg.blue, fg.alpha);
+      pango_cairo_show_layout (cr, n_windows_layout);
+
+      g_object_unref (n_windows_layout);
+      g_free (n_windows);
+    }
+
+  return FALSE;
 }
 
 
@@ -3426,12 +3827,13 @@ xfce_tasklist_group_button_button_press_event (GtkWidget         *button,
           G_CALLBACK (xfce_tasklist_group_button_menu_destroy), group_child);
 
       gtk_menu_attach_to_widget (GTK_MENU (menu), button, NULL);
-      gtk_menu_popup (GTK_MENU (menu), NULL, NULL,
-                      xfce_panel_plugin_position_menu,
-                      xfce_tasklist_get_panel_plugin (group_child->tasklist),
-                      event->button,
-                      event->time);
+      gtk_menu_popup_at_widget (GTK_MENU (menu), button,
+                                xfce_tasklist_vertical (group_child->tasklist)
+                                ? GDK_GRAVITY_NORTH_EAST : GDK_GRAVITY_SOUTH_WEST,
+                                GDK_GRAVITY_NORTH_WEST,
+                                (GdkEvent *) event);
 
+      gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (button), TRUE);
       return TRUE;
     }
 
@@ -3445,8 +3847,6 @@ xfce_tasklist_group_button_name_changed (WnckClassGroup    *class_group,
                                          XfceTasklistChild *group_child)
 {
   const gchar       *name;
-  gchar             *label;
-  guint              n_windows;
   GSList            *li;
   XfceTasklistChild *child;
 
@@ -3455,22 +3855,17 @@ xfce_tasklist_group_button_name_changed (WnckClassGroup    *class_group,
   panel_return_if_fail (WNCK_IS_CLASS_GROUP (group_child->class_group));
 
   /* count number of windows in the menu */
-  for (li = group_child->windows, n_windows = 0; li != NULL; li = li->next)
+  for (li = group_child->windows, group_child->n_windows = 0; li != NULL; li = li->next)
     {
       child = li->data;
-      if (GTK_WIDGET_VISIBLE (child->button)
+      if (gtk_widget_get_visible (child->button)
           && child->type == CHILD_TYPE_GROUP_MENU)
-        n_windows++;
+        group_child->n_windows++;
     }
 
   /* create the button label */
   name = wnck_class_group_get_name (group_child->class_group);
-  if (!exo_str_is_empty (name))
-    label = g_strdup_printf ("%s (%d)", name, n_windows);
-  else
-    label = g_strdup_printf ("(%d)", n_windows);
-  gtk_label_set_text (GTK_LABEL (group_child->label), label);
-  g_free (label);
+  gtk_label_set_text (GTK_LABEL (group_child->label), name);
 
   /* don't sort if there is no need to update the sorting (ie. only number
    * of windows is changed or button is not inserted in the tasklist yet */
@@ -3484,28 +3879,62 @@ static void
 xfce_tasklist_group_button_icon_changed (WnckClassGroup    *class_group,
                                          XfceTasklistChild *group_child)
 {
-  GdkPixbuf *pixbuf;
+  GtkStyleContext   *context;
+  GdkPixbuf         *pixbuf;
+  GSList            *li;
+  XfceTasklistChild *child;
+  gboolean           all_minimized_in_group = TRUE;
+  gint               icon_size;
 
   panel_return_if_fail (XFCE_IS_TASKLIST (group_child->tasklist));
   panel_return_if_fail (WNCK_IS_CLASS_GROUP (class_group));
   panel_return_if_fail (group_child->class_group == class_group);
-  panel_return_if_fail (XFCE_IS_PANEL_IMAGE (group_child->icon));
+  panel_return_if_fail (GTK_IS_WIDGET (group_child->icon));
 
   /* 0 means icons are disabled, although the grouping button does
    * not use lucient icons */
   if (group_child->tasklist->minimized_icon_lucency == 0)
     return;
 
+  icon_size = xfce_panel_plugin_get_icon_size (XFCE_PANEL_PLUGIN (xfce_tasklist_get_panel_plugin (group_child->tasklist)));
+  context = gtk_widget_get_style_context (GTK_WIDGET (group_child->icon));
+
   /* get the class group icon */
   if (group_child->tasklist->show_labels)
+    pixbuf = wnck_class_group_get_mini_icon (class_group);
+  else if (icon_size <= 31)
     pixbuf = wnck_class_group_get_mini_icon (class_group);
   else
     pixbuf = wnck_class_group_get_icon (class_group);
 
+  /* check if all the windows in the group are minimized */
+  for (li = group_child->windows; li != NULL; li = li->next)
+    {
+      child = li->data;
+      if (!wnck_window_is_minimized (child->window))
+        {
+          all_minimized_in_group = FALSE;
+          break;
+        }
+    }
+  /* if the icons in the group are ALL minimized, then display
+   * a minimized lucent effect for the group icon too */
+  if (!group_child->tasklist->only_minimized
+      && group_child->tasklist->minimized_icon_lucency < 100
+      && all_minimized_in_group
+      && !gtk_style_context_has_class (context, "minimized"))
+    {
+      gtk_style_context_add_class (context, "minimized");
+    }
+  else if (gtk_style_context_has_class (context, "minimized"))
+    {
+      gtk_style_context_remove_class (context, "minimized");
+    }
+
   if (G_LIKELY (pixbuf != NULL))
-    xfce_panel_image_set_from_pixbuf (XFCE_PANEL_IMAGE (group_child->icon), pixbuf);
+    gtk_image_set_from_pixbuf (GTK_IMAGE (group_child->icon), pixbuf);
   else
-    xfce_panel_image_clear (XFCE_PANEL_IMAGE (group_child->icon));
+    gtk_image_clear (GTK_IMAGE (group_child->icon));
 }
 
 
@@ -3568,7 +3997,7 @@ xfce_tasklist_group_button_child_visible_changed (XfceTasklistChild *group_child
   for (li = group_child->windows; li != NULL; li = li->next)
     {
       child = li->data;
-      if (GTK_WIDGET_VISIBLE (child->button))
+      if (gtk_widget_get_visible (child->button))
         visible_counter++;
     }
 
@@ -3588,7 +4017,7 @@ xfce_tasklist_group_button_child_visible_changed (XfceTasklistChild *group_child
   for (li = group_child->windows; li != NULL; li = li->next)
     {
       child = li->data;
-      if (GTK_WIDGET_VISIBLE (child->button))
+      if (gtk_widget_get_visible (child->button))
         child->type = type;
     }
 
@@ -3684,6 +4113,9 @@ xfce_tasklist_group_button_new (WnckClassGroup *class_group,
   child->type = CHILD_TYPE_GROUP;
   child->class_group = class_group;
 
+  gtk_style_context_add_class (gtk_widget_get_style_context (GTK_WIDGET (child->button)), "group-button");
+  g_signal_connect_after (G_OBJECT (child->button), "draw",
+      G_CALLBACK (xfce_tasklist_group_button_button_draw), child);
   /* note that the same signals should be in the proxy menu item too */
   g_signal_connect (G_OBJECT (child->button), "button-press-event",
       G_CALLBACK (xfce_tasklist_group_button_button_press_event), child);
@@ -3749,20 +4181,10 @@ xfce_tasklist_set_include_all_monitors (XfceTasklist *tasklist,
     {
       tasklist->all_monitors = all_monitors;
 
-      /* set the geometry to invalid or update the geometry and
-       * update the visibility of the buttons */
-      if (all_monitors)
-        {
-          xfce_tasklist_geometry_set_invalid (tasklist);
-
-          /* update visibility of buttons */
-          xfce_tasklist_active_workspace_changed (tasklist->screen,
-                                                  NULL, tasklist);
-        }
-      else if (tasklist->gdk_screen != NULL)
-        {
-          xfce_tasklist_gdk_screen_changed (tasklist->gdk_screen, tasklist);
-        }
+      /* update all windows */
+      if (tasklist->screen != NULL)
+        xfce_tasklist_active_workspace_changed (tasklist->screen,
+                                                NULL, tasklist);
     }
 }
 
@@ -3841,6 +4263,7 @@ xfce_tasklist_set_show_labels (XfceTasklist *tasklist,
             xfce_tasklist_group_button_icon_changed (child->class_group, child);
           else
             xfce_tasklist_button_icon_changed (child->window, child);
+          gtk_widget_queue_resize (GTK_WIDGET (tasklist));
         }
     }
 }
@@ -3885,6 +4308,29 @@ xfce_tasklist_set_show_wireframes (XfceTasklist *tasklist,
 
 
 static void
+xfce_tasklist_set_label_decorations (XfceTasklist *tasklist,
+                                     gboolean      label_decorations)
+{
+  GList             *li;
+  XfceTasklistChild *child;
+
+  panel_return_if_fail (XFCE_IS_TASKLIST (tasklist));
+
+  if (tasklist->label_decorations != label_decorations)
+    {
+      tasklist->label_decorations = label_decorations;
+
+      for (li = tasklist->windows; li != NULL; li = li->next)
+        {
+          child = li->data;
+          xfce_tasklist_button_name_changed (NULL, child);
+        }
+    }
+}
+
+
+
+static void
 xfce_tasklist_set_grouping (XfceTasklist         *tasklist,
                             XfceTasklistGrouping  grouping)
 {
@@ -3922,24 +4368,23 @@ xfce_tasklist_update_orientation (XfceTasklist *tasklist)
       child = li->data;
 
       /* update task box */
-      xfce_hvbox_set_orientation (XFCE_HVBOX (child->box),
+      gtk_orientable_set_orientation (GTK_ORIENTABLE (child->box),
           horizontal ? GTK_ORIENTATION_HORIZONTAL : GTK_ORIENTATION_VERTICAL);
 
       /* update the label */
       if (horizontal)
         {
           /* gtk_box_reorder_child (GTK_BOX (child->box), child->icon, 0); */
-          gtk_misc_set_alignment (GTK_MISC (child->label), 0.0, 0.5);
+          gtk_label_set_xalign (GTK_LABEL (child->label), 0.0);
+          gtk_label_set_yalign (GTK_LABEL (child->label), 0.5);
           gtk_label_set_angle (GTK_LABEL (child->label), 0);
-          gtk_label_set_ellipsize (GTK_LABEL (child->label),
-                                   child->tasklist->ellipsize_mode);
         }
       else
         {
           /* gtk_box_reorder_child (GTK_BOX (child->box), child->icon, -1); */
-          gtk_misc_set_alignment (GTK_MISC (child->label), 0.50, 0.00);
+          gtk_label_set_yalign (GTK_LABEL (child->label), 0.0);
+          gtk_label_set_xalign (GTK_LABEL (child->label), 0.5);
           gtk_label_set_angle (GTK_LABEL (child->label), 270);
-          gtk_label_set_ellipsize (GTK_LABEL (child->label), PANGO_ELLIPSIZE_NONE);
         }
     }
 
@@ -3999,8 +4444,7 @@ xfce_tasklist_update_monitor_geometry (XfceTasklist *tasklist)
 {
   if (tasklist->update_monitor_geometry_id == 0)
     {
-      tasklist->update_monitor_geometry_id = g_idle_add_full (G_PRIORITY_LOW, xfce_tasklist_update_monitor_geometry_idle,
-                                                              tasklist, xfce_tasklist_update_monitor_geometry_idle_destroy);
+      tasklist->update_monitor_geometry_id = gdk_threads_add_idle_full (G_PRIORITY_LOW, xfce_tasklist_update_monitor_geometry_idle,
+                                                                       tasklist, xfce_tasklist_update_monitor_geometry_idle_destroy);
     }
 }
-

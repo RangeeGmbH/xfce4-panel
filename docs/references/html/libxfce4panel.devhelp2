@@ -15,7 +15,7 @@
     </sub>
     <sub name="Additional Widgets" link="libxfce4panel-widgets.html">
       <sub name="XfceArrowButton" link="XfceArrowButton.html"/>
-      <sub name="XfceHVBox" link="XfceHVBox.html"/>
+      <sub name="XfceHVBox" link="libxfce4panel-XfceHVBox.html"/>
       <sub name="XfcePanelImage" link="XfcePanelImage.html"/>
     </sub>
     <sub name="Miscelleanous" link="libxfce4panel-miscelleanous.html">
@@ -23,8 +23,11 @@
     </sub>
     <sub name="Index of all symbols" link="api-index-full.html"/>
     <sub name="Index of deprecated symbols" link="api-index-deprecated.html"/>
+    <sub name="Index of new symbols in 4.14" link="api-index-4-14.html"/>
+    <sub name="Index of new symbols in 4.10" link="api-index-4-10.html"/>
     <sub name="Index of new symbols in 4.8" link="api-index-4-8.html"/>
     <sub name="Index of new symbols in 4.6" link="api-index-4-6.html"/>
+    <sub name="Annotation Glossary" link="annotation-glossary.html"/>
   </chapters>
   <functions>
     <keyword type="function" name="libxfce4panel_check_version ()" link="libxfce4panel-Version-Information.html#libxfce4panel-check-version" since="4.8"/>
@@ -44,6 +47,7 @@
     <keyword type="macro" name="xfce_screen_position_is_right()" link="libxfce4panel-Standard-Enumerations.html#xfce-screen-position-is-right"/>
     <keyword type="macro" name="xfce_screen_position_is_top()" link="libxfce4panel-Standard-Enumerations.html#xfce-screen-position-is-top"/>
     <keyword type="enum" name="enum XfceScreenPosition" link="libxfce4panel-Standard-Enumerations.html#XfceScreenPosition"/>
+    <keyword type="enum" name="enum XfcePanelPluginMode" link="libxfce4panel-Standard-Enumerations.html#XfcePanelPluginMode" since="4.10"/>
     <keyword type="macro" name="panel_slice_alloc()" link="libxfce4panel-Commonly-used-plugin-macros.html#panel-slice-alloc" deprecated=""/>
     <keyword type="macro" name="panel_slice_alloc0()" link="libxfce4panel-Commonly-used-plugin-macros.html#panel-slice-alloc0" deprecated=""/>
     <keyword type="macro" name="panel_slice_free()" link="libxfce4panel-Commonly-used-plugin-macros.html#panel-slice-free" deprecated=""/>
@@ -84,12 +88,21 @@
     <keyword type="function" name="xfce_panel_plugin_save_location ()" link="XfcePanelPlugin.html#xfce-panel-plugin-save-location"/>
     <keyword type="macro" name="xfce_panel_plugin_xfconf_channel_new()" link="XfcePanelPlugin.html#xfce-panel-plugin-xfconf-channel-new" since="4.8"/>
     <keyword type="macro" name="xfce_panel_plugin_set_panel_hidden()" link="XfcePanelPlugin.html#xfce-panel-plugin-set-panel-hidden" deprecated="4.8: Use xfce_panel_plugin_block_autohide() instead."/>
+    <keyword type="function" name="xfce_panel_plugin_get_icon_size ()" link="XfcePanelPlugin.html#xfce-panel-plugin-get-icon-size" since="4.14"/>
+    <keyword type="function" name="xfce_panel_plugin_get_mode ()" link="XfcePanelPlugin.html#xfce-panel-plugin-get-mode" since="4.10"/>
+    <keyword type="function" name="xfce_panel_plugin_get_nrows ()" link="XfcePanelPlugin.html#xfce-panel-plugin-get-nrows" since="4.10"/>
+    <keyword type="function" name="xfce_panel_plugin_get_shrink ()" link="XfcePanelPlugin.html#xfce-panel-plugin-get-shrink" since="4.10"/>
+    <keyword type="function" name="xfce_panel_plugin_get_small ()" link="XfcePanelPlugin.html#xfce-panel-plugin-get-small" since="4.10"/>
+    <keyword type="function" name="xfce_panel_plugin_set_shrink ()" link="XfcePanelPlugin.html#xfce-panel-plugin-set-shrink"/>
+    <keyword type="function" name="xfce_panel_plugin_set_small ()" link="XfcePanelPlugin.html#xfce-panel-plugin-set-small"/>
     <keyword type="struct" name="struct XfcePanelPlugin" link="XfcePanelPlugin.html#XfcePanelPlugin-struct"/>
     <keyword type="struct" name="struct XfcePanelPluginClass" link="XfcePanelPlugin.html#XfcePanelPluginClass"/>
     <keyword type="property" name="The “arguments” property" link="XfcePanelPlugin.html#XfcePanelPlugin--arguments"/>
     <keyword type="property" name="The “comment” property" link="XfcePanelPlugin.html#XfcePanelPlugin--comment"/>
+    <keyword type="property" name="The “dark-mode” property" link="XfcePanelPlugin.html#XfcePanelPlugin--dark-mode"/>
     <keyword type="property" name="The “display-name” property" link="XfcePanelPlugin.html#XfcePanelPlugin--display-name"/>
     <keyword type="property" name="The “expand” property" link="XfcePanelPlugin.html#XfcePanelPlugin--expand"/>
+    <keyword type="property" name="The “icon-size” property" link="XfcePanelPlugin.html#XfcePanelPlugin--icon-size"/>
     <keyword type="property" name="The “mode” property" link="XfcePanelPlugin.html#XfcePanelPlugin--mode"/>
     <keyword type="property" name="The “name” property" link="XfcePanelPlugin.html#XfcePanelPlugin--name"/>
     <keyword type="property" name="The “nrows” property" link="XfcePanelPlugin.html#XfcePanelPlugin--nrows"/>
@@ -134,10 +147,10 @@
     <keyword type="struct" name="struct XfceArrowButton" link="XfceArrowButton.html#XfceArrowButton-struct"/>
     <keyword type="property" name="The “arrow-type” property" link="XfceArrowButton.html#XfceArrowButton--arrow-type"/>
     <keyword type="signal" name="The “arrow-type-changed” signal" link="XfceArrowButton.html#XfceArrowButton-arrow-type-changed"/>
-    <keyword type="function" name="xfce_hvbox_new ()" link="XfceHVBox.html#xfce-hvbox-new"/>
-    <keyword type="function" name="xfce_hvbox_set_orientation ()" link="XfceHVBox.html#xfce-hvbox-set-orientation"/>
-    <keyword type="function" name="xfce_hvbox_get_orientation ()" link="XfceHVBox.html#xfce-hvbox-get-orientation"/>
-    <keyword type="struct" name="struct XfceHVBox" link="XfceHVBox.html#XfceHVBox-struct"/>
+    <keyword type="function" name="xfce_hvbox_new ()" link="libxfce4panel-XfceHVBox.html#xfce-hvbox-new" deprecated="4.14: Use gtk_box_new() instead"/>
+    <keyword type="function" name="xfce_hvbox_set_orientation ()" link="libxfce4panel-XfceHVBox.html#xfce-hvbox-set-orientation" deprecated="4.14: Use gtk_orientable_set_orientation() instead"/>
+    <keyword type="function" name="xfce_hvbox_get_orientation ()" link="libxfce4panel-XfceHVBox.html#xfce-hvbox-get-orientation" deprecated="4.14: Use gtk_orientable_get_orientation() instead"/>
+    <keyword type="struct" name="struct XfceHVBox" link="libxfce4panel-XfceHVBox.html#XfceHVBox"/>
     <keyword type="function" name="xfce_panel_image_new ()" link="XfcePanelImage.html#xfce-panel-image-new" since="4.8"/>
     <keyword type="function" name="xfce_panel_image_new_from_pixbuf ()" link="XfcePanelImage.html#xfce-panel-image-new-from-pixbuf" since="4.8"/>
     <keyword type="function" name="xfce_panel_image_new_from_source ()" link="XfcePanelImage.html#xfce-panel-image-new-from-source" since="4.8"/>
@@ -174,6 +187,9 @@
     <keyword type="constant" name="XFCE_SCREEN_POSITION_SE_H" link="libxfce4panel-Standard-Enumerations.html#XFCE-SCREEN-POSITION-SE-H:CAPS"/>
     <keyword type="constant" name="XFCE_SCREEN_POSITION_FLOATING_H" link="libxfce4panel-Standard-Enumerations.html#XFCE-SCREEN-POSITION-FLOATING-H:CAPS"/>
     <keyword type="constant" name="XFCE_SCREEN_POSITION_FLOATING_V" link="libxfce4panel-Standard-Enumerations.html#XFCE-SCREEN-POSITION-FLOATING-V:CAPS"/>
+    <keyword type="constant" name="XFCE_PANEL_PLUGIN_MODE_HORIZONTAL" link="libxfce4panel-Standard-Enumerations.html#XFCE-PANEL-PLUGIN-MODE-HORIZONTAL:CAPS"/>
+    <keyword type="constant" name="XFCE_PANEL_PLUGIN_MODE_VERTICAL" link="libxfce4panel-Standard-Enumerations.html#XFCE-PANEL-PLUGIN-MODE-VERTICAL:CAPS"/>
+    <keyword type="constant" name="XFCE_PANEL_PLUGIN_MODE_DESKBAR" link="libxfce4panel-Standard-Enumerations.html#XFCE-PANEL-PLUGIN-MODE-DESKBAR:CAPS"/>
     <keyword type="member" name="XfcePanelPluginClass.construct" link="XfcePanelPlugin.html#XfcePanelPluginClass.construct"/>
     <keyword type="member" name="XfcePanelPluginClass.screen-position-changed" link="XfcePanelPlugin.html#XfcePanelPluginClass.screen-position-changed"/>
     <keyword type="member" name="XfcePanelPluginClass.size-changed" link="XfcePanelPlugin.html#XfcePanelPluginClass.size-changed"/>

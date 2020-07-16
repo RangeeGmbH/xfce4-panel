@@ -74,7 +74,7 @@ static void     xfce_arrow_button_get_property         (GObject               *o
                                                         guint                  prop_id,
                                                         GValue                *value,
                                                         GParamSpec            *pspec);
-static void     xfce_arrow_button_finalize             (GObject               *object);
+static void     xfce_arrow_button_dispose              (GObject               *object);
 #if GTK_CHECK_VERSION (3, 0, 0)
 static gboolean xfce_arrow_button_draw                 (GtkWidget             *widget,
                                                         cairo_t               *cr);
@@ -107,8 +107,10 @@ struct _XfceArrowButtonPrivate
    * MAX_BLINKING_COUNT is reached */
   guint          blinking_counter;
 
+#if !GTK_CHECK_VERSION (3, 0, 0)
   /* button relief when the blinking starts */
   GtkReliefStyle last_relief;
+#endif
 };
 
 
@@ -117,7 +119,7 @@ static guint arrow_button_signals[LAST_SIGNAL];
 
 
 
-G_DEFINE_TYPE (XfceArrowButton, xfce_arrow_button, GTK_TYPE_TOGGLE_BUTTON)
+G_DEFINE_TYPE_WITH_PRIVATE (XfceArrowButton, xfce_arrow_button, GTK_TYPE_TOGGLE_BUTTON)
 
 
 
@@ -127,12 +129,10 @@ xfce_arrow_button_class_init (XfceArrowButtonClass * klass)
   GObjectClass   *gobject_class;
   GtkWidgetClass *gtkwidget_class;
 
-  g_type_class_add_private (klass, sizeof (XfceArrowButtonPrivate));
-
   gobject_class = G_OBJECT_CLASS (klass);
   gobject_class->get_property = xfce_arrow_button_get_property;
   gobject_class->set_property = xfce_arrow_button_set_property;
-  gobject_class->finalize = xfce_arrow_button_finalize;
+  gobject_class->dispose = xfce_arrow_button_dispose;
 
   gtkwidget_class = GTK_WIDGET_CLASS (klass);
 #if GTK_CHECK_VERSION (3, 0, 0)
@@ -184,19 +184,38 @@ xfce_arrow_button_class_init (XfceArrowButtonClass * klass)
 static void
 xfce_arrow_button_init (XfceArrowButton *button)
 {
-  button->priv = G_TYPE_INSTANCE_GET_PRIVATE (button, XFCE_TYPE_ARROW_BUTTON, XfceArrowButtonPrivate);
+#if GTK_CHECK_VERSION (3, 0, 0)
+  GtkStyleContext *context;
+  GtkCssProvider  *provider;
+#endif
+
+  button->priv = xfce_arrow_button_get_instance_private (button);
 
   /* initialize button values */
   button->priv->arrow_type = GTK_ARROW_UP;
   button->priv->blinking_timeout_id = 0;
   button->priv->blinking_counter = 0;
+#if !GTK_CHECK_VERSION (3, 0, 0)
   button->priv->last_relief = GTK_RELIEF_NORMAL;
+#endif
 
   /* set some widget properties */
   gtk_widget_set_has_window (GTK_WIDGET (button), FALSE);
   gtk_widget_set_can_default (GTK_WIDGET (button), FALSE);
   gtk_widget_set_can_focus (GTK_WIDGET (button), FALSE);
+#if GTK_CHECK_VERSION (3, 0, 0)
+  gtk_widget_set_focus_on_click (GTK_WIDGET (button), FALSE);
+  /* Make sure themes like Adwaita, which set excessive padding, don't cause the
+     launcher buttons to overlap when panels have a fairly normal size */
+  context = gtk_widget_get_style_context (GTK_WIDGET (button));
+  provider = gtk_css_provider_new ();
+  gtk_css_provider_load_from_data (provider, ".xfce4-panel button { padding: 0; }", -1, NULL);
+  gtk_style_context_add_provider (context,
+                                  GTK_STYLE_PROVIDER (provider),
+                                  GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
+#else
   gtk_button_set_focus_on_click (GTK_BUTTON (button), FALSE);
+#endif
 }
 
 
@@ -246,14 +265,17 @@ xfce_arrow_button_get_property (GObject    *object,
 
 
 static void
-xfce_arrow_button_finalize (GObject *object)
+xfce_arrow_button_dispose (GObject *object)
 {
   XfceArrowButton *button = XFCE_ARROW_BUTTON (object);
 
   if (button->priv->blinking_timeout_id != 0)
-    g_source_remove (button->priv->blinking_timeout_id);
+    {
+      g_source_remove (button->priv->blinking_timeout_id);
+      button->priv->blinking_timeout_id = 0;
+    }
 
-  (*G_OBJECT_CLASS (xfce_arrow_button_parent_class)->finalize) (object);
+  (*G_OBJECT_CLASS (xfce_arrow_button_parent_class)->dispose) (object);
 }
 
 
@@ -327,7 +349,7 @@ xfce_arrow_button_draw (GtkWidget *widget,
         gtk_render_arrow (context, cr, angle, x, y, width);
     }
 
-  return TRUE;
+  return FALSE;
 }
 
 
@@ -343,6 +365,7 @@ xfce_arrow_button_get_preferred_width (GtkWidget *widget,
   GtkStyleContext *context;
   GtkBorder        padding, border;
 
+  minimum_child_width = natural_child_width = 0;
   child = gtk_bin_get_child (GTK_BIN (widget));
   if (child != NULL
       && gtk_widget_get_visible (child))
@@ -368,8 +391,7 @@ xfce_arrow_button_get_preferred_width (GtkWidget *widget,
       context = gtk_widget_get_style_context (widget);
       gtk_style_context_get_padding (context, gtk_widget_get_state_flags (widget), &padding);
       gtk_style_context_get_border (context, gtk_widget_get_state_flags (widget), &border);
-      natural_child_width = (ARROW_WIDTH + padding.left + padding.right + border.left + border.right);
-      minimum_child_width = natural_child_width - ARROW_WIDTH;
+      minimum_child_width = natural_child_width = (ARROW_WIDTH + padding.left + padding.right + border.left + border.right);
     }
 
   if (minimum_width != NULL)
@@ -392,6 +414,7 @@ xfce_arrow_button_get_preferred_height (GtkWidget *widget,
   GtkStyleContext *context;
   GtkBorder        padding, border;
 
+  minimum_child_height = natural_child_height = 0;
   child = gtk_bin_get_child (GTK_BIN (widget));
   if (child != NULL
       && gtk_widget_get_visible (child))
@@ -417,8 +440,7 @@ xfce_arrow_button_get_preferred_height (GtkWidget *widget,
       context = gtk_widget_get_style_context (widget);
       gtk_style_context_get_padding (context, gtk_widget_get_state_flags (widget), &padding);
       gtk_style_context_get_border (context, gtk_widget_get_state_flags (widget), &border);
-      natural_child_height = (ARROW_WIDTH + padding.top + padding.bottom + border.top + border.bottom);
-      minimum_child_height = natural_child_height - ARROW_WIDTH;
+      minimum_child_height = natural_child_height = (ARROW_WIDTH + padding.top + padding.bottom + border.top + border.bottom);
     }
 
 
@@ -493,6 +515,7 @@ xfce_arrow_button_size_request (GtkWidget      *widget,
   XfceArrowButton *button = XFCE_ARROW_BUTTON (widget);
   GtkWidget *child;
 
+  requisition->height = requisition->width = 0;
   child = gtk_bin_get_child (GTK_BIN (widget));
   if (child != NULL && GTK_WIDGET_VISIBLE (child))
     {
@@ -573,6 +596,20 @@ static gboolean
 xfce_arrow_button_blinking_timeout (gpointer user_data)
 {
   XfceArrowButton *button = XFCE_ARROW_BUTTON (user_data);
+
+#if GTK_CHECK_VERSION (3, 0, 0)
+  GtkStateFlags    flags = gtk_widget_get_state_flags (GTK_WIDGET (button));
+
+  if ((flags & GTK_STATE_FLAG_ACTIVE) == GTK_STATE_FLAG_ACTIVE
+    || button->priv->blinking_timeout_id == 0)
+    {
+      gtk_widget_unset_state_flags (GTK_WIDGET (button), GTK_STATE_FLAG_ACTIVE);
+    }
+  else
+    {
+      gtk_widget_set_state_flags (GTK_WIDGET (button), GTK_STATE_FLAG_ACTIVE, FALSE);
+    }
+#else
   GtkStyle        *style;
   GtkRcStyle      *rc;
 
@@ -592,6 +629,7 @@ xfce_arrow_button_blinking_timeout (gpointer user_data)
       rc->bg[GTK_STATE_NORMAL] = style->bg[GTK_STATE_SELECTED];
       gtk_widget_modify_style(GTK_WIDGET (button), rc);
     }
+#endif
 
   return (button->priv->blinking_counter++ < MAX_BLINKING_COUNT);
 }
@@ -602,12 +640,17 @@ static void
 xfce_arrow_button_blinking_timeout_destroyed (gpointer user_data)
 {
   XfceArrowButton *button = XFCE_ARROW_BUTTON (user_data);
+
+#if GTK_CHECK_VERSION (3, 0, 0)
+  gtk_widget_unset_state_flags (GTK_WIDGET (button), GTK_STATE_FLAG_ACTIVE);
+#else
   GtkRcStyle      *rc;
 
   rc = gtk_widget_get_modifier_style (GTK_WIDGET (button));
   gtk_button_set_relief (GTK_BUTTON (button), button->priv->last_relief);
   PANEL_UNSET_FLAG (rc->color_flags[GTK_STATE_NORMAL], GTK_RC_BG);
   gtk_widget_modify_style (GTK_WIDGET (button), rc);
+#endif
 
   button->priv->blinking_timeout_id = 0;
   button->priv->blinking_counter = 0;
@@ -721,8 +764,10 @@ xfce_arrow_button_set_blinking (XfceArrowButton *button,
 
   if (blinking)
     {
+#if !GTK_CHECK_VERSION (3, 0, 0)
       /* store the relief of the button */
       button->priv->last_relief = gtk_button_get_relief (GTK_BUTTON (button));
+#endif
 
       if (button->priv->blinking_timeout_id == 0)
         {

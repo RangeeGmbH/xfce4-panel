@@ -4,7 +4,6 @@ panel-preferences.desktop.in
 common/panel-utils.c
 
 libxfce4panel/xfce-arrow-button.c
-libxfce4panel/xfce-hvbox.c
 libxfce4panel/xfce-panel-convenience.c
 libxfce4panel/xfce-panel-image.c
 libxfce4panel/xfce-panel-plugin-provider.c
@@ -48,6 +47,7 @@ plugins/clock/clock-analog.c
 plugins/clock/clock-binary.c
 plugins/clock/clock-dialog.glade
 plugins/clock/clock-digital.c
+plugins/clock/clock-digital.h
 plugins/clock/clock-fuzzy.c
 plugins/clock/clock-lcd.c
 plugins/clock/clock.desktop.in.in

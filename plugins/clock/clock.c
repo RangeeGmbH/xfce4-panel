@@ -27,7 +27,6 @@
 
 #include <gdk/gdkkeysyms.h>
 #include <gtk/gtk.h>
-#include <exo/exo.h>
 #include <libxfce4ui/libxfce4ui.h>
 #include <libxfce4panel/libxfce4panel.h>
 #include <common/panel-private.h>
@@ -43,7 +42,8 @@
 #include "clock-lcd.h"
 #include "clock-dialog_ui.h"
 
-#define DEFAULT_TOOLTIP_FORMAT "%A %d %B %Y"
+/* TRANSLATORS: adjust this accordingly for your locale format */
+#define DEFAULT_TOOLTIP_FORMAT NC_("Date", "%A %d %B %Y")
 
 /* Please adjust the following command to match your distribution */
 /* e.g. "time-admin" */
@@ -86,7 +86,8 @@ static void     clock_plugin_set_mode                  (ClockPlugin           *p
 static void     clock_plugin_reposition_calendar       (ClockPlugin           *plugin);
 static gboolean clock_plugin_pointer_grab              (ClockPlugin           *plugin,
                                                         GtkWidget             *widget,
-                                                        gboolean               keep);
+                                                        gboolean               keep,
+                                                        guint32                activate_time);
 static void     clock_plugin_pointer_ungrab            (ClockPlugin           *plugin,
                                                         GtkWidget             *widget);
 static gboolean clock_plugin_calendar_pointed          (GtkWidget             *calendar_window,
@@ -98,8 +99,7 @@ static gboolean clock_plugin_calendar_button_press_event (GtkWidget           *c
 static gboolean clock_plugin_calendar_key_press_event  (GtkWidget             *calendar_window,
                                                         GdkEventKey           *event,
                                                         ClockPlugin           *plugin);
-static void     clock_plugin_popup_calendar            (ClockPlugin           *plugin,
-                                                        gboolean               modal);
+static void     clock_plugin_popup_calendar            (ClockPlugin           *plugin);
 static void     clock_plugin_hide_calendar             (ClockPlugin           *plugin);
 static gboolean clock_plugin_tooltip                   (gpointer               user_data);
 
@@ -152,8 +152,8 @@ struct _ClockPlugin
   gchar              *tooltip_format;
   ClockTimeTimeout   *tooltip_timeout;
 
-  GdkGrabStatus       grab_pointer;
-  GdkGrabStatus       grab_keyboard;
+  GdkSeat            *seat;
+  gboolean            seat_grabbed;
 
   gchar              *time_config_tool;
   ClockTime          *time;
@@ -230,34 +230,34 @@ clock_plugin_class_init (ClockPluginClass *klass)
                                                       CLOCK_PLUGIN_MODE_MIN,
                                                       CLOCK_PLUGIN_MODE_MAX,
                                                       CLOCK_PLUGIN_MODE_DEFAULT,
-                                                      EXO_PARAM_READWRITE));
+                                                      G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
 
   g_object_class_install_property (gobject_class,
                                    PROP_TOOLTIP_FORMAT,
                                    g_param_spec_string ("tooltip-format",
                                                         NULL, NULL,
                                                         DEFAULT_TOOLTIP_FORMAT,
-                                                        EXO_PARAM_READWRITE));
+                                                        G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
 
   g_object_class_install_property (gobject_class,
                                    PROP_ROTATE_VERTICALLY,
                                    g_param_spec_boolean ("rotate-vertically",
                                                          NULL, NULL,
                                                          TRUE,
-                                                         EXO_PARAM_READWRITE));
+                                                         G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
 
   g_object_class_install_property (gobject_class,
                                    PROP_COMMAND,
                                    g_param_spec_string ("command",
                                                         NULL, NULL, NULL,
-                                                        EXO_PARAM_READWRITE));
+                                                        G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
 
   g_object_class_install_property (gobject_class,
                                    PROP_TIME_CONFIG_TOOL,
                                    g_param_spec_string ("time-config-tool",
                                                         NULL, NULL,
                                                         DEFAULT_TIME_CONFIG_TOOL,
-                                                        EXO_PARAM_READWRITE));
+                                                        G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
 }
 
 
@@ -272,6 +272,8 @@ clock_plugin_init (ClockPlugin *plugin)
   plugin->command = NULL;
   plugin->time_config_tool = g_strdup (DEFAULT_TIME_CONFIG_TOOL);
   plugin->rotate_vertically = TRUE;
+  plugin->seat = NULL;
+  plugin->seat_grabbed = FALSE;
   plugin->time = clock_time_new ();
 
   plugin->button = xfce_panel_create_toggle_button ();
@@ -433,20 +435,25 @@ clock_plugin_button_press_event (GtkWidget      *widget,
   if (event->button == 1 || event->button == 2)
     {
       if (event->type == GDK_BUTTON_PRESS &&
-          exo_str_is_empty (plugin->command))
+          panel_str_is_empty (plugin->command))
         {
           /* toggle calendar window visibility */
           if (plugin->calendar_window == NULL
               || !gtk_widget_get_visible (GTK_WIDGET (plugin->calendar_window)))
-            clock_plugin_popup_calendar
-              (plugin, event->button == 1 && !(event->state & GDK_CONTROL_MASK));
+            {
+              clock_plugin_popup_calendar (plugin);
+              if (event->button == 1 && !(event->state & GDK_CONTROL_MASK))
+                clock_plugin_pointer_grab (plugin, GTK_WIDGET (plugin->calendar_window), TRUE, event->time);
+            }
           else
-            clock_plugin_hide_calendar (plugin);
+            {
+              clock_plugin_hide_calendar (plugin);
+            }
 
           return TRUE;
         }
       else if (event->type == GDK_2BUTTON_PRESS
-               && !exo_str_is_empty (plugin->command))
+               && !panel_str_is_empty (plugin->command))
         {
           /* launch command */
           if (!xfce_spawn_command_line_on_screen (gtk_widget_get_screen (widget),
@@ -697,15 +704,16 @@ clock_plugin_configure_plugin_mode_changed (GtkComboBox       *combo,
     g_object_set (G_OBJECT (dialog->plugin), "mode", mode, NULL);
   panel_return_if_fail (G_IS_OBJECT (dialog->plugin->clock));
 
-  /* connect the exo bindings */
+  /* connect the bindings */
   for (i = 0; i < G_N_ELEMENTS (names); i++)
     {
       if (PANEL_HAS_FLAG (active, 1 << (i + 1)))
         {
           object = gtk_builder_get_object (dialog->builder, names[i].binding);
           panel_return_if_fail (G_IS_OBJECT (object));
-          exo_mutual_binding_new (G_OBJECT (dialog->plugin->clock), names[i].binding,
-                                  G_OBJECT (object), names[i].property);
+          g_object_bind_property (G_OBJECT (dialog->plugin->clock), names[i].binding,
+                                  G_OBJECT (object), names[i].property,
+                                  G_BINDING_BIDIRECTIONAL | G_BINDING_SYNC_CREATE);
         }
     }
 }
@@ -758,6 +766,34 @@ clock_plugin_configure_plugin_chooser_separator (GtkTreeModel *model,
 
 
 static void
+clock_plugin_validate_format_specifier (GtkEntry *entry, const gchar *format, ClockPlugin *plugin)
+{
+  GtkStyleContext *context;
+
+  context = gtk_widget_get_style_context (GTK_WIDGET (entry));
+
+  if (!clock_time_strdup_strftime (plugin->time, format))
+    gtk_style_context_add_class (context, "error");
+  else
+    gtk_style_context_remove_class (context, "error");
+}
+
+
+
+static void
+clock_plugin_validate_entry_text (GtkEditable *entry,
+                                  gpointer user_data)
+{
+  ClockPlugin *plugin = user_data;
+
+  clock_plugin_validate_format_specifier (GTK_ENTRY (entry),
+                                          gtk_entry_get_text (GTK_ENTRY (entry)),
+                                          plugin);
+}
+
+
+
+static void
 clock_plugin_configure_plugin_chooser_fill (ClockPlugin *plugin,
                                             GtkComboBox *combo,
                                             GtkEntry    *entry,
@@ -785,19 +821,27 @@ clock_plugin_configure_plugin_chooser_fill (ClockPlugin *plugin,
   for (i = 0; formats[i] != NULL; i++)
     {
       preview = clock_time_strdup_strftime (plugin->time, _(formats[i]));
-      gtk_list_store_insert_with_values (store, &iter, i,
-                                         COLUMN_FORMAT, _(formats[i]),
-                                         COLUMN_TEXT, preview, -1);
-      g_free (preview);
-
-      if (has_active == FALSE
-          && !exo_str_is_empty (active_format)
-          && strcmp (active_format, formats[i]) == 0)
+      if (preview)
         {
-          gtk_combo_box_set_active_iter (combo, &iter);
-          gtk_widget_hide (GTK_WIDGET (entry));
-          has_active = TRUE;
+          gtk_list_store_insert_with_values (store, &iter, i,
+            COLUMN_FORMAT, _(formats[i]),
+            COLUMN_TEXT, preview, -1);
+
+          g_free (preview);
+
+          if (has_active == FALSE
+            && !panel_str_is_empty (active_format)
+            && strcmp (active_format, formats[i]) == 0)
+            {
+              gtk_combo_box_set_active_iter (combo, &iter);
+              gtk_widget_hide (GTK_WIDGET (entry));
+              has_active = TRUE;
+
+            }
         }
+      else
+        g_warning ("Getting a time preview failed for format specifier %s, so "
+                    "omitting it from the list of default formats.", formats[i]);
     }
 
   gtk_list_store_insert_with_values (store, NULL, i++,
@@ -809,6 +853,9 @@ clock_plugin_configure_plugin_chooser_fill (ClockPlugin *plugin,
     {
       gtk_combo_box_set_active_iter (combo, &iter);
       gtk_widget_show (GTK_WIDGET (entry));
+      clock_plugin_validate_format_specifier (entry,
+                                              gtk_entry_get_text (entry),
+                                              plugin);
     }
 
   g_signal_connect (G_OBJECT (combo), "changed",
@@ -920,8 +967,6 @@ clock_plugin_configure_zoneinfo_model (gpointer data)
   GtkListStore       *store;
   GObject            *object;
 
-  GDK_THREADS_ENTER ();
-
   dialog->zonecompletion_idle = 0;
 
   object = gtk_builder_get_object (dialog->builder, "timezone-name");
@@ -941,8 +986,6 @@ clock_plugin_configure_zoneinfo_model (gpointer data)
   gtk_entry_completion_set_text_column (completion, 0);
 
   g_object_unref (G_OBJECT (completion));
-
-  GDK_THREADS_LEAVE ();
 
   return FALSE;
 }
@@ -983,22 +1026,25 @@ clock_plugin_configure_plugin (XfcePanelPlugin *panel_plugin)
 
   object = gtk_builder_get_object (builder, "timezone-name");
   panel_return_if_fail (GTK_IS_ENTRY (object));
-  exo_mutual_binding_new (G_OBJECT (plugin->time), "timezone",
-                          G_OBJECT (object), "text");
+  g_object_bind_property (G_OBJECT (plugin->time), "timezone",
+                          G_OBJECT (object), "text",
+                          G_BINDING_BIDIRECTIONAL | G_BINDING_SYNC_CREATE);
 
   /* idle add the zone completion */
-  dialog->zonecompletion_idle = g_idle_add (clock_plugin_configure_zoneinfo_model, dialog);
+  dialog->zonecompletion_idle = gdk_threads_add_idle (clock_plugin_configure_zoneinfo_model, dialog);
 
   object = gtk_builder_get_object (builder, "mode");
   g_signal_connect_data (G_OBJECT (object), "changed",
       G_CALLBACK (clock_plugin_configure_plugin_mode_changed), dialog,
-      (GClosureNotify) clock_plugin_configure_plugin_free, 0);
-  exo_mutual_binding_new (G_OBJECT (plugin), "mode",
-                          G_OBJECT (object), "active");
+      (GClosureNotify) (void (*)(void)) clock_plugin_configure_plugin_free, 0);
+  g_object_bind_property (G_OBJECT (plugin), "mode",
+                          G_OBJECT (object), "active",
+                          G_BINDING_BIDIRECTIONAL | G_BINDING_SYNC_CREATE);
 
   object = gtk_builder_get_object (builder, "tooltip-format");
-  exo_mutual_binding_new (G_OBJECT (plugin), "tooltip-format",
-                          G_OBJECT (object), "text");
+  g_object_bind_property (G_OBJECT (plugin), "tooltip-format",
+                          G_OBJECT (object), "text",
+                          G_BINDING_BIDIRECTIONAL | G_BINDING_SYNC_CREATE);
   combo = gtk_builder_get_object (builder, "tooltip-chooser");
   clock_plugin_configure_plugin_chooser_fill (plugin,
                                               GTK_COMBO_BOX (combo),
@@ -1006,6 +1052,8 @@ clock_plugin_configure_plugin (XfcePanelPlugin *panel_plugin)
                                               tooltip_formats);
 
   object = gtk_builder_get_object (builder, "digital-format");
+  g_signal_connect (G_OBJECT (object), "changed",
+                    G_CALLBACK (clock_plugin_validate_entry_text), plugin);
   combo = gtk_builder_get_object (builder, "digital-chooser");
   clock_plugin_configure_plugin_chooser_fill (plugin,
                                               GTK_COMBO_BOX (combo),
@@ -1113,17 +1161,17 @@ static void
 clock_plugin_calendar_show_event (GtkWidget   *calendar_window,
                                   ClockPlugin *plugin)
 {
-  GDateTime *date_time;
+  GDateTime *time;
 
   panel_return_if_fail (XFCE_IS_PANEL_PLUGIN (plugin));
 
   clock_plugin_reposition_calendar (plugin);
 
-  date_time = clock_time_get_time (plugin->time);
-  gtk_calendar_select_month (GTK_CALENDAR (plugin->calendar), g_date_time_get_month (date_time) - 1,
-                             g_date_time_get_year (date_time));
-  gtk_calendar_select_day (GTK_CALENDAR (plugin->calendar), g_date_time_get_day_of_month (date_time));
-  g_date_time_unref (date_time);
+  time = clock_time_get_time (plugin->time);
+  gtk_calendar_select_month (GTK_CALENDAR (plugin->calendar), g_date_time_get_month (time) - 1,
+                             g_date_time_get_year (time));
+  gtk_calendar_select_day (GTK_CALENDAR (plugin->calendar), g_date_time_get_day_of_month (time));
+  g_date_time_unref (time);
 }
 
 
@@ -1132,10 +1180,13 @@ static void
 clock_plugin_pointer_ungrab (ClockPlugin *plugin,
                              GtkWidget   *widget)
 {
-  if (plugin->grab_pointer == GDK_GRAB_SUCCESS)
-    gdk_pointer_ungrab (GDK_CURRENT_TIME);
-  if (plugin->grab_keyboard == GDK_GRAB_SUCCESS)
-    gdk_keyboard_ungrab (GDK_CURRENT_TIME);
+  panel_return_if_fail (XFCE_IS_CLOCK_PLUGIN (plugin));
+
+  if (plugin->seat != NULL && plugin->seat_grabbed)
+    {
+      gdk_seat_ungrab (plugin->seat);
+      plugin->seat_grabbed = FALSE;
+    }
 }
 
 
@@ -1143,32 +1194,39 @@ clock_plugin_pointer_ungrab (ClockPlugin *plugin,
 static gboolean
 clock_plugin_pointer_grab (ClockPlugin *plugin,
                            GtkWidget   *widget,
-                           gboolean     keep)
+                           gboolean     keep,
+                           guint32      activate_time)
 {
-  GdkWindow     *window;
-  gboolean       grab_succeed = FALSE;
-  guint          i;
-  GdkEventMask   pointer_mask = GDK_BUTTON_PRESS_MASK | GDK_BUTTON_RELEASE_MASK
-                                | GDK_ENTER_NOTIFY_MASK | GDK_LEAVE_NOTIFY_MASK
-                                | GDK_POINTER_MOTION_MASK;
+  GdkWindow        *window;
+  gboolean          grabbed = FALSE;
+  guint             i;
+  GdkDisplay       *display;
+  GdkDevice        *device;
 
-  window = widget->window;
+  window = gtk_widget_get_window (widget);
+
+  device = gtk_get_current_event_device ();
+
+  if (device == NULL)
+    {
+      display = gtk_widget_get_display (widget);
+      plugin->seat = gdk_display_get_default_seat (display);
+    }
+  else
+    {
+      plugin->seat = gdk_device_get_seat (device);
+    }
 
   /* don't try to get the grab for longer then 1/4 second */
   for (i = 0; i < (G_USEC_PER_SEC / 100 / 4); i++)
     {
-      plugin->grab_keyboard = gdk_keyboard_grab (window, TRUE, GDK_CURRENT_TIME);
-      if (plugin->grab_keyboard == GDK_GRAB_SUCCESS)
-        {
-          plugin->grab_pointer = gdk_pointer_grab (window, TRUE, pointer_mask,
-                                                   NULL, NULL, GDK_CURRENT_TIME);
-          if (plugin->grab_pointer == GDK_GRAB_SUCCESS)
-            {
-              grab_succeed = TRUE;
-              break;
-            }
-        }
-
+      grabbed = plugin->seat_grabbed =
+        plugin->seat != NULL &&
+        gdk_seat_grab (plugin->seat, window,
+                         GDK_SEAT_CAPABILITY_ALL, TRUE,
+                         NULL, NULL, NULL, NULL) == GDK_GRAB_SUCCESS;
+      if (grabbed)
+        break;
       g_usleep (100);
     }
 
@@ -1176,14 +1234,14 @@ clock_plugin_pointer_grab (ClockPlugin *plugin,
   if (!keep)
     clock_plugin_pointer_ungrab (plugin, widget);
 
-  if (!grab_succeed)
+  if (!grabbed)
     {
       clock_plugin_pointer_ungrab (plugin, widget);
       g_printerr (PACKAGE_NAME ": Unable to get keyboard and mouse "
                   "grab. Popup failed.\n");
     }
 
-  return grab_succeed;
+  return grabbed;
 }
 
 
@@ -1194,13 +1252,16 @@ clock_plugin_calendar_pointed (GtkWidget *calendar_window,
                                gdouble    y_root)
 {
   gint          window_x, window_y;
+  GtkAllocation allocation;
 
   if (gtk_widget_get_mapped (calendar_window))
     {
-      gdk_window_get_position (calendar_window->window, &window_x, &window_y);
+      gdk_window_get_position (gtk_widget_get_window (calendar_window), &window_x, &window_y);
 
-      if (x_root >= window_x && x_root < window_x + calendar_window->allocation.width &&
-          y_root >= window_y && y_root < window_y + calendar_window->allocation.height)
+      gtk_widget_get_allocation (calendar_window, &allocation);
+
+      if (x_root >= window_x && x_root < window_x + allocation.width &&
+          y_root >= window_y && y_root < window_y + allocation.height)
         return TRUE;
     }
 
@@ -1243,8 +1304,7 @@ clock_plugin_calendar_key_press_event (GtkWidget      *calendar_window,
 
 
 static void
-clock_plugin_popup_calendar (ClockPlugin *plugin,
-                             gboolean     modal)
+clock_plugin_popup_calendar (ClockPlugin *plugin)
 {
   if (plugin->calendar_window == NULL)
     {
@@ -1276,8 +1336,6 @@ clock_plugin_popup_calendar (ClockPlugin *plugin,
   gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (plugin->button), TRUE);
   gtk_widget_show (GTK_WIDGET (plugin->calendar_window));
   xfce_panel_plugin_block_autohide (XFCE_PANEL_PLUGIN (plugin), TRUE);
-  if (modal)
-    clock_plugin_pointer_grab (plugin, GTK_WIDGET (plugin->calendar_window), TRUE);
 }
 
 

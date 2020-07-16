@@ -1,3 +1,4 @@
+ACLOCAL_AMFLAGS = -I m4 ${ACLOCAL_FLAGS}
 
 SUBDIRS = \
 	libxfce4panel \
@@ -36,7 +37,9 @@ EXTRA_DIST = \
 	$(desktop_in_files) \
 	intltool-extract.in \
 	intltool-merge.in \
-	intltool-update.in
+	intltool-update.in \
+	m4/introspection.m4 \
+	m4/vapigen.m4
 
 DISTCLEANFILES = \
 	$(desktop_DATA) \
@@ -46,6 +49,8 @@ DISTCLEANFILES = \
 	intltool-update-tmp
 
 DISTCHECK_CONFIGURE_FLAGS = \
-	--enable-gtk-doc
+	--enable-gtk-doc \
+	--enable-introspection \
+	--enable-vala=no
 
 # vi:set ts=8 sw=8 noet ai nocindent syntax=automake:

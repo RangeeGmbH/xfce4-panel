@@ -25,10 +25,8 @@ liblauncher_la_CFLAGS = \
 	$(LIBXFCE4UTIL_CFLAGS) \
 	$(LIBXFCE4UI_CFLAGS) \
 	$(GARCON_CFLAGS) \
-	$(EXO_CFLAGS) \
 	$(GIO_CFLAGS) \
 	$(XFCONF_CFLAGS) \
-	$(DBUS_CFLAGS) \
 	$(PLATFORM_CFLAGS)
 
 liblauncher_la_LDFLAGS = \
@@ -45,8 +43,6 @@ liblauncher_la_LIBADD = \
 	$(LIBXFCE4UTIL_LIBS) \
 	$(LIBXFCE4UI_LIBS) \
 	$(GARCON_LIBS) \
-	$(EXO_LIBS) \
-	$(DBUS_LIBS) \
 	$(GIO_LIBS) \
 	$(XFCONF_LIBS)
 
@@ -77,7 +73,7 @@ DISTCLEANFILES += \
 	$(libclock_built_sources)
 
 launcher-dialog_ui.h: launcher-dialog.glade
-	$(AM_V_GEN) exo-csource --static --strip-comments --strip-content --name=launcher_dialog_ui $< >$@
+	$(AM_V_GEN) xdt-csource --static --strip-comments --strip-content --name=launcher_dialog_ui $< >$@
 endif
 
 # vi:set ts=8 sw=8 noet ai nocindent syntax=automake:

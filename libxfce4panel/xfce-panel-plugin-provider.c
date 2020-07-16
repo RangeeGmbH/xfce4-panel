@@ -56,7 +56,7 @@ xfce_panel_plugin_provider_get_type (void)
       type = g_type_register_static_simple (G_TYPE_INTERFACE,
                                             g_intern_static_string ("XfcePanelPluginProvider"),
                                             sizeof (XfcePanelPluginProviderInterface),
-                                            (GClassInitFunc) xfce_panel_plugin_provider_default_init,
+                                            (GClassInitFunc) (void (*)(void)) xfce_panel_plugin_provider_default_init,
                                             0,
                                             NULL,
                                             0);
@@ -110,6 +110,17 @@ xfce_panel_plugin_provider_set_size (XfcePanelPluginProvider *provider,
   panel_return_if_fail (XFCE_IS_PANEL_PLUGIN_PROVIDER (provider));
 
   (*XFCE_PANEL_PLUGIN_PROVIDER_GET_INTERFACE (provider)->set_size) (provider, size);
+}
+
+
+
+void
+xfce_panel_plugin_provider_set_icon_size (XfcePanelPluginProvider *provider,
+                                          gint                     icon_size)
+{
+  panel_return_if_fail (XFCE_IS_PANEL_PLUGIN_PROVIDER (provider));
+
+  (*XFCE_PANEL_PLUGIN_PROVIDER_GET_INTERFACE (provider)->set_icon_size) (provider, icon_size);
 }
 
 

@@ -21,7 +21,7 @@ plugins/systray/systray.desktop.in
 plugins/tasklist/tasklist.desktop.in
 plugins/windowmenu/windowmenu.desktop.in
 
-# https://bugs.launchpad.net/intltool/+bug/111794
+# https://bugs.launchpad.net/intltool/+bug/1117944
 sub/plugins/actions/actions.desktop.in
 sub/plugins/applicationsmenu/applicationsmenu.desktop.in
 sub/plugins/clock/clock.desktop.in

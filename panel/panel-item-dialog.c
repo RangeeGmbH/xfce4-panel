@@ -24,7 +24,6 @@
 #include <string.h>
 #endif
 
-#include <exo/exo.h>
 #include <libxfce4ui/libxfce4ui.h>
 #include <libxfce4util/libxfce4util.h>
 
@@ -62,6 +61,10 @@ static gboolean     panel_item_dialog_separator_func         (GtkTreeModel      
 static void         panel_item_dialog_selection_changed      (GtkTreeSelection   *selection,
                                                               PanelItemDialog    *dialog);
 static PanelModule *panel_item_dialog_get_selected_module    (GtkTreeView        *treeview);
+static void         panel_item_dialog_row_activated          (GtkTreeView        *treeview,
+                                                              GtkTreePath        *path,
+                                                              GtkTreeViewColumn  *column,
+                                                              gpointer            user_data);
 static void         panel_item_dialog_drag_begin             (GtkWidget          *treeview,
                                                               GdkDragContext     *context,
                                                               PanelItemDialog    *dialog);
@@ -164,10 +167,12 @@ panel_item_dialog_init (PanelItemDialog *dialog)
 {
   GtkWidget         *main_vbox;
   GtkWidget         *hbox;
+  GtkWidget         *button;
   GtkWidget         *label;
   GtkWidget         *entry;
   GtkWidget         *scroll;
   GtkWidget         *treeview;
+  GtkWidget         *icon;
   GtkTreeModel      *filter;
   GtkTreeViewColumn *column;
   GtkCellRenderer   *renderer;
@@ -190,31 +195,40 @@ panel_item_dialog_init (PanelItemDialog *dialog)
   gtk_window_set_title (GTK_WINDOW (dialog), _("Add New Items"));
   xfce_titled_dialog_set_subtitle (XFCE_TITLED_DIALOG (dialog),
       _("Add new plugins to the panel"));
-  gtk_window_set_icon_name (GTK_WINDOW (dialog), GTK_STOCK_ADD);
-  gtk_dialog_set_has_separator (GTK_DIALOG (dialog), FALSE);
+  gtk_window_set_icon_name (GTK_WINDOW (dialog), "list-add");
   gtk_window_set_default_size (GTK_WINDOW (dialog), 350, 450);
   gtk_window_set_type_hint (GTK_WINDOW (dialog), GDK_WINDOW_TYPE_HINT_NORMAL);
 
-  dialog->add_button = gtk_button_new_from_stock (GTK_STOCK_ADD);
-  gtk_widget_show (dialog->add_button);
+  icon = gtk_image_new_from_icon_name ("list-add", GTK_ICON_SIZE_BUTTON);
+  dialog->add_button = gtk_button_new_with_mnemonic (_("_Add"));
+  gtk_button_set_image (GTK_BUTTON (dialog->add_button), icon);
+  gtk_widget_show_all (dialog->add_button);
 
-  gtk_dialog_add_button (GTK_DIALOG (dialog), GTK_STOCK_HELP, GTK_RESPONSE_HELP);
+  icon = gtk_image_new_from_icon_name ("help-browser", GTK_ICON_SIZE_BUTTON);
+  button = gtk_button_new_with_mnemonic (_("_Help"));
+  gtk_button_set_image (GTK_BUTTON (button), icon);
+  gtk_widget_show_all (button);
+  gtk_dialog_add_action_widget (GTK_DIALOG (dialog), button, GTK_RESPONSE_HELP);
   gtk_dialog_add_action_widget (GTK_DIALOG (dialog), dialog->add_button, GTK_RESPONSE_OK);
-  gtk_dialog_add_button (GTK_DIALOG (dialog), GTK_STOCK_CLOSE, GTK_RESPONSE_CLOSE);
+  icon = gtk_image_new_from_icon_name ("window-close", GTK_ICON_SIZE_BUTTON);
+  button = gtk_button_new_with_mnemonic (_("_Close"));
+  gtk_button_set_image (GTK_BUTTON (button), icon);
+  gtk_widget_show_all (button);
+  gtk_dialog_add_action_widget (GTK_DIALOG (dialog), button, GTK_RESPONSE_CLOSE);
   gtk_dialog_set_default_response (GTK_DIALOG (dialog), GTK_RESPONSE_CLOSE);
 
-  main_vbox = gtk_vbox_new (FALSE, BORDER * 2);
-  gtk_container_add (GTK_CONTAINER (GTK_DIALOG (dialog)->vbox), main_vbox);
+  main_vbox = gtk_box_new (GTK_ORIENTATION_VERTICAL, BORDER * 2);
+  gtk_container_add (GTK_CONTAINER (gtk_dialog_get_content_area (GTK_DIALOG (dialog))), main_vbox);
   gtk_container_set_border_width (GTK_CONTAINER (main_vbox), BORDER);
   gtk_widget_show (main_vbox);
 
   /* search widget */
-  hbox = gtk_hbox_new (FALSE, BORDER);
+  hbox = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, BORDER);
   gtk_box_pack_start (GTK_BOX (main_vbox), hbox, FALSE, FALSE, 0);
   gtk_widget_show (hbox);
 
   label = gtk_label_new_with_mnemonic (_("_Search:"));
-  gtk_misc_set_alignment (GTK_MISC (label), 1.0, 0.5);
+  gtk_label_set_xalign (GTK_LABEL (label), 1.0);
   gtk_box_pack_start (GTK_BOX (hbox), label, TRUE, TRUE, 0);
   gtk_widget_show (label);
 
@@ -222,14 +236,13 @@ panel_item_dialog_init (PanelItemDialog *dialog)
   gtk_box_pack_start (GTK_BOX (hbox), entry, FALSE, FALSE, 0);
   gtk_label_set_mnemonic_widget (GTK_LABEL (label), entry);
   gtk_widget_set_tooltip_text (entry, _("Enter search phrase here"));
-#if GTK_CHECK_VERSION (2, 16, 0)
-  gtk_entry_set_icon_from_stock (GTK_ENTRY (entry), GTK_ENTRY_ICON_PRIMARY, GTK_STOCK_FIND);
-#endif
+  gtk_entry_set_icon_from_icon_name (GTK_ENTRY (entry), GTK_ENTRY_ICON_PRIMARY, "edit-find");
   gtk_widget_show (entry);
 
   /* scroller */
   scroll = gtk_scrolled_window_new (NULL, NULL);
   gtk_scrolled_window_set_policy (GTK_SCROLLED_WINDOW (scroll), GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
+  gtk_widget_set_vexpand (scroll, TRUE);
   gtk_box_pack_start (GTK_BOX (main_vbox), scroll, TRUE, TRUE, 0);
   gtk_scrolled_window_set_shadow_type (GTK_SCROLLED_WINDOW (scroll), GTK_SHADOW_IN);
   gtk_widget_show (scroll);
@@ -256,6 +269,7 @@ panel_item_dialog_init (PanelItemDialog *dialog)
 
   selection = gtk_tree_view_get_selection (GTK_TREE_VIEW (treeview));
   g_signal_connect (G_OBJECT (selection), "changed", G_CALLBACK (panel_item_dialog_selection_changed), dialog);
+  g_signal_connect (G_OBJECT (treeview), "row-activated", G_CALLBACK (panel_item_dialog_row_activated), dialog);
 
   g_object_unref (G_OBJECT (filter));
 
@@ -486,6 +500,19 @@ panel_item_dialog_get_selected_module (GtkTreeView *treeview)
 
 
 static void
+panel_item_dialog_row_activated (GtkTreeView *treeview,
+                                 GtkTreePath *path,
+                                 GtkTreeViewColumn *column,
+                                 gpointer user_data)
+{
+  GtkDialog *dialog = GTK_DIALOG (user_data);
+
+  panel_item_dialog_response (dialog, GTK_RESPONSE_OK);
+}
+
+
+
+static void
 panel_item_dialog_drag_begin (GtkWidget       *treeview,
                               GdkDragContext  *context,
                               PanelItemDialog *dialog)
@@ -506,7 +533,7 @@ panel_item_dialog_drag_begin (GtkWidget       *treeview,
           /* set the drag icon */
           icon_name = panel_module_get_icon_name (module);
           theme = gtk_icon_theme_get_for_screen (gtk_widget_get_screen (treeview));
-          if (!exo_str_is_empty (icon_name)
+          if (!panel_str_is_empty (icon_name)
               && gtk_icon_theme_has_icon (theme, icon_name))
             gtk_drag_set_icon_name (context, icon_name, 0, 0);
           else
@@ -515,7 +542,7 @@ panel_item_dialog_drag_begin (GtkWidget       *treeview,
       else
         {
           /* plugin is not usable */
-          gtk_drag_set_icon_name (context, GTK_STOCK_CANCEL, 0, 0);
+          gtk_drag_set_icon_name (context, "window-close", 0, 0);
         }
 
       g_object_unref (G_OBJECT (module));
@@ -544,7 +571,7 @@ panel_item_dialog_drag_data_get (GtkWidget        *treeview,
     {
       /* set the internal module name as selection data */
       internal_name = panel_module_get_name (module);
-      gtk_selection_data_set (selection_data, selection_data->target, 8,
+      gtk_selection_data_set (selection_data, gtk_selection_data_get_target (selection_data), 8,
           (guchar *) internal_name, strlen (internal_name));
       g_object_unref (G_OBJECT (module));
     }
@@ -609,7 +636,7 @@ panel_item_dialog_populate_store (PanelItemDialog *dialog)
 
   /* add an empty item for separator in 2nd position */
   if (panel_module_factory_has_launcher (dialog->factory))
-    gtk_list_store_insert_with_values (dialog->store, &iter, 1,
+    gtk_list_store_insert_with_values (dialog->store, &iter, 2,
                                        COLUMN_MODULE, NULL, -1);
 }
 
@@ -636,16 +663,28 @@ panel_item_dialog_compare_func (GtkTreeModel *model,
       /* don't move the separator */
       result = 0;
     }
-  else if (exo_str_is_equal (LAUNCHER_PLUGIN_NAME,
-                             panel_module_get_name (module_a)))
+  else if (g_strcmp0 (LAUNCHER_PLUGIN_NAME,
+                      panel_module_get_name (module_a)) == 0)
     {
       /* move the launcher to the first position */
       result = -1;
     }
-  else if (exo_str_is_equal (LAUNCHER_PLUGIN_NAME,
-                             panel_module_get_name (module_b)))
+  else if (g_strcmp0 (LAUNCHER_PLUGIN_NAME,
+                      panel_module_get_name (module_b)) == 0)
     {
       /* move the launcher to the first position */
+      result = 1;
+    }
+  else if (g_strcmp0 (SEPARATOR_PLUGIN_NAME,
+                      panel_module_get_name (module_a)) == 0)
+    {
+      /* move the separator to the second position */
+      result = -1;
+    }
+  else if (g_strcmp0 (SEPARATOR_PLUGIN_NAME,
+                      panel_module_get_name (module_b)) == 0)
+    {
+      /* move the separator to the second position */
       result = 1;
     }
   else
@@ -690,7 +729,7 @@ panel_item_dialog_visible_func (GtkTreeModel *model,
 
   /* search string from dialog */
   text = gtk_entry_get_text (entry);
-  if (G_UNLIKELY (exo_str_is_empty (text)))
+  if (G_UNLIKELY (panel_str_is_empty (text)))
     return TRUE;
 
   gtk_tree_model_get (model, iter, COLUMN_MODULE, &module, -1);
@@ -760,7 +799,7 @@ panel_item_dialog_text_renderer (GtkTreeViewColumn *column,
 
   /* avoid (null) in markup string */
   comment = panel_module_get_comment (module);
-  if (exo_str_is_empty (comment))
+  if (panel_str_is_empty (comment))
     comment = "";
 
   name = panel_module_get_display_name (module);

@@ -50,18 +50,37 @@
  * Create regular #GtkButton with a few properties set to be useful in the
  * Xfce panel: Flat (%GTK_RELIEF_NONE), no focus on click and minimal padding.
  *
- * Returns: newly created #GtkButton.
+ * Returns: (transfer full): newly created #GtkButton.
  **/
 GtkWidget *
 xfce_panel_create_button (void)
 {
-  GtkWidget *button = gtk_button_new ();
+  GtkWidget       *button = gtk_button_new ();
+#if GTK_CHECK_VERSION (3, 0, 0)
+  GtkStyleContext *context;
+  GtkCssProvider  *provider;
+#endif
 
   gtk_widget_set_can_default (GTK_WIDGET (button), FALSE);
   gtk_widget_set_can_focus (GTK_WIDGET (button), FALSE);
   gtk_button_set_relief (GTK_BUTTON (button), GTK_RELIEF_NONE);
+#if GTK_CHECK_VERSION (3, 0, 0)
+  gtk_widget_set_focus_on_click (GTK_WIDGET (button), FALSE);
+#else
   gtk_button_set_focus_on_click (GTK_BUTTON (button), FALSE);
+#endif
   gtk_widget_set_name (button, "xfce-panel-button");
+
+#if GTK_CHECK_VERSION (3, 0, 0)
+  /* Make sure themes like Adwaita, which set excessive padding, don't cause the
+     launcher buttons to overlap when panels have a fairly normal size */
+  context = gtk_widget_get_style_context (GTK_WIDGET (button));
+  provider = gtk_css_provider_new ();
+  gtk_css_provider_load_from_data (provider, ".xfce4-panel button { padding: 1px; }", -1, NULL);
+  gtk_style_context_add_provider (context,
+                                  GTK_STYLE_PROVIDER (provider),
+                                  GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
+#endif
 
   return button;
 }
@@ -74,18 +93,38 @@ xfce_panel_create_button (void)
  * Create regular #GtkToggleButton with a few properties set to be useful in
  * Xfce panel: Flat (%GTK_RELIEF_NONE), no focus on click and minimal padding.
  *
- * Returns: newly created #GtkToggleButton.
+ * Returns: (transfer full): newly created #GtkToggleButton.
  **/
 GtkWidget *
 xfce_panel_create_toggle_button (void)
 {
+#if GTK_CHECK_VERSION (3, 0, 0)
+  GtkStyleContext *context;
+  GtkCssProvider  *provider;
+#endif
+
   GtkWidget *button = gtk_toggle_button_new ();
 
   gtk_widget_set_can_default (GTK_WIDGET (button), FALSE);
   gtk_widget_set_can_focus (GTK_WIDGET (button), FALSE);
   gtk_button_set_relief (GTK_BUTTON (button), GTK_RELIEF_NONE);
+#if GTK_CHECK_VERSION (3, 0, 0)
+  gtk_widget_set_focus_on_click (GTK_WIDGET (button), FALSE);
+#else
   gtk_button_set_focus_on_click (GTK_BUTTON (button), FALSE);
+#endif
   gtk_widget_set_name (button, "xfce-panel-toggle-button");
+
+#if GTK_CHECK_VERSION (3, 0, 0)
+  /* Make sure themes like Adwaita, which set excessive padding, don't cause the
+     launcher buttons to overlap when panels have a fairly normal size */
+  context = gtk_widget_get_style_context (GTK_WIDGET (button));
+  provider = gtk_css_provider_new ();
+  gtk_css_provider_load_from_data (provider, ".xfce4-panel button { padding: 1px; }", -1, NULL);
+  gtk_style_context_add_provider (context,
+                                  GTK_STYLE_PROVIDER (provider),
+                                  GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
+#endif
 
   return button;
 }
@@ -127,7 +166,7 @@ xfce_panel_get_channel_name (void)
 /**
  * xfce_panel_pixbuf_from_source_at_size:
  * @source: string that contains the location of an icon
- * @icon_theme: icon theme or %NULL to use the default icon theme
+ * @icon_theme: (allow-none): icon theme or %NULL to use the default icon theme
  * @dest_width: the maximum returned width of the GdkPixbuf
  * @dest_height: the maximum returned height of the GdkPixbuf
  *
@@ -142,7 +181,7 @@ xfce_panel_get_channel_name (void)
  * If it is when loaded from the disk, the pixbuf is scaled
  * preserving the aspect ratio.
  *
- * Returns: a GdkPixbuf or %NULL if nothing was found. The value should
+ * Returns: (transfer full): a GdkPixbuf or %NULL if nothing was found. The value should
  *          be released with g_object_unref when no longer used.
  *
  * See also: XfcePanelImage
@@ -220,7 +259,7 @@ xfce_panel_pixbuf_from_source_at_size (const gchar  *source,
         icon_theme = gtk_icon_theme_get_default ();
 
       /* bit ugly as a fallback, but in most cases better then no icon */
-      pixbuf = gtk_icon_theme_load_icon (icon_theme, GTK_STOCK_MISSING_IMAGE,
+      pixbuf = gtk_icon_theme_load_icon (icon_theme, "image-missing",
                                          size, GTK_ICON_LOOKUP_USE_BUILTIN, NULL);
     }
 
@@ -257,12 +296,12 @@ xfce_panel_pixbuf_from_source_at_size (const gchar  *source,
 /**
  * xfce_panel_pixbuf_from_source:
  * @source: string that contains the location of an icon
- * @icon_theme: icon theme or %NULL to use the default icon theme
+ * @icon_theme: (allow-none): icon theme or %NULL to use the default icon theme
  * @size: size the icon that should be loaded
  *
  * See xfce_panel_pixbuf_from_source_at_size
  *
- * Returns: a GdkPixbuf or %NULL if nothing was found. The value should
+ * Returns: (transfer full): a GdkPixbuf or %NULL if nothing was found. The value should
  *          be released with g_object_unref when no longer used.
  *
  * See also: XfcePanelImage

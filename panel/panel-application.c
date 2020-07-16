@@ -24,7 +24,6 @@
 #include <stdlib.h>
 #endif
 
-#include <exo/exo.h>
 #include <glib/gstdio.h>
 #include <xfconf/xfconf.h>
 #include <libxfce4util/libxfce4util.h>
@@ -254,7 +253,7 @@ panel_application_finalize (GObject *object)
 #endif
 
   /* destroy all panels */
-  g_slist_foreach (application->windows, (GFunc) gtk_widget_destroy, NULL);
+  g_slist_foreach (application->windows, (GFunc) (void (*)(void)) gtk_widget_destroy, NULL);
   g_slist_free (application->windows);
 
   g_object_unref (G_OBJECT (application->factory));
@@ -298,10 +297,10 @@ panel_application_xfconf_window_bindings (PanelApplication *application,
     { "length-adjust", G_TYPE_BOOLEAN },
     { "enter-opacity", G_TYPE_UINT },
     { "leave-opacity", G_TYPE_UINT },
-    { "background-alpha", G_TYPE_UINT },
     { "background-style", G_TYPE_UINT },
-    { "background-color", GDK_TYPE_COLOR },
+    { "background-rgba", GDK_TYPE_RGBA },
     { "background-image", G_TYPE_STRING },
+    { "icon-size", G_TYPE_UINT },
     { "output-name", G_TYPE_STRING },
     { "position", G_TYPE_STRING },
     { "disable-struts", G_TYPE_BOOLEAN },
@@ -355,7 +354,7 @@ panel_application_load_real (PanelApplication *application)
 
   if (xfconf_channel_get_property (application->xfconf, "/panels", &val)
       && (G_VALUE_HOLDS_UINT (&val)
-          || G_VALUE_HOLDS (&val, PANEL_PROPERTIES_TYPE_VALUE_ARRAY)))
+          || G_VALUE_HOLDS (&val, G_TYPE_PTR_ARRAY)))
     {
       if (G_VALUE_HOLDS_UINT (&val))
         {
@@ -394,8 +393,8 @@ panel_application_load_real (PanelApplication *application)
               && strncmp (output_name, "screen-", 7) == 0
               && sscanf (output_name, "screen-%d", &screen_num) == 1)
             {
-              if (screen_num < gdk_display_get_n_screens (display))
-                screen = gdk_display_get_screen (display, screen_num);
+              if (screen_num < 1)
+                screen = gdk_display_get_default_screen (display);
             }
           g_free (output_name);
 
@@ -509,9 +508,7 @@ panel_application_wait_for_window_manager_destroyed (gpointer data)
 
   /* start loading the panels, hopefully a window manager is found, but it
    * probably also works fine without... */
-  GDK_THREADS_ENTER ();
   panel_application_load_real (application);
-  GDK_THREADS_LEAVE ();
 }
 #endif
 
@@ -528,7 +525,7 @@ panel_application_plugin_move_drag_data_get (GtkWidget        *item,
   /* set some data, we never use this, but GTK_DEST_DEFAULT_ALL
    * used in the item dialog requires this */
   gtk_selection_data_set (selection_data,
-                          selection_data->target, 8,
+                          gtk_selection_data_get_target (selection_data), 8,
                           (const guchar *) "0", 1);
 }
 
@@ -572,14 +569,15 @@ panel_application_plugin_move (GtkWidget        *item,
 
   /* create drag context */
   target_list = gtk_target_list_new (drag_targets, G_N_ELEMENTS (drag_targets));
-  context = gtk_drag_begin (item, target_list, GDK_ACTION_MOVE, 1, NULL);
+  context = gtk_drag_begin_with_coordinates (item, target_list,
+                                             GDK_ACTION_MOVE, 1, NULL, -1, -1);
   gtk_target_list_unref (target_list);
 
   /* set the drag context icon name */
   module = panel_module_get_from_plugin_provider (XFCE_PANEL_PLUGIN_PROVIDER (item));
   icon_name = panel_module_get_icon_name (module);
   theme = gtk_icon_theme_get_for_screen (gtk_widget_get_screen (item));
-  if (!exo_str_is_empty (icon_name)
+  if (!panel_str_is_empty (icon_name)
       && gtk_icon_theme_has_icon (theme, icon_name))
     gtk_drag_set_icon_name (context, icon_name, 0, 0);
   else
@@ -603,7 +601,7 @@ panel_application_plugin_delete_config (PanelApplication *application,
   gchar *filename, *path;
 
   panel_return_if_fail (PANEL_IS_APPLICATION (application));
-  panel_return_if_fail (!exo_str_is_empty (name));
+  panel_return_if_fail (!panel_str_is_empty (name));
   panel_return_if_fail (unique_id != -1);
 
   /* remove the xfconf property */
@@ -908,10 +906,10 @@ panel_application_drag_data_received (PanelWindow      *window,
       switch (info)
         {
         case TARGET_PLUGIN_NAME:
-          if (G_LIKELY (selection_data->length > 0))
+          if (G_LIKELY (gtk_selection_data_get_length (selection_data) > 0))
             {
               /* create a new item with a unique id */
-              name = (const gchar *) selection_data->data;
+              name = (const gchar *) gtk_selection_data_get_data (selection_data);
               succeed = panel_application_plugin_insert (application, window, name,
                                                          -1, NULL, application->drop_index);
             }
@@ -950,7 +948,7 @@ panel_application_drag_data_received (PanelWindow      *window,
 
               /* reparent the widget, this will also call remove and add for the itembar */
               gtk_widget_hide (provider);
-              gtk_widget_reparent (provider, itembar);
+              xfce_widget_reparent (provider, itembar);
               gtk_widget_show (provider);
 
               /* move the item to the correct position on the itembar */
@@ -982,7 +980,7 @@ panel_application_drag_data_received (PanelWindow      *window,
               if (G_LIKELY (uris != NULL))
                 {
                   n_items = g_strv_length (uris);
-                  if (xfce_dialog_confirm (NULL, GTK_STOCK_ADD, _("Create _Launcher"),
+                  if (xfce_dialog_confirm (NULL, "list-add", _("Create _Launcher"),
                                            _("This will create a new launcher plugin on the panel and inserts "
                                              "the dropped files as menu items."),
                                            ngettext ("Create new launcher from %d desktop file",
@@ -1220,8 +1218,8 @@ panel_application_load (PanelApplication  *application,
 
       /* setup timeout to check for a window manager */
       application->wait_for_wm_timeout_id =
-          g_timeout_add_full (G_PRIORITY_DEFAULT_IDLE, 50, panel_application_wait_for_window_manager,
-                              wfwm, panel_application_wait_for_window_manager_destroyed);
+          gdk_threads_add_timeout_full (G_PRIORITY_DEFAULT_IDLE, 50, panel_application_wait_for_window_manager,
+                                        wfwm, panel_application_wait_for_window_manager_destroyed);
     }
   else
     {
@@ -1482,7 +1480,7 @@ panel_application_new_window (PanelApplication *application,
   GtkWidget          *itembar;
   gchar              *property;
   gint                idx;
-  static const gchar *props[] = { "mode", "size", "nrows" };
+  static const gchar *props[] = { "mode", "size", "nrows", "icon-size" };
   guint               i;
   gchar              *position;
   static gint         unqiue_id_counter = 1;
@@ -1523,7 +1521,7 @@ panel_application_new_window (PanelApplication *application,
   /* add the itembar */
   itembar = panel_itembar_new ();
   for (i = 0; i < G_N_ELEMENTS (props); i++)
-    exo_binding_new (G_OBJECT (window), props[i], G_OBJECT (itembar), props[i]);
+    g_object_bind_property (G_OBJECT (window), props[i], G_OBJECT (itembar), props[i], G_BINDING_DEFAULT);
   gtk_container_add (GTK_CONTAINER (window), itembar);
   gtk_widget_show (itembar);
 
@@ -1555,6 +1553,7 @@ panel_application_new_window (PanelApplication *application,
       idx = g_slist_index (application->windows, window);
       position = g_strdup_printf ("p=0;x=100;y=%d", 30 + (idx * (48 + 10)));
       g_object_set (G_OBJECT (window), "position", position, NULL);
+      g_object_set (G_OBJECT (window), "size", 48, NULL);
       g_free (position);
     }
 
@@ -1724,7 +1723,7 @@ panel_application_logout (void)
     }
   else if (g_getenv ("SESSION_MANAGER") == NULL)
     {
-      if (xfce_dialog_confirm (NULL, GTK_STOCK_QUIT, NULL,
+      if (xfce_dialog_confirm (NULL, "application-exit", _("Quit"),
           _("You have started X without session manager. Clicking Quit will close the X server."),
           _("Are you sure you want to quit the panel?")))
         command = "xfce4-panel --quit";

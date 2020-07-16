@@ -6,13 +6,10 @@
     with the panel.
   -->
   <interface name="org.xfce.Panel">
-    <annotation name="org.freedesktop.DBus.GLib.CSymbol"
-                value="panel_dbus_service"/>
-    <annotation name="org.freedesktop.DBus.GLib.ClientCSymbol"
-                value="_panel_dbus_client"/>
+    <annotation name="org.gtk.GDBus.C.Name" value="ExportedService" />
 
     <!--
-      DisplayPreferencesDialog (active : UINT, socket-id : STRING) : VOID
+      DisplayPreferencesDialog (active : UINT, socket-id : UINT) : VOID
 
       active    : The active panel number in the dialog, starting
                   at zero.
@@ -22,7 +19,7 @@
     -->
     <method name="DisplayPreferencesDialog">
       <arg name="active" direction="in" type="u" />
-      <arg name="socket_id" direction="in" type="s" />
+      <arg name="socket_id" direction="in" type="u" />
     </method>
 
     <!--

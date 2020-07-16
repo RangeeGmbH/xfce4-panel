@@ -16,9 +16,7 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
-/* #if !defined(LIBXFCE4PANEL_INSIDE_LIBXFCE4PANEL_H) && !defined(LIBXFCE4PANEL_COMPILATION)
-#error "Only <libxfce4panel/libxfce4panel.h> can be included directly, this file may disappear or change contents"
-#endif */
+
 
 #ifndef __XFCE_PANEL_PLUGIN_H__
 #define __XFCE_PANEL_PLUGIN_H__
@@ -99,6 +97,8 @@ typedef gboolean (*XfcePanelPluginCheck) (GdkScreen *screen);
  * @configure_plugin :        See #XfcePanelPlugin::configure-plugin for more information.
  * @removed :                 See #XfcePanelPlugin::removed for more information.
  * @remote_event :            See #XfcePanelPlugin::remote-event for more information.
+ * @mode_changed :            See #XfcePanelPlugin::mode-changed for more information.
+ * @nrows_changed :           See #XfcePanelPlugin::nrows-changed for more information.
  *
  * Class of an #XfcePanelPlugin. The interface can be used to create GObject based plugin.
  **/
@@ -186,6 +186,8 @@ gboolean              xfce_panel_plugin_get_small           (XfcePanelPlugin   *
 
 void                  xfce_panel_plugin_set_small           (XfcePanelPlugin   *plugin,
                                                              gboolean           small);
+
+gint                  xfce_panel_plugin_get_icon_size       (XfcePanelPlugin   *plugin) G_GNUC_PURE;
 
 GtkOrientation        xfce_panel_plugin_get_orientation     (XfcePanelPlugin   *plugin) G_GNUC_PURE;
 

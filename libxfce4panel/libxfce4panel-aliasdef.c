@@ -4,14 +4,8 @@
 
 #include <glib.h>
 
-#undef IN_HEADER
-#define IN_HEADER(x) 1
-
-#undef IN_SOURCE
-#define IN_SOURCE defined
-
-#if IN_HEADER(__LIBXFCE4PANEL_CONFIG_H__)
-#if IN_SOURCE(__LIBXFCE4PANEL_CONFIG_C__)
+#if 1
+#ifdef __LIBXFCE4PANEL_CONFIG_C__
 #undef libxfce4panel_check_version 
 extern __typeof (libxfce4panel_check_version) libxfce4panel_check_version __attribute((alias("IA__libxfce4panel_check_version"), visibility("default")));
 
@@ -26,8 +20,8 @@ extern __typeof (libxfce4panel_minor_version) libxfce4panel_minor_version __attr
 
 #endif
 #endif
-#if IN_HEADER(__LIBXFCE4PANEL_ENUM_TYPES_H__)
-#if IN_SOURCE(__LIBXFCE4PANEL_ENUM_TYPES_C__)
+#if 1
+#ifdef __LIBXFCE4PANEL_ENUM_TYPES_C__
 #undef xfce_screen_position_get_type 
 extern __typeof (xfce_screen_position_get_type) xfce_screen_position_get_type __attribute((alias("IA__xfce_screen_position_get_type"), visibility("default")));
 
@@ -36,8 +30,8 @@ extern __typeof (xfce_panel_plugin_mode_get_type) xfce_panel_plugin_mode_get_typ
 
 #endif
 #endif
-#if IN_HEADER(__XFCE_ARROW_BUTTON_H__)
-#if IN_SOURCE(__XFCE_ARROW_BUTTON_C__)
+#if 1
+#ifdef __XFCE_ARROW_BUTTON_C__
 #undef xfce_arrow_button_get_type 
 extern __typeof (xfce_arrow_button_get_type) xfce_arrow_button_get_type __attribute((alias("IA__xfce_arrow_button_get_type"), visibility("default")));
 
@@ -58,8 +52,11 @@ extern __typeof (xfce_arrow_button_set_blinking) xfce_arrow_button_set_blinking 
 
 #endif
 #endif
-#if IN_HEADER(__XFCE_HVBOX_H__)
-#if IN_SOURCE(__XFCE_HVBOX_C__)
+#if 1
+#ifdef __XFCE_HVBOX_C__
+#undef xfce_hvbox_get_orientation 
+extern __typeof (xfce_hvbox_get_orientation) xfce_hvbox_get_orientation __attribute((alias("IA__xfce_hvbox_get_orientation"), visibility("default")));
+
 #undef xfce_hvbox_get_type 
 extern __typeof (xfce_hvbox_get_type) xfce_hvbox_get_type __attribute((alias("IA__xfce_hvbox_get_type"), visibility("default")));
 
@@ -69,13 +66,10 @@ extern __typeof (xfce_hvbox_new) xfce_hvbox_new __attribute((alias("IA__xfce_hvb
 #undef xfce_hvbox_set_orientation 
 extern __typeof (xfce_hvbox_set_orientation) xfce_hvbox_set_orientation __attribute((alias("IA__xfce_hvbox_set_orientation"), visibility("default")));
 
-#undef xfce_hvbox_get_orientation 
-extern __typeof (xfce_hvbox_get_orientation) xfce_hvbox_get_orientation __attribute((alias("IA__xfce_hvbox_get_orientation"), visibility("default")));
-
 #endif
 #endif
-#if IN_HEADER(__XFCE_PANEL_CONVENIENCE_H__)
-#if IN_SOURCE(__XFCE_PANEL_CONVENIENCE_C__)
+#if 1
+#ifdef __XFCE_PANEL_CONVENIENCE_C__
 #undef xfce_panel_create_button 
 extern __typeof (xfce_panel_create_button) xfce_panel_create_button __attribute((alias("IA__xfce_panel_create_button"), visibility("default")));
 
@@ -93,8 +87,8 @@ extern __typeof (xfce_panel_pixbuf_from_source_at_size) xfce_panel_pixbuf_from_s
 
 #endif
 #endif
-#if IN_HEADER(__XFCE_PANEL_IMAGE_H__)
-#if IN_SOURCE(__XFCE_PANEL_IMAGE_C__)
+#if 1
+#ifdef __XFCE_PANEL_IMAGE_C__
 #undef xfce_panel_image_get_type 
 extern __typeof (xfce_panel_image_get_type) xfce_panel_image_get_type __attribute((alias("IA__xfce_panel_image_get_type"), visibility("default")));
 
@@ -124,8 +118,8 @@ extern __typeof (xfce_panel_image_clear) xfce_panel_image_clear __attribute((ali
 
 #endif
 #endif
-#if IN_HEADER(__XFCE_PANEL_PLUGIN_H__)
-#if IN_SOURCE(__XFCE_PANEL_PLUGIN_C__)
+#if 1
+#ifdef __XFCE_PANEL_PLUGIN_C__
 #undef xfce_panel_plugin_get_type 
 extern __typeof (xfce_panel_plugin_get_type) xfce_panel_plugin_get_type __attribute((alias("IA__xfce_panel_plugin_get_type"), visibility("default")));
 
@@ -152,6 +146,9 @@ extern __typeof (xfce_panel_plugin_get_size) xfce_panel_plugin_get_size __attrib
 
 #undef xfce_panel_plugin_get_small 
 extern __typeof (xfce_panel_plugin_get_small) xfce_panel_plugin_get_small __attribute((alias("IA__xfce_panel_plugin_get_small"), visibility("default")));
+
+#undef xfce_panel_plugin_get_icon_size 
+extern __typeof (xfce_panel_plugin_get_icon_size) xfce_panel_plugin_get_icon_size __attribute((alias("IA__xfce_panel_plugin_get_icon_size"), visibility("default")));
 
 #undef xfce_panel_plugin_get_expand 
 extern __typeof (xfce_panel_plugin_get_expand) xfce_panel_plugin_get_expand __attribute((alias("IA__xfce_panel_plugin_get_expand"), visibility("default")));
@@ -233,8 +230,8 @@ extern __typeof (xfce_panel_plugin_save_location) xfce_panel_plugin_save_locatio
 
 #endif
 #endif
-#if IN_HEADER(__XFCE_PANEL_PLUGIN_PROVIDER_H__)
-#if IN_SOURCE(__XFCE_PANEL_PLUGIN_PROVIDER_C__)
+#if 1
+#ifdef __XFCE_PANEL_PLUGIN_PROVIDER_C__
 #undef xfce_panel_plugin_provider_ask_remove 
 extern __typeof (xfce_panel_plugin_provider_ask_remove) xfce_panel_plugin_provider_ask_remove __attribute((alias("IA__xfce_panel_plugin_provider_ask_remove"), visibility("default")));
 
@@ -249,6 +246,9 @@ extern __typeof (xfce_panel_plugin_provider_get_unique_id) xfce_panel_plugin_pro
 
 #undef xfce_panel_plugin_provider_set_size 
 extern __typeof (xfce_panel_plugin_provider_set_size) xfce_panel_plugin_provider_set_size __attribute((alias("IA__xfce_panel_plugin_provider_set_size"), visibility("default")));
+
+#undef xfce_panel_plugin_provider_set_icon_size 
+extern __typeof (xfce_panel_plugin_provider_set_icon_size) xfce_panel_plugin_provider_set_icon_size __attribute((alias("IA__xfce_panel_plugin_provider_set_icon_size"), visibility("default")));
 
 #undef xfce_panel_plugin_provider_set_mode 
 extern __typeof (xfce_panel_plugin_provider_set_mode) xfce_panel_plugin_provider_set_mode __attribute((alias("IA__xfce_panel_plugin_provider_set_mode"), visibility("default")));

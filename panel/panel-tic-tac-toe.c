@@ -105,12 +105,11 @@ static void
 panel_tic_tac_toe_init (PanelTicTacToe *dialog)
 {
   GtkWidget *button;
-  GtkWidget *table;
+  GtkWidget *grid;
   GtkWidget *separator;
   guint      i;
   GtkWidget *label;
   guint      row, col;
-  GtkWidget *align;
   GtkWidget *vbox;
   GtkWidget *combo;
   GtkWidget *hbox;
@@ -118,54 +117,51 @@ panel_tic_tac_toe_init (PanelTicTacToe *dialog)
   gtk_window_set_title (GTK_WINDOW (dialog), "Tic-tac-toe");
   gtk_window_set_resizable (GTK_WINDOW (dialog), FALSE);
   gtk_window_set_icon_name (GTK_WINDOW (dialog), "applications-games");
-  gtk_dialog_set_has_separator (GTK_DIALOG (dialog), FALSE);
 
-  button = xfce_gtk_button_new_mixed (GTK_STOCK_NEW, _("_New Game"));
+  button = xfce_gtk_button_new_mixed ("document-new", _("_New Game"));
   gtk_dialog_add_action_widget (GTK_DIALOG (dialog), button, GTK_RESPONSE_ACCEPT);
-  gtk_dialog_add_button (GTK_DIALOG (dialog), GTK_STOCK_CLOSE, GTK_RESPONSE_CLOSE);
+  gtk_dialog_add_button (GTK_DIALOG (dialog), _("_Close"), GTK_RESPONSE_CLOSE);
 
-  vbox = gtk_vbox_new (FALSE, 6);
-  gtk_box_pack_start (GTK_BOX (GTK_DIALOG (dialog)->vbox), vbox, TRUE, TRUE, 0);
+  vbox = gtk_box_new (GTK_ORIENTATION_VERTICAL, 6);
+  gtk_box_pack_start (GTK_BOX (gtk_dialog_get_content_area (GTK_DIALOG (dialog))), vbox, TRUE, TRUE, 0);
   gtk_container_set_border_width (GTK_CONTAINER (vbox), 6);
 
-  hbox = gtk_hbox_new (FALSE, 12);
+  hbox = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 12);
   gtk_box_pack_start (GTK_BOX (vbox), hbox, FALSE, FALSE, 0);
 
   label = gtk_label_new_with_mnemonic (_("_Level:"));
   gtk_box_pack_start (GTK_BOX (hbox), label, FALSE, FALSE, 0);
 
-  dialog->level = combo = gtk_combo_box_new_text ();
+  dialog->level = combo = gtk_combo_box_text_new ();
   gtk_box_pack_start (GTK_BOX (hbox), combo, FALSE, FALSE, 0);
   gtk_label_set_mnemonic_widget (GTK_LABEL (label), combo);
-  gtk_combo_box_append_text (GTK_COMBO_BOX (combo), _("Novice"));
-  gtk_combo_box_append_text (GTK_COMBO_BOX (combo), _("Intermediate"));
-  gtk_combo_box_append_text (GTK_COMBO_BOX (combo), _("Experienced"));
-  gtk_combo_box_append_text (GTK_COMBO_BOX (combo), _("Expert"));
+  gtk_combo_box_text_append_text (GTK_COMBO_BOX_TEXT (combo), _("Novice"));
+  gtk_combo_box_text_append_text (GTK_COMBO_BOX_TEXT (combo), _("Intermediate"));
+  gtk_combo_box_text_append_text (GTK_COMBO_BOX_TEXT (combo), _("Experienced"));
+  gtk_combo_box_text_append_text (GTK_COMBO_BOX_TEXT (combo), _("Expert"));
   gtk_combo_box_set_active (GTK_COMBO_BOX (combo), LEVEL_EXPERIENCED);
 
-  align = gtk_alignment_new (0.5, 0.5, 0.0, 0.0);
-  gtk_box_pack_start (GTK_BOX (vbox), align, TRUE, TRUE, 0);
+  grid = gtk_grid_new ();
+  gtk_grid_set_column_spacing (GTK_GRID (grid), 1);
+  gtk_grid_set_row_spacing (GTK_GRID (grid), 1);
+  gtk_container_add (GTK_CONTAINER (vbox), grid);
 
-  table = gtk_table_new (5, 5, FALSE);
-  gtk_table_set_col_spacings (GTK_TABLE (table), 1);
-  gtk_table_set_row_spacings (GTK_TABLE (table), 1);
-  gtk_container_add (GTK_CONTAINER (align), table);
-
-  separator = gtk_hseparator_new ();
-  gtk_table_attach (GTK_TABLE (table), separator, 0, 5, 1, 2, GTK_FILL, GTK_FILL, 0, 0);
-  separator = gtk_hseparator_new ();
-  gtk_table_attach (GTK_TABLE (table), separator, 0, 5, 3, 4, GTK_FILL, GTK_FILL, 0, 0);
-  separator = gtk_vseparator_new ();
-  gtk_table_attach (GTK_TABLE (table), separator, 1, 2, 0, 5, GTK_FILL, GTK_FILL, 0, 0);
-  separator = gtk_vseparator_new ();
-  gtk_table_attach (GTK_TABLE (table), separator, 3, 4, 0, 5, GTK_FILL, GTK_FILL, 0, 0);
+  separator = gtk_separator_new (GTK_ORIENTATION_HORIZONTAL);
+  gtk_grid_attach (GTK_GRID (grid), separator, 0, 1, 5, 1);
+  separator = gtk_separator_new (GTK_ORIENTATION_HORIZONTAL);
+  gtk_grid_attach (GTK_GRID (grid), separator, 0, 3, 5, 1);
+  separator = gtk_separator_new (GTK_ORIENTATION_VERTICAL);
+  gtk_grid_attach (GTK_GRID (grid), separator, 1, 0, 1, 5);
+  separator = gtk_separator_new (GTK_ORIENTATION_VERTICAL);
+  gtk_grid_attach (GTK_GRID (grid), separator, 3, 0, 1, 5);
 
   for (i = 0; i < 9; i++)
     {
       button = dialog->buttons[i] = gtk_button_new ();
       gtk_button_set_relief (GTK_BUTTON (button), GTK_RELIEF_NONE);
       gtk_widget_set_size_request (button, 70, 70);
-      GTK_WIDGET_UNSET_FLAGS (button, GTK_CAN_DEFAULT | GTK_CAN_FOCUS);
+      gtk_widget_set_can_default (button, FALSE);
+      gtk_widget_set_can_focus (button, FALSE);
       g_signal_connect (G_OBJECT (button), "clicked",
           G_CALLBACK (panel_tic_tac_toe_button_clicked), dialog);
 
@@ -175,12 +171,8 @@ panel_tic_tac_toe_init (PanelTicTacToe *dialog)
       row = (i / 3) * 2;
       col = (i % 3) * 2;
 
-      gtk_table_attach (GTK_TABLE (table), button,
-                        col, col + 1,
-                        row, row + 1,
-                        GTK_EXPAND | GTK_FILL,
-                        GTK_EXPAND | GTK_FILL,
-                        0, 0);
+      gtk_grid_attach (GTK_GRID (grid), button,
+                       col, row, 1, 1);
     }
 
   /* set label attributes */
@@ -467,17 +459,20 @@ panel_tic_tac_toe_get_move (gint state,
           moves = panel_tic_tac_toe_best_opening (state, first_moves);
           if (moves != 0)
             break;
+          /* else fall through */
 
         case LEVEL_INTERMEDIATE:
           /* try to find a winning move */
           moves = panel_tic_tac_toe_get_winner_move (state, PLAYER_X);
           if (moves != 0)
             break;
+          /* else fall through */
 
           /* try to find a blocking move */
           moves = panel_tic_tac_toe_get_winner_move (state, PLAYER_O);
           if (moves != 0)
             break;
+          /* else fall through */
 
         case LEVEL_NOVICE:
           moves = legal_moves;
@@ -567,7 +562,7 @@ panel_tic_tac_toe_highlight_winner (PanelTicTacToe *dialog,
   else
     {
       /* grey out all the cells */
-      attr = pango_attr_foreground_new (0xcccc, 0xcccc, 0xcccc);
+      attr = pango_attr_foreground_new (0x4444, 0x4444, 0x4444);
       winner |= cells_to_hex2 (PLAYER_O, PLAYER_O, PLAYER_O,
                                PLAYER_O, PLAYER_O, PLAYER_O,
                                PLAYER_O, PLAYER_O, PLAYER_O);

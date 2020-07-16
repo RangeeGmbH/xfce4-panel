@@ -8,7 +8,7 @@
 <link rel="up" href="libxfce4panel-miscelleanous.html" title="Part IV. Miscelleanous">
 <link rel="prev" href="libxfce4panel-miscelleanous.html" title="Part IV. Miscelleanous">
 <link rel="next" href="api-index-full.html" title="Index of all symbols">
-<meta name="generator" content="GTK-Doc V1.25 (XML mode)">
+<meta name="generator" content="GTK-Doc V1.28 (XML mode)">
 <link rel="stylesheet" href="style.css" type="text/css">
 </head>
 <body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
@@ -41,7 +41,7 @@
 <tbody>
 <tr>
 <td class="function_type">
-<a href="/usr/share/gtk-doc/html/gtk3GtkWidget.html#GtkWidget-struct"><span class="returnvalue">GtkWidget</span></a> *
+<a href="/usr/share/gtk-doc/html/gtk3/GtkWidget.html#GtkWidget-struct"><span class="returnvalue">GtkWidget</span></a> *
 </td>
 <td class="function_name">
 <a class="link" href="libxfce4panel-Convenience-Functions.html#xfce-panel-create-button" title="xfce_panel_create_button ()">xfce_panel_create_button</a> <span class="c_punctuation">()</span>
@@ -49,14 +49,14 @@
 </tr>
 <tr>
 <td class="function_type">
-<a href="/usr/share/gtk-doc/html/gtk3GtkWidget.html#GtkWidget-struct"><span class="returnvalue">GtkWidget</span></a> *
+<a href="/usr/share/gtk-doc/html/gtk3/GtkWidget.html#GtkWidget-struct"><span class="returnvalue">GtkWidget</span></a> *
 </td>
 <td class="function_name">
 <a class="link" href="libxfce4panel-Convenience-Functions.html#xfce-panel-create-toggle-button" title="xfce_panel_create_toggle_button ()">xfce_panel_create_toggle_button</a> <span class="c_punctuation">()</span>
 </td>
 </tr>
 <tr>
-<td class="function_type">const <a href="/usr/share/gtk-doc/html/glibglib-Basic-Types.html#gchar"><span class="returnvalue">gchar</span></a> *
+<td class="function_type">const <a href="/usr/share/gtk-doc/html/glib/glib-Basic-Types.html#gchar"><span class="returnvalue">gchar</span></a> *
 </td>
 <td class="function_name">
 <a class="link" href="libxfce4panel-Convenience-Functions.html#xfce-panel-get-channel-name" title="xfce_panel_get_channel_name ()">xfce_panel_get_channel_name</a> <span class="c_punctuation">()</span>
@@ -118,31 +118,33 @@ to help developers of Xfce Panel plugins.</p>
 <a name="libxfce4panel-Convenience-Functions.functions_details"></a><h2>Functions</h2>
 <div class="refsect2">
 <a name="xfce-panel-create-button"></a><h3>xfce_panel_create_button ()</h3>
-<pre class="programlisting"><a href="/usr/share/gtk-doc/html/gtk3GtkWidget.html#GtkWidget-struct"><span class="returnvalue">GtkWidget</span></a> *
+<pre class="programlisting"><a href="/usr/share/gtk-doc/html/gtk3/GtkWidget.html#GtkWidget-struct"><span class="returnvalue">GtkWidget</span></a> *
 xfce_panel_create_button (<em class="parameter"><code><span class="type">void</span></code></em>);</pre>
-<p>Create regular <a href="/usr/share/gtk-doc/html/gtk3GtkButton.html#GtkButton-struct"><span class="type">GtkButton</span></a> with a few properties set to be useful in the
-Xfce panel: Flat (<a href="/usr/share/gtk-doc/html/gtk3gtk3-Standard-Enumerations.html#GTK-RELIEF-NONE:CAPS"><code class="literal">GTK_RELIEF_NONE</code></a>), no focus on click and minimal padding.</p>
+<p>Create regular <a href="/usr/share/gtk-doc/html/gtk3/GtkButton.html#GtkButton-struct"><span class="type">GtkButton</span></a> with a few properties set to be useful in the
+Xfce panel: Flat (<a href="/usr/share/gtk-doc/html/gtk3/gtk3-Standard-Enumerations.html#GTK-RELIEF-NONE:CAPS"><code class="literal">GTK_RELIEF_NONE</code></a>), no focus on click and minimal padding.</p>
 <div class="refsect3">
 <a name="xfce-panel-create-button.returns"></a><h4>Returns</h4>
-<p> newly created <a href="/usr/share/gtk-doc/html/gtk3GtkButton.html#GtkButton-struct"><span class="type">GtkButton</span></a>.</p>
+<p>newly created <a href="/usr/share/gtk-doc/html/gtk3/GtkButton.html#GtkButton-struct"><span class="type">GtkButton</span></a>. </p>
+<p><span class="annotation">[<acronym title="Free data after the code is done."><span class="acronym">transfer full</span></acronym>]</span></p>
 </div>
 </div>
 <hr>
 <div class="refsect2">
 <a name="xfce-panel-create-toggle-button"></a><h3>xfce_panel_create_toggle_button ()</h3>
-<pre class="programlisting"><a href="/usr/share/gtk-doc/html/gtk3GtkWidget.html#GtkWidget-struct"><span class="returnvalue">GtkWidget</span></a> *
+<pre class="programlisting"><a href="/usr/share/gtk-doc/html/gtk3/GtkWidget.html#GtkWidget-struct"><span class="returnvalue">GtkWidget</span></a> *
 xfce_panel_create_toggle_button (<em class="parameter"><code><span class="type">void</span></code></em>);</pre>
-<p>Create regular <a href="/usr/share/gtk-doc/html/gtk3GtkToggleButton.html#GtkToggleButton-struct"><span class="type">GtkToggleButton</span></a> with a few properties set to be useful in
-Xfce panel: Flat (<a href="/usr/share/gtk-doc/html/gtk3gtk3-Standard-Enumerations.html#GTK-RELIEF-NONE:CAPS"><code class="literal">GTK_RELIEF_NONE</code></a>), no focus on click and minimal padding.</p>
+<p>Create regular <a href="/usr/share/gtk-doc/html/gtk3/GtkToggleButton.html#GtkToggleButton-struct"><span class="type">GtkToggleButton</span></a> with a few properties set to be useful in
+Xfce panel: Flat (<a href="/usr/share/gtk-doc/html/gtk3/gtk3-Standard-Enumerations.html#GTK-RELIEF-NONE:CAPS"><code class="literal">GTK_RELIEF_NONE</code></a>), no focus on click and minimal padding.</p>
 <div class="refsect3">
 <a name="xfce-panel-create-toggle-button.returns"></a><h4>Returns</h4>
-<p> newly created <a href="/usr/share/gtk-doc/html/gtk3GtkToggleButton.html#GtkToggleButton-struct"><span class="type">GtkToggleButton</span></a>.</p>
+<p>newly created <a href="/usr/share/gtk-doc/html/gtk3/GtkToggleButton.html#GtkToggleButton-struct"><span class="type">GtkToggleButton</span></a>. </p>
+<p><span class="annotation">[<acronym title="Free data after the code is done."><span class="acronym">transfer full</span></acronym>]</span></p>
 </div>
 </div>
 <hr>
 <div class="refsect2">
 <a name="xfce-panel-get-channel-name"></a><h3>xfce_panel_get_channel_name ()</h3>
-<pre class="programlisting">const <a href="/usr/share/gtk-doc/html/glibglib-Basic-Types.html#gchar"><span class="returnvalue">gchar</span></a> *
+<pre class="programlisting">const <a href="/usr/share/gtk-doc/html/glib/glib-Basic-Types.html#gchar"><span class="returnvalue">gchar</span></a> *
 xfce_panel_get_channel_name (<em class="parameter"><code><span class="type">void</span></code></em>);</pre>
 <p>Function for the name of the Xfconf channel used by the panel. By default
 this returns "xfce4-panel", but you can override this value with the
@@ -160,9 +162,9 @@ xfce_panel_plugin_get_property_base</p>
 <div class="refsect2">
 <a name="xfce-panel-pixbuf-from-source"></a><h3>xfce_panel_pixbuf_from_source ()</h3>
 <pre class="programlisting"><span class="returnvalue">GdkPixbuf</span> *
-xfce_panel_pixbuf_from_source (<em class="parameter"><code>const <a href="/usr/share/gtk-doc/html/glibglib-Basic-Types.html#gchar"><span class="type">gchar</span></a> *source</code></em>,
-                               <em class="parameter"><code><a href="/usr/share/gtk-doc/html/gtk3GtkIconTheme.html#GtkIconTheme-struct"><span class="type">GtkIconTheme</span></a> *icon_theme</code></em>,
-                               <em class="parameter"><code><a href="/usr/share/gtk-doc/html/glibglib-Basic-Types.html#gint"><span class="type">gint</span></a> size</code></em>);</pre>
+xfce_panel_pixbuf_from_source (<em class="parameter"><code>const <a href="/usr/share/gtk-doc/html/glib/glib-Basic-Types.html#gchar"><span class="type">gchar</span></a> *source</code></em>,
+                               <em class="parameter"><code><a href="/usr/share/gtk-doc/html/gtk3/GtkIconTheme.html#GtkIconTheme-struct"><span class="type">GtkIconTheme</span></a> *icon_theme</code></em>,
+                               <em class="parameter"><code><a href="/usr/share/gtk-doc/html/glib/glib-Basic-Types.html#gint"><span class="type">gint</span></a> size</code></em>);</pre>
 <p>See xfce_panel_pixbuf_from_source_at_size</p>
 <div class="refsect3">
 <a name="xfce-panel-pixbuf-from-source.parameters"></a><h4>Parameters</h4>
@@ -180,8 +182,8 @@ xfce_panel_pixbuf_from_source (<em class="parameter"><code>const <a href="/usr/s
 </tr>
 <tr>
 <td class="parameter_name"><p>icon_theme</p></td>
-<td class="parameter_description"><p>icon theme or <a href="/usr/share/gtk-doc/html/glibglib-Standard-Macros.html#NULL:CAPS"><code class="literal">NULL</code></a> to use the default icon theme</p></td>
-<td class="parameter_annotations"> </td>
+<td class="parameter_description"><p>icon theme or <a href="/usr/share/gtk-doc/html/glib/glib-Standard-Macros.html#NULL:CAPS"><code class="literal">NULL</code></a> to use the default icon theme. </p></td>
+<td class="parameter_annotations"><span class="annotation">[<acronym title="NULL is OK, both for passing and for returning."><span class="acronym">allow-none</span></acronym>]</span></td>
 </tr>
 <tr>
 <td class="parameter_name"><p>size</p></td>
@@ -193,9 +195,10 @@ xfce_panel_pixbuf_from_source (<em class="parameter"><code>const <a href="/usr/s
 </div>
 <div class="refsect3">
 <a name="xfce-panel-pixbuf-from-source.returns"></a><h4>Returns</h4>
-<p> a GdkPixbuf or <a href="/usr/share/gtk-doc/html/glibglib-Standard-Macros.html#NULL:CAPS"><code class="literal">NULL</code></a> if nothing was found. The value should
+<p>a GdkPixbuf or <a href="/usr/share/gtk-doc/html/glib/glib-Standard-Macros.html#NULL:CAPS"><code class="literal">NULL</code></a> if nothing was found. The value should
 be released with g_object_unref when no longer used.</p>
-<p>See also: XfcePanelImage</p>
+<p>See also: XfcePanelImage. </p>
+<p><span class="annotation">[<acronym title="Free data after the code is done."><span class="acronym">transfer full</span></acronym>]</span></p>
 </div>
 <p class="since">Since: <a class="link" href="api-index-4-8.html#api-index-4.8">4.8</a></p>
 </div>
@@ -203,10 +206,10 @@ be released with g_object_unref when no longer used.</p>
 <div class="refsect2">
 <a name="xfce-panel-pixbuf-from-source-at-size"></a><h3>xfce_panel_pixbuf_from_source_at_size ()</h3>
 <pre class="programlisting"><span class="returnvalue">GdkPixbuf</span> *
-xfce_panel_pixbuf_from_source_at_size (<em class="parameter"><code>const <a href="/usr/share/gtk-doc/html/glibglib-Basic-Types.html#gchar"><span class="type">gchar</span></a> *source</code></em>,
-                                       <em class="parameter"><code><a href="/usr/share/gtk-doc/html/gtk3GtkIconTheme.html#GtkIconTheme-struct"><span class="type">GtkIconTheme</span></a> *icon_theme</code></em>,
-                                       <em class="parameter"><code><a href="/usr/share/gtk-doc/html/glibglib-Basic-Types.html#gint"><span class="type">gint</span></a> dest_width</code></em>,
-                                       <em class="parameter"><code><a href="/usr/share/gtk-doc/html/glibglib-Basic-Types.html#gint"><span class="type">gint</span></a> dest_height</code></em>);</pre>
+xfce_panel_pixbuf_from_source_at_size (<em class="parameter"><code>const <a href="/usr/share/gtk-doc/html/glib/glib-Basic-Types.html#gchar"><span class="type">gchar</span></a> *source</code></em>,
+                                       <em class="parameter"><code><a href="/usr/share/gtk-doc/html/gtk3/GtkIconTheme.html#GtkIconTheme-struct"><span class="type">GtkIconTheme</span></a> *icon_theme</code></em>,
+                                       <em class="parameter"><code><a href="/usr/share/gtk-doc/html/glib/glib-Basic-Types.html#gint"><span class="type">gint</span></a> dest_width</code></em>,
+                                       <em class="parameter"><code><a href="/usr/share/gtk-doc/html/glib/glib-Basic-Types.html#gint"><span class="type">gint</span></a> dest_height</code></em>);</pre>
 <p>Try to load a pixbuf from a source string. The source could be
 an abolute path, an icon name or a filename that points to a
 file in the pixmaps directory.</p>
@@ -233,8 +236,8 @@ preserving the aspect ratio.</p>
 </tr>
 <tr>
 <td class="parameter_name"><p>icon_theme</p></td>
-<td class="parameter_description"><p>icon theme or <a href="/usr/share/gtk-doc/html/glibglib-Standard-Macros.html#NULL:CAPS"><code class="literal">NULL</code></a> to use the default icon theme</p></td>
-<td class="parameter_annotations"> </td>
+<td class="parameter_description"><p>icon theme or <a href="/usr/share/gtk-doc/html/glib/glib-Standard-Macros.html#NULL:CAPS"><code class="literal">NULL</code></a> to use the default icon theme. </p></td>
+<td class="parameter_annotations"><span class="annotation">[<acronym title="NULL is OK, both for passing and for returning."><span class="acronym">allow-none</span></acronym>]</span></td>
 </tr>
 <tr>
 <td class="parameter_name"><p>dest_width</p></td>
@@ -251,11 +254,12 @@ preserving the aspect ratio.</p>
 </div>
 <div class="refsect3">
 <a name="xfce-panel-pixbuf-from-source-at-size.returns"></a><h4>Returns</h4>
-<p> a GdkPixbuf or <a href="/usr/share/gtk-doc/html/glibglib-Standard-Macros.html#NULL:CAPS"><code class="literal">NULL</code></a> if nothing was found. The value should
+<p>a GdkPixbuf or <a href="/usr/share/gtk-doc/html/glib/glib-Standard-Macros.html#NULL:CAPS"><code class="literal">NULL</code></a> if nothing was found. The value should
 be released with g_object_unref when no longer used.</p>
-<p>See also: XfcePanelImage</p>
+<p>See also: XfcePanelImage. </p>
+<p><span class="annotation">[<acronym title="Free data after the code is done."><span class="acronym">transfer full</span></acronym>]</span></p>
 </div>
-<p class="since">Since: 4.10</p>
+<p class="since">Since: <a class="link" href="api-index-4-10.html#api-index-4.10">4.10</a></p>
 </div>
 </div>
 <div class="refsect1">
@@ -268,7 +272,7 @@ be released with g_object_unref when no longer used.</p>
 <p><code class="literal">xfce_allow_panel_customization</code> has been deprecated since version 4.8 and should not be used in newly-written code.</p>
 <p>Look at <a class="link" href="XfcePanelPlugin.html#xfce-panel-plugin-get-locked" title="xfce_panel_plugin_get_locked ()"><code class="function">xfce_panel_plugin_get_locked()</code></a>.</p>
 </div>
-<p>Always returns <a href="/usr/share/gtk-doc/html/glibglib-Standard-Macros.html#FALSE:CAPS"><code class="literal">FALSE</code></a>. Plugins can be locked on a plugin basis
+<p>Always returns <a href="/usr/share/gtk-doc/html/glib/glib-Standard-Macros.html#FALSE:CAPS"><code class="literal">FALSE</code></a>. Plugins can be locked on a plugin basis
 level in the future, so this function is useless.</p>
 </div>
 <hr>
@@ -296,6 +300,6 @@ level in the future, so this function is useless.</p>
 </div>
 </div>
 <div class="footer">
-<hr>Generated by GTK-Doc V1.25</div>
+<hr>Generated by GTK-Doc V1.28</div>
 </body>
 </html>

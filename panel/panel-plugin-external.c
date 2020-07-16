@@ -30,16 +30,16 @@
 #include <sys/wait.h>
 #endif
 
-#include <exo/exo.h>
 #include <gdk/gdk.h>
 #include <gdk/gdkx.h>
 #include <libxfce4util/libxfce4util.h>
 
-#include <dbus/dbus-glib.h>
+#include <gio/gio.h>
 
 #include <common/panel-private.h>
 #include <common/panel-dbus.h>
 #include <common/panel-debug.h>
+#include <common/panel-utils.h>
 
 #include <libxfce4panel/libxfce4panel.h>
 #include <libxfce4panel/xfce-panel-plugin-provider.h>
@@ -84,6 +84,8 @@ static const gchar *panel_plugin_external_get_name                (XfcePanelPlug
 static gint         panel_plugin_external_get_unique_id           (XfcePanelPluginProvider          *provider);
 static void         panel_plugin_external_set_size                (XfcePanelPluginProvider          *provider,
                                                                    gint                              size);
+static void         panel_plugin_external_set_icon_size           (XfcePanelPluginProvider          *provider,
+                                                                   gint                              icon_size);
 static void         panel_plugin_external_set_mode                (XfcePanelPluginProvider          *provider,
                                                                    XfcePanelPluginMode               mode);
 static void         panel_plugin_external_set_nrows               (XfcePanelPluginProvider          *provider,
@@ -139,7 +141,9 @@ enum
 
 
 G_DEFINE_ABSTRACT_TYPE_WITH_CODE (PanelPluginExternal, panel_plugin_external, GTK_TYPE_SOCKET,
-  G_IMPLEMENT_INTERFACE (XFCE_TYPE_PANEL_PLUGIN_PROVIDER, panel_plugin_external_provider_init))
+                                  G_ADD_PRIVATE (PanelPluginExternal)
+                                  G_IMPLEMENT_INTERFACE (XFCE_TYPE_PANEL_PLUGIN_PROVIDER,
+                                                         panel_plugin_external_provider_init))
 
 
 
@@ -149,8 +153,6 @@ panel_plugin_external_class_init (PanelPluginExternalClass *klass)
   GObjectClass   *gobject_class;
   GtkWidgetClass *gtkwidget_class;
   GtkSocketClass *gtksocket_class;
-
-  g_type_class_add_private (klass, sizeof (PanelPluginExternalPrivate));
 
   gobject_class = G_OBJECT_CLASS (klass);
   gobject_class->finalize = panel_plugin_external_finalize;
@@ -170,7 +172,7 @@ panel_plugin_external_class_init (PanelPluginExternalClass *klass)
                                    g_param_spec_int ("unique-id",
                                                      NULL, NULL,
                                                      -1, G_MAXINT, -1,
-                                                     EXO_PARAM_READWRITE
+                                                     G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS
                                                      | G_PARAM_CONSTRUCT_ONLY));
 
   g_object_class_install_property (gobject_class,
@@ -178,7 +180,7 @@ panel_plugin_external_class_init (PanelPluginExternalClass *klass)
                                    g_param_spec_object ("module",
                                                         NULL, NULL,
                                                         PANEL_TYPE_MODULE,
-                                                        EXO_PARAM_READWRITE
+                                                        G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS
                                                         | G_PARAM_CONSTRUCT_ONLY));
 
   g_object_class_install_property (gobject_class,
@@ -186,7 +188,7 @@ panel_plugin_external_class_init (PanelPluginExternalClass *klass)
                                    g_param_spec_boxed ("arguments",
                                                        NULL, NULL,
                                                        G_TYPE_STRV,
-                                                       EXO_PARAM_READWRITE
+                                                       G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS
                                                        | G_PARAM_CONSTRUCT_ONLY));
 }
 
@@ -195,7 +197,7 @@ panel_plugin_external_class_init (PanelPluginExternalClass *klass)
 static void
 panel_plugin_external_init (PanelPluginExternal *external)
 {
-  external->priv = G_TYPE_INSTANCE_GET_PRIVATE (external, PANEL_TYPE_PLUGIN_EXTERNAL, PanelPluginExternalPrivate);
+  external->priv = panel_plugin_external_get_instance_private (external);
 
   external->module = NULL;
   external->show_configure = FALSE;
@@ -222,6 +224,7 @@ panel_plugin_external_provider_init (XfcePanelPluginProviderInterface *iface)
   iface->get_name = panel_plugin_external_get_name;
   iface->get_unique_id = panel_plugin_external_get_unique_id;
   iface->set_size = panel_plugin_external_set_size;
+  iface->set_icon_size = panel_plugin_external_set_icon_size;
   iface->set_mode = panel_plugin_external_set_mode;
   iface->set_nrows = panel_plugin_external_set_nrows;
   iface->set_screen_position = panel_plugin_external_set_screen_position;
@@ -250,7 +253,9 @@ panel_plugin_external_finalize (GObject *object)
     {
       /* remove the child watch and don't leave zombies */
       g_source_remove (external->priv->watch_id);
-      g_child_watch_add (external->priv->pid, (GChildWatchFunc) g_spawn_close_pid, NULL);
+      g_child_watch_add (external->priv->pid,
+                         (GChildWatchFunc) (void (*)(void)) g_spawn_close_pid,
+                         NULL);
     }
 
   panel_plugin_external_queue_free (external);
@@ -432,8 +437,8 @@ panel_plugin_external_child_ask_restart_dialog (GtkWindow   *parent,
                                             "the last %d seconds. If you press Execute the panel will try to restart "
                                             "the plugin otherwise it will be permanently removed from the panel."),
                                             PANEL_PLUGIN_AUTO_RESTART);
-  gtk_dialog_add_buttons (GTK_DIALOG (dialog), GTK_STOCK_EXECUTE, GTK_RESPONSE_OK,
-                          GTK_STOCK_REMOVE, GTK_RESPONSE_CLOSE, NULL);
+  gtk_dialog_add_buttons (GTK_DIALOG (dialog), _("_Execute"), GTK_RESPONSE_OK,
+                          _("_Remove"), GTK_RESPONSE_CLOSE, NULL);
   gtk_dialog_set_default_response (GTK_DIALOG (dialog), GTK_RESPONSE_OK);
   gtk_window_set_position (GTK_WINDOW (dialog), GTK_WIN_POS_CENTER);
 
@@ -469,7 +474,9 @@ panel_plugin_external_child_ask_restart (PanelPluginExternal *external)
         {
           /* remove the child watch and don't leave zombies */
           g_source_remove (external->priv->watch_id);
-          g_child_watch_add (external->priv->pid, (GChildWatchFunc) g_spawn_close_pid, NULL);
+          g_child_watch_add (external->priv->pid,
+                             (GChildWatchFunc) (void (*)(void)) g_spawn_close_pid,
+                             NULL);
           external->priv->watch_id = 0;
         }
 
@@ -496,14 +503,13 @@ static void
 panel_plugin_external_child_spawn_child_setup (gpointer data)
 {
   PanelPluginExternal *external = PANEL_PLUGIN_EXTERNAL (data);
-  GdkScreen           *screen;
-  gchar               *name;
+  GdkDisplay          *display;
+  const gchar         *name;
 
   /* this is what gdk_spawn_on_screen does */
-  screen = gtk_widget_get_screen (GTK_WIDGET (external));
-  name = gdk_screen_make_display_name (screen);
+  display = gtk_widget_get_display (GTK_WIDGET (external));
+  name = gdk_display_get_name (display);
   g_setenv ("DISPLAY", name, TRUE);
-  g_free (name);
 }
 
 
@@ -521,7 +527,7 @@ panel_plugin_external_child_spawn (PanelPluginExternal *external)
   GTimeVal       timestamp;
 
   panel_return_if_fail (PANEL_IS_PLUGIN_EXTERNAL (external));
-  panel_return_if_fail (GTK_WIDGET_REALIZED (external));
+  panel_return_if_fail (gtk_widget_get_realized (GTK_WIDGET (external)));
 
   /* set plugin specific arguments */
   argv = (*PANEL_PLUGIN_EXTERNAL_GET_CLASS (external)->get_argv) (external, external->priv->arguments);
@@ -639,7 +645,7 @@ panel_plugin_external_child_respawn (gpointer user_data)
   panel_return_val_if_fail (PANEL_IS_PLUGIN_EXTERNAL (external), FALSE);
 
   /* abort startup if the plugin is not realized */
-  if (!GTK_WIDGET_REALIZED (external))
+  if (!gtk_widget_get_realized (GTK_WIDGET (external)))
     return FALSE;
 
   /* delay startup if the old child is still embedded */
@@ -745,7 +751,7 @@ panel_plugin_external_child_watch (GPid     pid,
                                                   PROVIDER_SIGNAL_REMOVE_PLUGIN);
 
           /* wait until everything is settled before we destroy */
-          exo_gtk_object_destroy_later (GTK_OBJECT (external));
+          panel_utils_destroy_later (GTK_WIDGET (external));
           goto close_pid;
         }
     }
@@ -760,7 +766,7 @@ panel_plugin_external_child_watch (GPid     pid,
         }
     }
 
-  if (GTK_WIDGET_REALIZED (external)
+  if (gtk_widget_get_realized (GTK_WIDGET (external))
       && (auto_restart || panel_plugin_external_child_ask_restart (external)))
     {
       panel_plugin_external_child_respawn_schedule (external);
@@ -894,6 +900,26 @@ panel_plugin_external_set_size (XfcePanelPluginProvider *provider,
 
   panel_plugin_external_queue_add (PANEL_PLUGIN_EXTERNAL (provider),
                                    PROVIDER_PROP_TYPE_SET_SIZE, &value);
+
+  g_value_unset (&value);
+}
+
+
+
+static void
+panel_plugin_external_set_icon_size (XfcePanelPluginProvider *provider,
+                                     gint                     icon_size)
+{
+  GValue value = { 0, };
+
+  panel_return_if_fail (PANEL_IS_PLUGIN_EXTERNAL (provider));
+  panel_return_if_fail (XFCE_IS_PANEL_PLUGIN_PROVIDER (provider));
+
+  g_value_init (&value, G_TYPE_INT);
+  g_value_set_int (&value, icon_size);
+
+  panel_plugin_external_queue_add (PANEL_PLUGIN_EXTERNAL (provider),
+                                   PROVIDER_PROP_TYPE_SET_ICON_SIZE, &value);
 
   g_value_unset (&value);
 }
@@ -1082,7 +1108,7 @@ panel_plugin_external_set_sensitive (PanelPluginExternal *external)
   panel_return_if_fail (PANEL_IS_PLUGIN_EXTERNAL (external));
 
   g_value_init (&value, G_TYPE_BOOLEAN);
-  g_value_set_boolean (&value, GTK_WIDGET_IS_SENSITIVE (external));
+  g_value_set_boolean (&value, gtk_widget_is_sensitive (GTK_WIDGET (external)));
 
   panel_plugin_external_queue_add (external, PROVIDER_PROP_TYPE_SET_SENSITIVE,
                                    &value);
@@ -1116,17 +1142,18 @@ panel_plugin_external_restart (PanelPluginExternal *external)
 
 
 void
-panel_plugin_external_set_background_alpha (PanelPluginExternal *external,
-                                            gdouble              alpha)
+panel_plugin_external_set_opacity (PanelPluginExternal *external,
+                                   gdouble              opacity)
 {
   GValue value = { 0, };
 
   panel_return_if_fail (PANEL_IS_PLUGIN_EXTERNAL (external));
 
   g_value_init (&value, G_TYPE_DOUBLE);
-  g_value_set_double (&value, alpha);
+  g_value_set_double (&value, opacity);
 
-  panel_plugin_external_queue_add (external, PROVIDER_PROP_TYPE_SET_BACKGROUND_ALPHA,
+  panel_plugin_external_queue_add (external,
+                                   PROVIDER_PROP_TYPE_SET_OPACITY,
                                    &value);
 
   g_value_unset (&value);
@@ -1136,7 +1163,7 @@ panel_plugin_external_set_background_alpha (PanelPluginExternal *external,
 
 void
 panel_plugin_external_set_background_color (PanelPluginExternal *external,
-                                            const GdkColor      *color)
+                                            const GdkRGBA       *color)
 {
   GValue value = { 0, };
 
@@ -1145,7 +1172,7 @@ panel_plugin_external_set_background_color (PanelPluginExternal *external,
   if (G_LIKELY (color != NULL))
     {
       g_value_init (&value, G_TYPE_STRING);
-      g_value_take_string (&value, gdk_color_to_string (color));
+      g_value_take_string (&value, gdk_rgba_to_string (color));
 
       panel_plugin_external_queue_add (external,
                                        PROVIDER_PROP_TYPE_SET_BACKGROUND_COLOR,

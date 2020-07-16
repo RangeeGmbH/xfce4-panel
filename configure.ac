@@ -14,14 +14,14 @@ dnl ***************************
 dnl *** Version information ***
 dnl ***************************
 m4_define([libxfce4panel_verinfo], [4:0:0]) dnl current:revision:age
-m4_define([libxfce4panel_version_api], [1.0])
+m4_define([libxfce4panel_version_api], [2.0])
 m4_define([xfce4_panel_config_version], [2])
 m4_define([xfce4_panel_version_major], [4])
-m4_define([xfce4_panel_version_minor], [12])
-m4_define([xfce4_panel_version_micro], [2])
+m4_define([xfce4_panel_version_minor], [14])
+m4_define([xfce4_panel_version_micro], [3])
 m4_define([xfce4_panel_version_nano],  []) dnl leave this empty to have no nano version
-m4_define([xfce4_panel_version_build], [738d1cf3])
-m4_define([xfce4_panel_version_tag],   [])
+m4_define([xfce4_panel_version_build], [f3553ee6])
+m4_define([xfce4_panel_version_tag], [])
 m4_define([xfce4_panel_version], [xfce4_panel_version_major().xfce4_panel_version_minor().xfce4_panel_version_micro()ifelse(xfce4_panel_version_nano(), [], [], [.xfce4_panel_version_nano()])ifelse(xfce4_panel_version_tag(), [git], [xfce4_panel_version_tag()-xfce4_panel_version_build()], [xfce4_panel_version_tag()])])
 
 dnl *******************************************
@@ -38,7 +38,7 @@ AC_COPYRIGHT([Copyright (c) 2002 - 2011
 Written for Xfce by Jasper Huijsmans <jasper@xfce.org>
 and Nick Schermer <nick@xfce.org>.])
 AC_INIT([xfce4-panel], [xfce4_panel_version], [http://bugzilla.xfce.org/], [xfce4-panel])
-AC_PREREQ([2.50])
+AC_PREREQ([2.60])
 AC_REVISION([xfce4_panel_version_build])
 
 dnl ***************************
@@ -47,6 +47,7 @@ dnl ***************************
 AC_CONFIG_HEADERS([config.h])
 AM_INIT_AUTOMAKE([1.8 no-dist-gzip dist-bzip2 tar-ustar])
 AM_MAINTAINER_MODE()
+AC_CONFIG_MACRO_DIRS([m4])
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 
 dnl ******************************
@@ -72,7 +73,7 @@ AC_PROG_CC()
 AM_PROG_CC_C_O()
 AC_PROG_LD()
 AC_PROG_INSTALL()
-AC_PROG_INTLTOOL()
+IT_PROG_INTLTOOL([0.35.0])
 AC_CHECK_PROGS([PERL], [perl5 perl])
 m4_ifdef([AC_PROG_SED], [AC_PROG_SED], [AC_CHECK_PROG(SED, sed, sed)])
 
@@ -122,7 +123,7 @@ AC_CHECK_FUNCS([bind_textdomain_codeset])
 dnl ******************************
 dnl *** Check for i18n support ***
 dnl ******************************
-XDT_I18N([am ar ast be bg bn ca cs da de el en_AU en_GB eo es et eu fi fr gl he hr hu id is it ja kk ko lt lv ms nb nl nn oc pa pl pt_BR pt ro ru si sk sl sq sr sv te th tr ug uk ur_PK ur vi zh_CN zh_HK zh_TW ])
+XDT_I18N([am ar ast be bg bn ca cs da de el en_AU en_GB eo es et eu fa_IR fi fr gl he hr hu hy_AM id ie is it ja ka kk ko lt lv ms nb nl nn oc pa pl pt_BR pt ro ru si sk sl sq sr sv te th tr ug uk ur_PK ur vi zh_CN zh_HK zh_TW ])
 
 dnl *******************************
 dnl *** Check for X11 installed ***
@@ -130,35 +131,57 @@ dnl *******************************
 XDT_CHECK_LIBX11_REQUIRE()
 
 dnl ***********************************
+dnl *** Check for gdbus-codegen ***
+dnl ***********************************
+AC_ARG_VAR([GDBUS_CODEGEN], [D-Bus code and documentation generator from XML D-Bus interface definitions])
+AC_PATH_PROG([GDBUS_CODEGEN], [gdbus-codegen], [no])
+if test x"$GDBUS_CODEGEN" = x"no"; then
+  AC_MSG_ERROR([could not find gdbus-codegen in \$PATH. You can run
+  ./configure GDBUS_CODEGEN=/path/to/gdbus-codegen to define
+  a custom location for it.])
+fi
+
+
+dnl ***********************************
 dnl *** Check for required packages ***
 dnl ***********************************
-XDT_CHECK_PACKAGE([LIBXFCE4UTIL], [libxfce4util-1.0], [4.9.0])
-XDT_CHECK_PACKAGE([GARCON], [garcon-1], [0.1.5])
-XDT_CHECK_PACKAGE([GARCON_GTK2], [garcon-gtk2-1], [0.3.0])
-XDT_CHECK_PACKAGE([LIBXFCE4UI], [libxfce4ui-1], [4.11.0])
-XDT_CHECK_PACKAGE([XFCONF], [libxfconf-0], [4.9.0])
-XDT_CHECK_PACKAGE([EXO], [exo-1], [0.7.2])
-XDT_CHECK_PACKAGE([GTK], [gtk+-2.0], [2.20.0])
-XDT_CHECK_PACKAGE([GLIB], [glib-2.0], [2.24.0])
-XDT_CHECK_PACKAGE([GIO], [gio-2.0], [2.24.0])
-XDT_CHECK_PACKAGE([GMODULE], [gmodule-2.0], [2.24.0])
-XDT_CHECK_PACKAGE([DBUS], [dbus-glib-1], [0.73])
+XDT_CHECK_PACKAGE([LIBXFCE4UTIL], [libxfce4util-1.0], [4.13.0])
+XDT_CHECK_PACKAGE([GARCON], [garcon-1], [0.5.0])
+XDT_CHECK_PACKAGE([GARCON_GTK3], [garcon-gtk3-1], [0.5.0])
+XDT_CHECK_PACKAGE([LIBXFCE4UI], [libxfce4ui-2], [4.13.0])
+XDT_CHECK_PACKAGE([XFCONF], [libxfconf-0], [4.13.2])
+XDT_CHECK_PACKAGE([GTK], [gtk+-3.0], [3.22.0])
+XDT_CHECK_PACKAGE([EXO], [exo-2], [0.11.2])
+XDT_CHECK_PACKAGE([GLIB], [glib-2.0], [2.42.0])
+XDT_CHECK_PACKAGE([GIO], [gio-2.0], [2.42.0])
+PKG_CHECK_MODULES([GIO_UNIX], [gio-unix-2.0 >= 2.42.0])
+XDT_CHECK_PACKAGE([GMODULE], [gmodule-2.0], [2.42.0])
 XDT_CHECK_PACKAGE([CAIRO], [cairo], [1.0.0])
-XDT_CHECK_PACKAGE([LIBWNCK], [libwnck-1.0], [2.30])
+XDT_CHECK_PACKAGE([LIBWNCK], [libwnck-3.0], [3.0])
 
 dnl ***********************************************************
-dnl *** Optional support for a GTK+3 version of the library ***
+dnl *** Optional support for a GTK+2 version of the library ***
 dnl ***********************************************************
-XDT_CHECK_OPTIONAL_PACKAGE([GTK3],
-                           [gtk+-3.0], [3.2.0], [gtk3],
-                           [GTK+ 3 support], [no])
-AM_CONDITIONAL([ENABLE_GTK3_LIBRARY], [test "x$GTK3_FOUND" = "xyes"])
+XDT_CHECK_OPTIONAL_PACKAGE([GTK2],
+                           [gtk+-2.0], [2.20.0], [gtk2],
+                           [GTK+ 2 support])
+AM_CONDITIONAL([ENABLE_GTK2_LIBRARY], [test "x$GTK2_FOUND" = "xyes"])
 
 dnl **********************************
 dnl *** Optional GIO UNIX features ***
 dnl **********************************
 XDT_CHECK_OPTIONAL_PACKAGE([GIO_UNIX], [gio-unix-2.0],
-                           [2.24.0], [gio-unix], [GIO UNIX features])
+                           [2.42.0], [gio-unix], [GIO UNIX features])
+
+dnl ***************************************
+dnl *** Check for gobject-introspection ***
+dnl ***************************************
+GOBJECT_INTROSPECTION_CHECK([1.30.0])
+
+dnl *************************
+dnl *** Check for vapigen ***
+dnl *************************
+VAPIGEN_CHECK()
 
 dnl *************************
 dnl *** Check for gtk-doc ***
@@ -185,7 +208,7 @@ if test x"$enable_visibility" != x"no"; then
   save_CFLAGS="$CFLAGS"
   CFLAGS="$CFLAGS -Wall -Werror"
   AC_MSG_CHECKING([whether $CC supports the GNUC visibility attribute])
-  AC_COMPILE_IFELSE(AC_LANG_SOURCE(
+  AC_COMPILE_IFELSE([AC_LANG_SOURCE(
   [
     void test_default (void);
     void test_hidden (void);
@@ -194,7 +217,7 @@ if test x"$enable_visibility" != x"no"; then
     void __attribute__ ((visibility("hidden"))) test_hidden (void) {}
 
     int main (int argc, char **argv) { test_default (); test_hidden (); return 0; }
-  ]),
+  ])],
   [
     have_gnuc_visibility=yes
     AC_MSG_RESULT([yes])
@@ -283,9 +306,9 @@ echo "Build Configuration:"
 echo
 echo "* Debug Support:          $enable_debug"
 echo "* GNU Visibility:         $have_gnuc_visibility"
-if test x"$GTK3_FOUND" = x"yes"; then
-echo "* GTK+ 3 Support:         yes"
+if test x"$GTK2_FOUND" = x"yes"; then
+echo "* GTK+ 2 Support:         yes"
 else
-echo "* GTK+ 3 Support:         no"
+echo "* GTK+ 2 Support:         no"
 fi
 echo

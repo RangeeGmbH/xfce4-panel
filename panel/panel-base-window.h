@@ -64,29 +64,33 @@ struct _PanelBaseWindow
   /*< private >*/
   PanelBaseWindowPrivate *priv;
 
-  guint                   is_composited : 1;
+  guint                    is_composited : 1;
 
-  gdouble                 background_alpha;
-  PanelBgStyle            background_style;
-  GdkColor               *background_color;
-  gchar                  *background_image;
+  PanelBgStyle             background_style;
+  GdkRGBA                 *background_rgba;
+  GdkColor                *background_color;
+  gchar                   *background_image;
+
+  /* transparency settings */
+  gdouble                  enter_opacity;
+  gdouble                  leave_opacity;
+  gdouble                  leave_opacity_old;
 };
 
-GType        panel_base_window_get_type    (void) G_GNUC_CONST;
+GType        panel_base_window_get_type                    (void) G_GNUC_CONST;
 
-void         panel_base_window_move_resize (PanelBaseWindow *window,
-                                            gint             x,
-                                            gint             y,
-                                            gint             width,
-                                            gint             height);
+void         panel_base_window_move_resize                 (PanelBaseWindow *window,
+                                                            gint             x,
+                                                            gint             y,
+                                                            gint             width,
+                                                            gint             height);
 
-void         panel_base_window_set_borders (PanelBaseWindow *window,
-                                            PanelBorders     borders);
-PanelBorders panel_base_window_get_borders (PanelBaseWindow *window);
-
-void         panel_util_set_source_rgba    (cairo_t         *cr,
-                                            const GdkColor  *color,
-                                            gdouble          alpha);
+void         panel_base_window_reset_background_css        (PanelBaseWindow *window);
+void         panel_base_window_orientation_changed         (PanelBaseWindow *window,
+                                                            gint             mode);
+void         panel_base_window_set_borders                 (PanelBaseWindow *window,
+                                                            PanelBorders     borders);
+PanelBorders panel_base_window_get_borders                 (PanelBaseWindow *window);
 
 G_END_DECLS
 

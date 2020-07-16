@@ -1,3 +1,4 @@
+DISTCLEANFILES =
 
 AM_CPPFLAGS = \
 	-I$(top_srcdir) \
@@ -7,7 +8,7 @@ AM_CPPFLAGS = \
 	$(PLATFORM_CPPFLAGS)
 
 lib_LTLIBRARIES = \
-	libxfce4panel-1.0.la
+	libxfce4panel-2.0.la
 
 libxfce4panel_public_built_sources = \
 	libxfce4panel-enum-types.h
@@ -37,56 +38,6 @@ libxfce4panel_includedir = \
 
 libxfce4panel_include_HEADERS = \
 	$(libxfce4panel_public_built_sources) \
-	$(libxfce4panel_headers) \
-	xfce-hvbox.h
-
-libxfce4panel_1_0_la_SOURCES = \
-	$(libxfce4panel_built_sources) \
-	$(libxfce4panel_headers) \
-	xfce-hvbox.h \
-	libxfce4panel-config.c \
-	xfce-arrow-button.c \
-	xfce-hvbox.c \
-	xfce-panel-convenience.c \
-	xfce-panel-plugin.c \
-	xfce-panel-plugin-provider.c \
-	xfce-panel-image.c
-
-libxfce4panel_1_0_la_CFLAGS =	 \
-	$(GTK_CFLAGS) \
-	$(LIBXFCE4UTIL_CFLAGS) \
-	$(PLATFORM_CFLAGS)
-
-libxfce4panel_1_0_la_LDFLAGS = \
-	-no-undefined \
-	-export-dynamic \
-	-version-info $(LIBXFCE4PANEL_VERINFO) \
-	-export-symbols-regex '^[^_].*' \
-	$(PLATFORM_LDFLAGS)
-
-libxfce4panel_1_0_la_LIBADD = \
-	$(GTK_LIBS) \
-	$(LIBXFCE4UTIL_LIBS) \
-	-lm
-
-#
-# Pkg-config file
-#
-pkgconfigdir = $(libdir)/pkgconfig
-pkgconfig_DATA = libxfce4panel-$(LIBXFCE4PANEL_VERSION_API).pc
-
-#
-# GTK+ 3 support library
-#
-if ENABLE_GTK3_LIBRARY
-
-lib_LTLIBRARIES += libxfce4panel-2.0.la
-
-libxfce4panel2_includedir = \
-	$(includedir)/xfce4/libxfce4panel-2.0/libxfce4panel
-
-libxfce4panel2_include_HEADERS = \
-	$(libxfce4panel_public_built_sources) \
 	$(libxfce4panel_headers)
 
 libxfce4panel_2_0_la_SOURCES = \
@@ -100,7 +51,7 @@ libxfce4panel_2_0_la_SOURCES = \
 	xfce-panel-image.c
 
 libxfce4panel_2_0_la_CFLAGS =	 \
-	$(GTK3_CFLAGS) \
+	$(GTK_CFLAGS) \
 	$(LIBXFCE4UTIL_CFLAGS) \
 	$(PLATFORM_CFLAGS)
 
@@ -112,11 +63,60 @@ libxfce4panel_2_0_la_LDFLAGS = \
 	$(PLATFORM_LDFLAGS)
 
 libxfce4panel_2_0_la_LIBADD = \
-	$(GTK3_LIBS) \
+	$(GTK_LIBS) \
 	$(LIBXFCE4UTIL_LIBS) \
 	-lm
 
-pkgconfig_DATA += libxfce4panel-2.0.pc
+#
+# Pkg-config file
+#
+pkgconfigdir = $(libdir)/pkgconfig
+pkgconfig_DATA = libxfce4panel-$(LIBXFCE4PANEL_VERSION_API).pc
+
+#
+# Gtk+ 2 support library
+#
+if ENABLE_GTK2_LIBRARY
+
+lib_LTLIBRARIES += libxfce4panel-1.0.la
+
+libxfce4panel1_includedir = \
+	$(includedir)/xfce4/libxfce4panel-1.0/libxfce4panel
+
+libxfce4panel1_include_HEADERS = \
+	$(libxfce4panel_public_built_sources) \
+	$(libxfce4panel_headers) \
+	xfce-hvbox.h
+
+libxfce4panel_1_0_la_SOURCES = \
+	$(libxfce4panel_built_sources) \
+	$(libxfce4panel_headers) \
+	libxfce4panel-config.c \
+	xfce-arrow-button.c \
+	xfce-hvbox.c \
+	xfce-panel-convenience.c \
+	xfce-panel-plugin.c \
+	xfce-panel-plugin-provider.c \
+	xfce-panel-image.c
+
+libxfce4panel_1_0_la_CFLAGS =	 \
+	$(GTK2_CFLAGS) \
+	$(LIBXFCE4UTIL_CFLAGS) \
+	$(PLATFORM_CFLAGS)
+
+libxfce4panel_1_0_la_LDFLAGS = \
+	-no-undefined \
+	-export-dynamic \
+	-version-info $(LIBXFCE4PANEL_VERINFO) \
+	-export-symbols-regex '^[^_].*' \
+	$(PLATFORM_LDFLAGS)
+
+libxfce4panel_1_0_la_LIBADD = \
+	$(GTK2_LIBS) \
+	$(LIBXFCE4UTIL_LIBS) \
+	-lm
+
+pkgconfig_DATA += libxfce4panel-1.0.pc
 
 endif
 
@@ -156,7 +156,7 @@ libxfce4panel-enum-types.c:  $(libxfce4panel_headers) Makefile
 		--ftail "\n#define __LIBXFCE4PANEL_ENUM_TYPES_C__\n#include <libxfce4panel/libxfce4panel-aliasdef.c>\n" \
 		$(libxfce4panel_headers) ) > $@
 
-DISTCLEANFILES = \
+DISTCLEANFILES += \
 	$(libxfce4panel_built_sources)
 
 BUILT_SOURCES = \
@@ -167,14 +167,74 @@ CLEANFILES = \
 	expected-abi
 
 endif
+# endif MAINTAINER_MODE
+
+
+# GObject Introspection
+include $(INTROSPECTION_MAKEFILE)
+INTROSPECTION_GIRS =
+INTROSPECTION_SCANNER_ENV = CC="$(CC)"
+INTROSPECTION_SCANNER_ARGS = \
+	--add-include-path=$(srcdir) \
+	--add-include-path=$(prefix)/share/gir-1.0 \
+	--warn-all \
+	--identifier-prefix=Xfce \
+	--identifier-prefix=xfce \
+	--identifier-prefix=LIBXFCE4PANEL \
+	--identifier-prefix=libxfce4panel \
+	--identifier-prefix=Plugin \
+	--c-include=libxfce4panel/libxfce4panel.h
+INTROSPECTION_COMPILER_ARGS = \
+	--includedir=$(srcdir) \
+	--includedir=$(prefix)/share/gir-1.0 \
+	--includedir=.
+
+if HAVE_INTROSPECTION
+introspection_sources = $(libxfce4panel_2_0_la_SOURCES)
+
+libxfce4panel-2.0.gir: libxfce4panel-2.0.la Makefile
+libxfce4panel_2_0_gir_INCLUDES = GObject-2.0 GLib-2.0 Gtk-3.0 libxfce4util-1.0
+libxfce4panel_2_0_gir_CFLAGS = $(AM_CPPFLAGS)
+libxfce4panel_2_0_gir_LIBS = libxfce4panel-2.0.la
+libxfce4panel_2_0_gir_FILES = $(introspection_sources)
+libxfce4panel_2_0_gir_EXPORT_PACKAGES = libxfce4panel-2.0
+INTROSPECTION_GIRS += libxfce4panel-2.0.gir
+
+girdir = $(datadir)/gir-1.0
+gir_DATA = $(INTROSPECTION_GIRS)
+
+typelibdir = $(libdir)/girepository-1.0
+typelib_DATA = $(INTROSPECTION_GIRS:.gir=.typelib)
+
+DISTCLEANFILES += $(gir_DATA) $(typelib_DATA)
+endif
+# endif HAVE_INTROSPECTION
 
 EXTRA_DIST = \
 	abicheck.sh \
 	libxfce4panel.symbols \
+	libxfce4panel-2.0.deps \
+	libxfce4panel-2.0.metadata \
 	libxfce4panel-alias.h \
 	libxfce4panel-aliasdef.c \
 	libxfce4panel-marshal.list \
 	make-libxfce4panel-alias.pl
+
+if ENABLE_VAPIGEN
+-include $(VAPIGEN_MAKEFILE)
+
+libxfce4panel-2.0.vapi: libxfce4panel-2.0.gir libxfce4panel-2.0.deps
+
+VAPIGEN_VAPIS = libxfce4panel-2.0.vapi
+VAPIGEN_GIRDIRS = $(prefix)/share/gir-1.0
+
+##libxfce4panel_2_0_vapi_DEPS = libxfce4panel-2.0 GObject-2.0 GLib-2.0 Gtk-3.0 libxfce4util-1.0
+libxfce4panel_2_0_vapi_METADATADIRS = .
+libxfce4panel_2_0_vapi_FILES = libxfce4panel-2.0.gir
+
+vapidir = $(datadir)/vala/vapi
+vapi_DATA = $(VAPIGEN_VAPIS) $(VAPIGEN_VAPIS:.vapi=.deps)
+endif
 
 if HAVE_GNUC_VISIBILITY
 TESTS =	abicheck.sh

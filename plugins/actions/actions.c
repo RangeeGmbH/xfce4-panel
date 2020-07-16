@@ -25,8 +25,8 @@
 #include <libxfce4panel/libxfce4panel.h>
 #include <libxfce4util/libxfce4util.h>
 #include <libxfce4ui/libxfce4ui.h>
-#include <exo/exo.h>
-#include <dbus/dbus-glib.h>
+
+#include <gio/gio.h>
 
 #include <common/panel-private.h>
 #include <common/panel-xfconf.h>
@@ -113,9 +113,10 @@ typedef enum
   ACTION_TYPE_SWITCH_USER   = 1 << 4,
   ACTION_TYPE_LOCK_SCREEN   = 1 << 5,
   ACTION_TYPE_HIBERNATE     = 1 << 6,
-  ACTION_TYPE_SUSPEND       = 1 << 7,
-  ACTION_TYPE_RESTART       = 1 << 8,
-  ACTION_TYPE_SHUTDOWN      = 1 << 9
+  ACTION_TYPE_HYBRID_SLEEP  = 1 << 7,
+  ACTION_TYPE_SUSPEND       = 1 << 8,
+  ACTION_TYPE_RESTART       = 1 << 9,
+  ACTION_TYPE_SHUTDOWN      = 1 << 10
 }
 ActionType;
 
@@ -128,6 +129,7 @@ typedef struct
   const gchar *question;
   const gchar *status;
   const gchar *icon_name;
+  const gchar *fallback_icon_name;
 }
 ActionEntry;
 
@@ -144,7 +146,7 @@ static ActionEntry action_entries[] =
 {
   { ACTION_TYPE_SEPARATOR,
     "separator",
-    NULL, NULL, NULL, NULL, NULL /* not needed */
+    NULL, NULL, NULL, NULL, NULL, NULL /* not needed */
   },
   { ACTION_TYPE_LOGOUT,
     "logout-dialog",
@@ -152,28 +154,32 @@ static ActionEntry action_entries[] =
     N_("_Log Out"),
     N_("Are you sure you want to log out?"),
     N_("Logging out in %d seconds."),
-    "system-log-out"
+    "system-log-out",
+    NULL
   },
   { ACTION_TYPE_LOGOUT_DIALOG,
     "logout",
     N_("Log Out..."),
     N_("Log _Out..."),
     NULL, NULL, /* already shows a dialog */
-    "system-log-out"
+    "system-log-out",
+    NULL
   },
   { ACTION_TYPE_SWITCH_USER,
     "switch-user",
     N_("Switch User"),
     N_("_Switch User"),
     NULL, NULL, /* not needed */
-    "system-users"
+    "system-users",
+    NULL
   },
   { ACTION_TYPE_LOCK_SCREEN,
     "lock-screen",
     N_("Lock Screen"),
     N_("Loc_k Screen"),
     NULL, NULL, /* not needed */
-    "system-lock-screen"
+    "system-lock-screen",
+    NULL
   },
   { ACTION_TYPE_HIBERNATE,
     "hibernate",
@@ -181,6 +187,16 @@ static ActionEntry action_entries[] =
     N_("_Hibernate"),
     N_("Do you want to suspend to disk?"),
     N_("Hibernating computer in %d seconds."),
+    "system-hibernate",
+    NULL
+  },
+  { ACTION_TYPE_HYBRID_SLEEP,
+    "hybrid-sleep",
+    N_("Hybrid Sleep"),
+    N_("_Hybrid Sleep"),
+    N_("Do you want to hibernate and suspend the system?"),
+    N_("Hibernating and Suspending computer in %d seconds."),
+    "system-suspend-hibernate",
     "system-hibernate"
   },
   { ACTION_TYPE_SUSPEND,
@@ -189,7 +205,8 @@ static ActionEntry action_entries[] =
     N_("Sus_pend"),
     N_("Do you want to suspend to RAM?"),
     N_("Suspending computer in %d seconds."),
-    "system-suspend"
+    "system-suspend",
+    NULL
   },
   { ACTION_TYPE_RESTART,
     "restart",
@@ -197,7 +214,8 @@ static ActionEntry action_entries[] =
     N_("_Restart"),
     N_("Are you sure you want to restart?"),
     N_("Restarting computer in %d seconds."),
-    "system-reboot"
+    "system-reboot",
+    NULL
   },
   { ACTION_TYPE_SHUTDOWN,
     "shutdown",
@@ -205,7 +223,8 @@ static ActionEntry action_entries[] =
     N_("Shut _Down"),
     N_("Are you sure you want to shut down?"),
     N_("Turning off computer in %d seconds."),
-    "system-shutdown"
+    "system-shutdown",
+    NULL
   }
 };
 
@@ -216,7 +235,6 @@ XFCE_PANEL_DEFINE_PLUGIN (ActionsPlugin, actions_plugin)
 
 
 
-static GtkIconSize menu_icon_size = GTK_ICON_SIZE_INVALID;
 static GQuark      action_quark = 0;
 
 
@@ -242,8 +260,8 @@ actions_plugin_class_init (ActionsPluginClass *klass)
                                    PROP_ITEMS,
                                    g_param_spec_boxed ("items",
                                                        NULL, NULL,
-                                                       PANEL_PROPERTIES_TYPE_VALUE_ARRAY,
-                                                       EXO_PARAM_READWRITE));
+                                                       G_TYPE_PTR_ARRAY,
+                                                       G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
 
   g_object_class_install_property (gobject_class,
                                    PROP_APPEARANCE,
@@ -252,27 +270,21 @@ actions_plugin_class_init (ActionsPluginClass *klass)
                                                       APPEARANCE_TYPE_BUTTONS,
                                                       APPEARANCE_TYPE_MENU,
                                                       APPEARANCE_TYPE_MENU,
-                                                      EXO_PARAM_READWRITE));
+                                                      G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
 
   g_object_class_install_property (gobject_class,
                                    PROP_INVERT_ORIENTATION,
                                    g_param_spec_boolean ("invert-orientation",
                                                          NULL, NULL,
                                                          FALSE,
-                                                         EXO_PARAM_READWRITE));
+                                                         G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
 
   g_object_class_install_property (gobject_class,
                                    PROP_ASK_CONFIRMATION,
                                    g_param_spec_boolean ("ask-confirmation",
                                                          NULL, NULL,
                                                          TRUE,
-                                                         EXO_PARAM_READWRITE));
-
-  menu_icon_size = gtk_icon_size_from_name ("panel-actions-menu");
-  if (menu_icon_size == GTK_ICON_SIZE_INVALID)
-    menu_icon_size = gtk_icon_size_register ("panel-actions-menu",
-                                             DEFAULT_ICON_SIZE,
-                                             DEFAULT_ICON_SIZE);
+                                                         G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
 
   action_quark = g_quark_from_string ("panel-action-quark");
 }
@@ -285,6 +297,17 @@ actions_plugin_init (ActionsPlugin *plugin)
   plugin->type = APPEARANCE_TYPE_MENU;
   plugin->invert_orientation = FALSE;
   plugin->ask_confirmation = TRUE;
+}
+
+
+
+static void
+actions_plugin_free_array_element (gpointer data)
+{
+  GValue *value = (GValue *)data;
+
+  g_value_unset (value);
+  g_free (value);
 }
 
 
@@ -334,8 +357,9 @@ actions_plugin_set_property (GObject      *object,
   switch (prop_id)
     {
     case PROP_ITEMS:
-      if (plugin->items != NULL)
-        xfconf_array_free (plugin->items);
+      if (plugin->items != NULL) {
+        g_ptr_array_unref (plugin->items);
+      }
       plugin->items = g_value_dup_boxed (value);
       actions_plugin_pack (plugin);
       break;
@@ -368,7 +392,7 @@ actions_plugin_construct (XfcePanelPlugin *panel_plugin)
   ActionsPlugin       *plugin = XFCE_ACTIONS_PLUGIN (panel_plugin);
   const PanelProperty  properties[] =
   {
-    { "items", PANEL_PROPERTIES_TYPE_VALUE_ARRAY },
+    { "items", G_TYPE_PTR_ARRAY },
     { "appearance", G_TYPE_UINT },
     { "invert-orientation", G_TYPE_BOOLEAN },
     { "ask-confirmation", G_TYPE_BOOLEAN },
@@ -401,22 +425,10 @@ actions_plugin_free_data (XfcePanelPlugin *panel_plugin)
     g_source_remove (plugin->pack_idle_id);
 
   if (plugin->items != NULL)
-    xfconf_array_free (plugin->items);
+    g_ptr_array_unref (plugin->items);
 
   if (plugin->menu != NULL)
     gtk_widget_destroy (plugin->menu);
-}
-
-
-
-static void
-actions_plugin_size_changed_child (GtkWidget *child,
-                                   gpointer   data)
-{
-  gint size = GPOINTER_TO_INT (data);
-
-  if (!GTK_IS_SEPARATOR (child))
-    gtk_widget_set_size_request (child, size, size);
 }
 
 
@@ -428,9 +440,9 @@ actions_plugin_size_changed (XfcePanelPlugin *panel_plugin,
   ActionsPlugin *plugin = XFCE_ACTIONS_PLUGIN (panel_plugin);
   GtkWidget     *box;
   GList         *children, *li;
-  gint           n_children;
-  gint           child_size;
   gint           max_size;
+  GtkImage      *icon;
+  gint           icon_size;
 
   if (plugin->type == APPEARANCE_TYPE_BUTTONS)
     {
@@ -438,29 +450,17 @@ actions_plugin_size_changed (XfcePanelPlugin *panel_plugin,
       box = gtk_bin_get_child (GTK_BIN (plugin));
       if (box != NULL)
         {
-          if (plugin->invert_orientation !=
-              (xfce_panel_plugin_get_mode (panel_plugin) == XFCE_PANEL_PLUGIN_MODE_DESKBAR))
-            {
-              children = gtk_container_get_children (GTK_CONTAINER (box));
-              if (G_UNLIKELY (children == NULL))
-                return TRUE;
-              n_children = g_list_length (children);
+          children = gtk_container_get_children (GTK_CONTAINER (box));
+          if (G_UNLIKELY (children == NULL))
+            return TRUE;
 
-              for (li = children; li != NULL; li = li->next)
-                {
-                  child_size = MIN (size / n_children, max_size);
-                  size -= child_size;
-                  n_children--;
-
-                  gtk_widget_set_size_request (GTK_WIDGET (li->data),
-                                               child_size, child_size);
-                }
-            }
-          else
+          for (li = children; li != NULL; li = li->next)
             {
-              gtk_container_foreach (GTK_CONTAINER (box),
-                  actions_plugin_size_changed_child,
-                  GINT_TO_POINTER (max_size));
+              gtk_widget_set_size_request (GTK_WIDGET (li->data),
+                                           max_size, max_size);
+              icon = GTK_IMAGE (gtk_bin_get_child (GTK_BIN (li->data)));
+              icon_size = xfce_panel_plugin_get_icon_size (panel_plugin);
+              gtk_image_set_pixel_size (GTK_IMAGE (icon), icon_size);
             }
         }
     }
@@ -485,7 +485,7 @@ actions_plugin_configure_store (gpointer data)
   model = g_object_get_data (G_OBJECT (plugin), "items-store");
   panel_return_val_if_fail (GTK_IS_LIST_STORE (model), FALSE);
 
-  array = g_ptr_array_new ();
+  array = g_ptr_array_new_full (1, (GDestroyNotify) actions_plugin_free_array_element);
 
   if (gtk_tree_model_get_iter_first (model, &iter))
     {
@@ -510,7 +510,7 @@ actions_plugin_configure_store (gpointer data)
 
   /* Store the new array */
   if (plugin->items != NULL)
-    xfconf_array_free (plugin->items);
+    g_ptr_array_unref (plugin->items);
   plugin->items = array;
   g_object_notify (G_OBJECT (plugin), "items");
 
@@ -596,18 +596,22 @@ actions_plugin_configure_plugin (XfcePanelPlugin *panel_plugin)
     return;
 
   combo = gtk_builder_get_object (builder, "combo-mode");
-  exo_mutual_binding_new (G_OBJECT (plugin), "appearance",
-                          G_OBJECT (combo), "active");
+  g_object_bind_property (G_OBJECT (plugin), "appearance",
+                          G_OBJECT (combo), "active",
+                          G_BINDING_SYNC_CREATE | G_BINDING_BIDIRECTIONAL);
 
   object = gtk_builder_get_object (builder, "invert-orientation");
-  exo_mutual_binding_new (G_OBJECT (plugin), "invert-orientation",
-                          G_OBJECT (object), "active");
-  exo_binding_new_with_negation (G_OBJECT (combo), "active",
-                                 G_OBJECT (object), "sensitive");
+  g_object_bind_property (G_OBJECT (plugin), "invert-orientation",
+                          G_OBJECT (object), "active",
+                          G_BINDING_SYNC_CREATE | G_BINDING_BIDIRECTIONAL);
+  g_object_bind_property (G_OBJECT (combo), "active",
+                          G_OBJECT (object), "sensitive",
+                          G_BINDING_SYNC_CREATE | G_BINDING_BIDIRECTIONAL | G_BINDING_INVERT_BOOLEAN);
 
   object = gtk_builder_get_object (builder, "confirmation-dialog");
-  exo_mutual_binding_new (G_OBJECT (plugin), "ask-confirmation",
-                          G_OBJECT (object), "active");
+  g_object_bind_property (G_OBJECT (plugin), "ask-confirmation",
+                          G_OBJECT (object), "active",
+                          G_BINDING_SYNC_CREATE | G_BINDING_BIDIRECTIONAL);
 
   store = gtk_builder_get_object (builder, "items-store");
   panel_return_if_fail (GTK_IS_LIST_STORE (store));
@@ -626,7 +630,7 @@ actions_plugin_configure_plugin (XfcePanelPlugin *panel_plugin)
       /* get the value and check if it is within range */
       val = g_ptr_array_index (plugin->items, i);
       name = g_value_get_string (val);
-      if (exo_str_is_empty (name))
+      if (panel_str_is_empty (name))
         continue;
 
       /* find the entry in the available actions */
@@ -750,7 +754,11 @@ actions_plugin_action_confirmation (ActionsPlugin *plugin,
   button = gtk_dialog_add_button (GTK_DIALOG (dialog), _(entry->mnemonic), GTK_RESPONSE_ACCEPT);
   gtk_dialog_set_default_response (GTK_DIALOG (dialog), GTK_RESPONSE_ACCEPT);
 
-  image = gtk_image_new_from_icon_name (entry->icon_name, GTK_ICON_SIZE_BUTTON);
+  if (gtk_icon_theme_has_icon (gtk_icon_theme_get_default (), entry->icon_name))
+    image = gtk_image_new_from_icon_name (entry->icon_name, GTK_ICON_SIZE_BUTTON);
+  else
+    image = gtk_image_new_from_icon_name (entry->fallback_icon_name, GTK_ICON_SIZE_BUTTON);
+
   gtk_button_set_image (GTK_BUTTON (button), image);
 
   timeout = g_slice_new0 (ActionTimeout);
@@ -777,13 +785,17 @@ actions_plugin_action_confirmation (ActionsPlugin *plugin,
 
 
 
-static DBusGProxy *
-actions_plugin_action_dbus_proxy_session (DBusGConnection *conn)
+static GDBusProxy *
+actions_plugin_action_dbus_proxy_session (GDBusConnection *conn)
 {
-  return dbus_g_proxy_new_for_name (conn,
-                                    "org.xfce.SessionManager",
-                                    "/org/xfce/SessionManager",
-                                    "org.xfce.Session.Manager");
+  return g_dbus_proxy_new_sync (conn,
+                                G_DBUS_PROXY_FLAGS_NONE,
+                                NULL,
+                                "org.xfce.SessionManager",
+                                "/org/xfce/SessionManager",
+                                "org.xfce.Session.Manager",
+                                NULL,
+                                NULL);
 }
 
 
@@ -794,11 +806,11 @@ actions_plugin_action_dbus_xfsm (const gchar  *method,
                                  gboolean      allow_save,
                                  GError      **error)
 {
-  DBusGConnection *conn;
-  DBusGProxy      *proxy;
-  gboolean         retval = FALSE;
+  GDBusConnection *conn;
+  GDBusProxy      *proxy;
+  GVariant        *retval;
 
-  conn = dbus_g_bus_get (DBUS_BUS_SESSION, error);
+  conn = g_bus_get_sync (G_BUS_TYPE_SESSION, NULL, error);
   if (conn == NULL)
     return FALSE;
 
@@ -807,45 +819,78 @@ actions_plugin_action_dbus_xfsm (const gchar  *method,
     {
       if (g_strcmp0 (method, "Logout") == 0)
         {
-          retval = dbus_g_proxy_call (proxy, method, error,
-                                      G_TYPE_BOOLEAN, show_dialog,
-                                      G_TYPE_BOOLEAN, allow_save,
-                                      G_TYPE_INVALID, G_TYPE_INVALID);
+          retval = g_dbus_proxy_call_sync (proxy, method,
+                                           g_variant_new ("(bb)",
+                                                          show_dialog,
+                                                          allow_save),
+                                           G_DBUS_CALL_FLAGS_NONE,
+                                           -1,
+                                           NULL,
+                                           error);
         }
       else if (g_strcmp0 (method, "Suspend") == 0
-               || g_strcmp0 (method, "Hibernate") == 0)
+               || g_strcmp0 (method, "Hibernate") == 0
+               || g_strcmp0 (method, "HybridSleep") == 0)
         {
-          retval = dbus_g_proxy_call (proxy, method, error,
-                                      G_TYPE_INVALID, G_TYPE_INVALID);
+          retval = g_dbus_proxy_call_sync (proxy, method,
+                                           NULL,
+                                           G_DBUS_PROXY_FLAGS_NONE,
+                                           -1,
+                                           NULL,
+                                           error);
         }
       else
         {
-          retval = dbus_g_proxy_call (proxy, method, error,
-                                      G_TYPE_BOOLEAN, allow_save,
-                                      G_TYPE_INVALID, G_TYPE_INVALID);
+          retval = g_dbus_proxy_call_sync (proxy, method,
+                                           g_variant_new ("(b)",
+                                                          show_dialog),
+                                           G_DBUS_CALL_FLAGS_NONE,
+                                           -1,
+                                           NULL,
+                                           error);
         }
 
       g_object_unref (G_OBJECT (proxy));
+
+      if (retval)
+        {
+          g_variant_unref (retval);
+          return TRUE;
+        }
     }
 
-  return retval;
+  return FALSE;
 }
 
 
 
 static gboolean
-actions_plugin_action_dbus_can (DBusGProxy  *proxy,
+actions_plugin_action_dbus_can (GDBusProxy  *proxy,
                                 const gchar *method)
 {
+  GVariant *retval;
   gboolean allowed = FALSE;
+  GError *error = NULL;
 
-  if (dbus_g_proxy_call (proxy, method, NULL,
-                         G_TYPE_INVALID,
-                         G_TYPE_BOOLEAN, &allowed,
-                         G_TYPE_INVALID))
-    return allowed;
+  retval = g_dbus_proxy_call_sync (proxy, method,
+                                   NULL,
+                                   G_DBUS_CALL_FLAGS_NONE,
+                                   -1,
+                                   NULL,
+                                   &error);
 
-  return FALSE;
+  if (G_LIKELY (retval))
+    {
+      g_variant_get (retval, "(b)", &allowed);
+      g_variant_unref (retval);
+    }
+  else if (error)
+    {
+      g_warning ("Calling %s failed %s", method, error->message);
+      g_error_free (error);
+    }
+
+  return allowed;
 }
 
 
@@ -853,10 +898,10 @@ actions_plugin_action_dbus_can (DBusGProxy  *proxy,
 static ActionType
 actions_plugin_actions_allowed (void)
 {
-  DBusGConnection *conn;
+  GDBusConnection *conn;
   ActionType       allow_mask = ACTION_TYPE_SEPARATOR;
   gchar           *path;
-  DBusGProxy      *proxy;
+  GDBusProxy      *proxy;
   GError          *error = NULL;
 
   /* check for commands we use */
@@ -864,13 +909,13 @@ actions_plugin_actions_allowed (void)
   if (path != NULL)
     PANEL_SET_FLAG (allow_mask, ACTION_TYPE_SWITCH_USER);
   else
-    {
-      /* check for gdmflexiserver if no dm-tool */
-      g_free (path);
-      path = g_find_program_in_path ("gdmflexiserver");
-      if (path != NULL)
-        PANEL_SET_FLAG (allow_mask, ACTION_TYPE_SWITCH_USER);
-    }
+  {
+    /* check for gdmflexiserver if dm-tool is not present */
+    g_free (path);
+    path = g_find_program_in_path ("gdmflexiserver");
+    if (path != NULL)
+      PANEL_SET_FLAG (allow_mask, ACTION_TYPE_SWITCH_USER);
+  }
   g_free (path);
 
   path = g_find_program_in_path ("xflock4");
@@ -879,7 +924,7 @@ actions_plugin_actions_allowed (void)
   g_free (path);
 
   /* session bus for querying the managers */
-  conn = dbus_g_bus_get (DBUS_BUS_SESSION, &error);
+  conn = g_bus_get_sync (G_BUS_TYPE_SESSION, NULL, &error);
   if (conn != NULL)
     {
       /* xfce4-session */
@@ -894,12 +939,15 @@ actions_plugin_actions_allowed (void)
 
           if (actions_plugin_action_dbus_can (proxy, "CanRestart"))
             PANEL_SET_FLAG (allow_mask, ACTION_TYPE_RESTART);
-        
+
           if (actions_plugin_action_dbus_can (proxy, "CanSuspend"))
             PANEL_SET_FLAG (allow_mask, ACTION_TYPE_SUSPEND);
-          
+
           if (actions_plugin_action_dbus_can (proxy, "CanHibernate"))
             PANEL_SET_FLAG (allow_mask, ACTION_TYPE_HIBERNATE);
+
+          if (actions_plugin_action_dbus_can (proxy, "CanHybridSleep"))
+            PANEL_SET_FLAG (allow_mask, ACTION_TYPE_HYBRID_SLEEP);
 
           g_object_unref (G_OBJECT (proxy));
         }
@@ -925,7 +973,7 @@ actions_plugin_action_activate (GtkWidget      *widget,
   gboolean       succeed = FALSE;
   XfconfChannel *channel;
   gboolean       allow_save;
-  gchar       *path;
+  gchar         *path;
 
   entry = g_object_get_qdata (G_OBJECT (widget), action_quark);
   panel_return_if_fail (entry != NULL);
@@ -965,6 +1013,11 @@ actions_plugin_action_activate (GtkWidget      *widget,
 
     case ACTION_TYPE_HIBERNATE:
       succeed = actions_plugin_action_dbus_xfsm ("Hibernate", FALSE,
+                                                 FALSE, &error);
+      break;
+
+    case ACTION_TYPE_HYBRID_SLEEP:
+      succeed = actions_plugin_action_dbus_xfsm ("HybridSleep", FALSE,
                                                  FALSE, &error);
       break;
 
@@ -1021,10 +1074,7 @@ actions_plugin_action_button (ActionsPlugin  *plugin,
 
   if (entry->type == ACTION_TYPE_SEPARATOR)
     {
-      if (orientation == GTK_ORIENTATION_HORIZONTAL)
-        widget = gtk_vseparator_new ();
-      else
-        widget = gtk_hseparator_new ();
+      widget = gtk_separator_new (orientation);
     }
   else
     {
@@ -1035,7 +1085,11 @@ actions_plugin_action_button (ActionsPlugin  *plugin,
       g_signal_connect (G_OBJECT (widget), "clicked",
           G_CALLBACK (actions_plugin_action_activate), plugin);
 
-      image = xfce_panel_image_new_from_source (entry->icon_name);
+      if (gtk_icon_theme_has_icon (gtk_icon_theme_get_default (), entry->icon_name))
+        image = gtk_image_new_from_icon_name (entry->icon_name, GTK_ICON_SIZE_BUTTON);
+      else
+        image = gtk_image_new_from_icon_name (entry->fallback_icon_name, GTK_ICON_SIZE_BUTTON);
+
       gtk_container_add (GTK_CONTAINER (widget), image);
       gtk_widget_show (image);
     }
@@ -1050,7 +1104,6 @@ actions_plugin_action_button (ActionsPlugin  *plugin,
 static GtkWidget *
 actions_plugin_action_menu_item (ActionsPlugin *plugin,
                                  const gchar   *name,
-                                 gint           size,
                                  ActionType    *type)
 {
   GtkWidget   *mi;
@@ -1068,18 +1121,22 @@ actions_plugin_action_menu_item (ActionsPlugin *plugin,
   if (entry->type == ACTION_TYPE_SEPARATOR)
     return gtk_separator_menu_item_new ();
 
+G_GNUC_BEGIN_IGNORE_DEPRECATIONS
   mi = gtk_image_menu_item_new_with_mnemonic (_(entry->mnemonic));
+G_GNUC_END_IGNORE_DEPRECATIONS
   g_object_set_qdata (G_OBJECT (mi), action_quark, entry);
   g_signal_connect (G_OBJECT (mi), "activate",
       G_CALLBACK (actions_plugin_action_activate), plugin);
 
-  if (size > 0)
-    {
-      image = xfce_panel_image_new_from_source (entry->icon_name);
-      xfce_panel_image_set_size (XFCE_PANEL_IMAGE (image), size);
-      gtk_image_menu_item_set_image (GTK_IMAGE_MENU_ITEM (mi), image);
-      gtk_widget_show (image);
-    }
+  if (gtk_icon_theme_has_icon (gtk_icon_theme_get_default (), entry->icon_name))
+    image = gtk_image_new_from_icon_name (entry->icon_name, GTK_ICON_SIZE_MENU);
+  else
+    image = gtk_image_new_from_icon_name (entry->fallback_icon_name, GTK_ICON_SIZE_MENU);
+
+G_GNUC_BEGIN_IGNORE_DEPRECATIONS
+  gtk_image_menu_item_set_image (GTK_IMAGE_MENU_ITEM (mi), image);
+G_GNUC_END_IGNORE_DEPRECATIONS
+  gtk_widget_show (image);
 
   return mi;
 }
@@ -1125,7 +1182,7 @@ actions_plugin_pack_idle (gpointer data)
 
       if (plugin->invert_orientation)
         orientation = !orientation;
-      box = xfce_hvbox_new (orientation, FALSE, 0);
+      box = gtk_box_new (orientation, 0);
       gtk_container_add (GTK_CONTAINER (plugin), box);
       gtk_widget_show (box);
 
@@ -1159,11 +1216,11 @@ actions_plugin_pack_idle (gpointer data)
     {
       /* get a decent username, not the glib defaults */
       username = g_get_real_name ();
-      if (exo_str_is_empty (username)
+      if (panel_str_is_empty (username)
           || strcmp (username, "Unknown") == 0)
         {
           username = g_get_user_name ();
-          if (exo_str_is_empty (username)
+          if (panel_str_is_empty (username)
               || strcmp (username, "somebody") == 0)
             username = _("John Doe");
         }
@@ -1182,6 +1239,9 @@ actions_plugin_pack_idle (gpointer data)
       mode = xfce_panel_plugin_get_mode (XFCE_PANEL_PLUGIN (plugin));
       gtk_label_set_angle (GTK_LABEL (label),
           (mode == XFCE_PANEL_PLUGIN_MODE_VERTICAL) ? 270 : 0);
+      gtk_label_set_ellipsize (GTK_LABEL (label),
+                               (mode == XFCE_PANEL_PLUGIN_MODE_DESKBAR) ?
+                               PANGO_ELLIPSIZE_END : PANGO_ELLIPSIZE_NONE);
       gtk_widget_show (label);
     }
 
@@ -1223,6 +1283,7 @@ actions_plugin_default_array (void)
       "+separator",
       "+suspend",
       "-hibernate",
+      "-hybrid-sleep",
       "-separator",
       "+shutdown",
       "-restart",
@@ -1268,7 +1329,6 @@ actions_plugin_menu (GtkWidget     *button,
   const GValue *val;
   const gchar  *name;
   GtkWidget    *mi;
-  gint          w, h, size;
   ActionType    type;
   ActionType    allowed_types;
 
@@ -1286,10 +1346,6 @@ actions_plugin_menu (GtkWidget     *button,
           G_CALLBACK (actions_plugin_menu_deactivate), button);
       g_object_add_weak_pointer (G_OBJECT (plugin->menu), (gpointer) &plugin->menu);
 
-      size = DEFAULT_ICON_SIZE;
-      if (gtk_icon_size_lookup (menu_icon_size, &w, &h))
-        size = MIN (w, h);
-
       allowed_types = actions_plugin_actions_allowed ();
 
       for (i = 0; i < plugin->items->len; i++)
@@ -1299,7 +1355,7 @@ actions_plugin_menu (GtkWidget     *button,
           if (name == NULL || *name != '+')
             continue;
 
-          mi = actions_plugin_action_menu_item (plugin, name + 1, size, &type);
+          mi = actions_plugin_action_menu_item (plugin, name + 1, &type);
           if (mi != NULL)
             {
               gtk_menu_shell_append (GTK_MENU_SHELL (plugin->menu), mi);
@@ -1309,7 +1365,9 @@ actions_plugin_menu (GtkWidget     *button,
         }
     }
 
-  gtk_menu_popup (GTK_MENU (plugin->menu), NULL, NULL,
-                  button != NULL ? xfce_panel_plugin_position_menu : NULL,
-                  plugin, 1, gtk_get_current_event_time ());
+  gtk_menu_popup_at_widget (GTK_MENU (plugin->menu), button,
+                            xfce_panel_plugin_get_orientation (XFCE_PANEL_PLUGIN (plugin)) == GTK_ORIENTATION_VERTICAL
+                            ? GDK_GRAVITY_NORTH_EAST : GDK_GRAVITY_SOUTH_WEST,
+                            GDK_GRAVITY_NORTH_WEST,
+                            NULL);
 }

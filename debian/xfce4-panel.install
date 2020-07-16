@@ -1,9 +1,9 @@
+etc/
 usr/bin/
 usr/lib/*/libxfce4panel-1.0.so.*
 usr/lib/*/xfce4/panel/migrate
-usr/lib/*/xfce4/panel/wrapper-1.0
 usr/lib/*/xfce4/panel/plugins/*.so
-etc/
+usr/lib/*/xfce4/panel/wrapper-1.0
 usr/share/applications/
 usr/share/icons/hicolor/
 usr/share/locale/

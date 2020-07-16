@@ -20,8 +20,6 @@
 #include <config.h>
 #endif
 
-#include <dbus/dbus-glib.h>
-
 #include <common/panel-private.h>
 #include <common/panel-xfconf.h>
 #include <libxfce4panel/xfce-panel-macros.h>
@@ -35,9 +33,8 @@ panel_properties_store_value (XfconfChannel *channel,
                               GObject       *object,
                               const gchar   *object_property)
 {
-  GValue      value = { 0, };
-  GdkColor   *color;
-  guint16     alpha = 0xffff;
+  GValue       value = { 0, };
+  GdkRGBA     *rgba;
 #ifndef NDEBUG
   GParamSpec *pspec;
 #endif
@@ -62,20 +59,20 @@ panel_properties_store_value (XfconfChannel *channel,
   g_value_init (&value, xfconf_property_type);
   g_object_get_property (G_OBJECT (object), object_property, &value);
 
-  if (G_LIKELY (xfconf_property_type != GDK_TYPE_COLOR))
+  if (G_LIKELY (xfconf_property_type != GDK_TYPE_RGBA))
     {
-      xfconf_channel_set_property (channel, xfconf_property, &value);
+        xfconf_channel_set_property (channel, xfconf_property, &value);
     }
   else
     {
       /* work around xfconf's lack of storing colors (bug #7117) and
        * do the same as xfconf_g_property_bind_gdkcolor() does */
-      color = g_value_get_boxed (&value);
+      rgba = g_value_get_boxed (&value);
       xfconf_channel_set_array (channel, xfconf_property,
-                                XFCONF_TYPE_UINT16, &color->red,
-                                XFCONF_TYPE_UINT16, &color->green,
-                                XFCONF_TYPE_UINT16, &color->blue,
-                                XFCONF_TYPE_UINT16, &alpha,
+                                G_TYPE_DOUBLE, &rgba->red,
+                                G_TYPE_DOUBLE, &rgba->green,
+                                G_TYPE_DOUBLE, &rgba->blue,
+                                G_TYPE_DOUBLE, &rgba->alpha,
                                 G_TYPE_INVALID);
     }
 
@@ -134,10 +131,10 @@ panel_properties_bind (XfconfChannel       *channel,
       if (save_properties)
         panel_properties_store_value (channel, property, prop->type, object, prop->property);
 
-      if (G_LIKELY (prop->type != GDK_TYPE_COLOR))
+      if (G_LIKELY (prop->type != GDK_TYPE_RGBA))
         xfconf_g_property_bind (channel, property, prop->type, object, prop->property);
       else
-        xfconf_g_property_bind_gdkcolor (channel, property, object, prop->property);
+        xfconf_g_property_bind_gdkrgba (channel, property, object, prop->property);
 
       g_free (property);
     }
@@ -149,21 +146,4 @@ void
 panel_properties_unbind (GObject *object)
 {
   xfconf_g_property_unbind_all (object);
-}
-
-
-
-GType
-panel_properties_value_array_get_type (void)
-{
-  static volatile gsize type__volatile = 0;
-  GType                 type;
-
-  if (g_once_init_enter (&type__volatile))
-    {
-      type = dbus_g_type_get_collection ("GPtrArray", G_TYPE_VALUE);
-      g_once_init_leave (&type__volatile, type);
-    }
-
-  return type__volatile;
 }
