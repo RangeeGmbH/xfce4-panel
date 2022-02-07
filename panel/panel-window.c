@@ -265,7 +265,8 @@ enum
   PROP_OUTPUT_NAME,
   PROP_POSITION,
   PROP_ENABLE_STRUTS,
-  PROP_DARK_MODE
+  PROP_DARK_MODE,
+  PROP_ALWAYS_BELOW
 };
 
 enum _PluginProp
@@ -389,6 +390,7 @@ struct _PanelWindow
   gboolean floating;
   guint span_monitors : 1;
   gchar *output_name;
+  guint always_below : 1;
 #ifdef HAVE_GTK_LAYER_SHELL
   guint show_id;
   guint set_anchor_default_id;
@@ -573,6 +575,12 @@ panel_window_class_init (PanelWindowClass *klass)
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
 
   g_object_class_install_property (gobject_class,
+                                   PROP_ALWAYS_BELOW,
+                                   g_param_spec_boolean ("always-below", NULL, NULL,
+                                                         FALSE,
+                                                         G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
+
+  g_object_class_install_property (gobject_class,
                                    PROP_POSITION,
                                    g_param_spec_string ("position", NULL, NULL,
                                                         NULL,
@@ -666,6 +674,7 @@ panel_window_init (PanelWindow *window)
   window->snap_position = SNAP_POSITION_NONE;
   window->floating = TRUE;
   window->span_monitors = FALSE;
+  window->always_below = FALSE;
   window->position_locked = FALSE;
   window->autohide_behavior = AUTOHIDE_BEHAVIOR_NEVER;
   window->autohide_state = AUTOHIDE_VISIBLE;
@@ -779,6 +788,10 @@ panel_window_get_property (GObject *object,
 
     case PROP_SPAN_MONITORS:
       g_value_set_boolean (value, window->span_monitors);
+      break;
+
+    case PROP_ALWAYS_BELOW:
+      g_value_set_boolean (value, window->always_below);
       break;
 
     case PROP_OUTPUT_NAME:
@@ -954,6 +967,15 @@ panel_window_set_property (GObject *object,
         {
           window->span_monitors = !!val_bool;
           panel_window_screen_layout_changed (window->screen, window);
+        }
+      break;
+
+    case PROP_ALWAYS_BELOW:
+      val_bool = g_value_get_boolean (value);
+      if (window->always_below != val_bool)
+        {
+          window->always_below = !!val_bool;
+          gtk_window_set_keep_below(GTK_WINDOW (window), window->always_below);
         }
       break;
 
