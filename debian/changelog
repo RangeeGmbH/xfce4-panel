@@ -1,3 +1,9 @@
+xfce4-panel (4.14.3-1-0rangeeos1) rangeeos; urgency=medium
+
+  * Add panel property "always-below"
+
+ -- René Vögeli <rvoegeli@rangee.com>  Mon, 07 Feb 2022 12:32:22 +0100
+
 xfce4-panel (4.14.3-1rangeeos1) rangeeos; urgency=medium
 
   * Patched files for RangeeOS

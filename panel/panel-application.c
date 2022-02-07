@@ -304,6 +304,7 @@ panel_application_xfconf_window_bindings (PanelApplication *application,
     { "output-name", G_TYPE_STRING },
     { "position", G_TYPE_STRING },
     { "disable-struts", G_TYPE_BOOLEAN },
+    { "always-below", G_TYPE_BOOLEAN },
     { NULL }
   };
 
