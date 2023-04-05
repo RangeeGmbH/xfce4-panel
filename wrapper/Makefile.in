@@ -88,12 +88,7 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
-wrapper_PROGRAMS = wrapper-2.0$(EXEEXT) $(am__EXEEXT_1)
-
-#
-# Gtk+ 2 support library
-#
-@ENABLE_GTK2_LIBRARY_TRUE@am__append_1 = wrapper-1.0
+wrapper_PROGRAMS = wrapper-2.0$(EXEEXT)
 subdir = wrapper
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/configure.ac
@@ -104,28 +99,17 @@ mkinstalldirs = $(install_sh) -d
 CONFIG_HEADER = $(top_builddir)/config.h
 CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
-@ENABLE_GTK2_LIBRARY_TRUE@am__EXEEXT_1 = wrapper-1.0$(EXEEXT)
 am__installdirs = "$(DESTDIR)$(wrapperdir)"
 PROGRAMS = $(wrapper_PROGRAMS)
-am__wrapper_1_0_SOURCES_DIST = main.c wrapper-module.c \
-	wrapper-module.h wrapper-plug.c wrapper-plug.h
-@ENABLE_GTK2_LIBRARY_TRUE@am_wrapper_1_0_OBJECTS =  \
-@ENABLE_GTK2_LIBRARY_TRUE@	wrapper_1_0-main.$(OBJEXT) \
-@ENABLE_GTK2_LIBRARY_TRUE@	wrapper_1_0-wrapper-module.$(OBJEXT) \
-@ENABLE_GTK2_LIBRARY_TRUE@	wrapper_1_0-wrapper-plug.$(OBJEXT)
-wrapper_1_0_OBJECTS = $(am_wrapper_1_0_OBJECTS)
+am_wrapper_2_0_OBJECTS = wrapper_2_0-main.$(OBJEXT) \
+	wrapper_2_0-wrapper-module.$(OBJEXT) \
+	wrapper_2_0-wrapper-plug.$(OBJEXT)
+wrapper_2_0_OBJECTS = $(am_wrapper_2_0_OBJECTS)
 am__DEPENDENCIES_1 =
 AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
 am__v_lt_0 = --silent
 am__v_lt_1 = 
-wrapper_1_0_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
-	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(wrapper_1_0_CFLAGS) \
-	$(CFLAGS) $(wrapper_1_0_LDFLAGS) $(LDFLAGS) -o $@
-am_wrapper_2_0_OBJECTS = wrapper_2_0-main.$(OBJEXT) \
-	wrapper_2_0-wrapper-module.$(OBJEXT) \
-	wrapper_2_0-wrapper-plug.$(OBJEXT)
-wrapper_2_0_OBJECTS = $(am_wrapper_2_0_OBJECTS)
 wrapper_2_0_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(wrapper_2_0_CFLAGS) \
 	$(CFLAGS) $(wrapper_2_0_LDFLAGS) $(LDFLAGS) -o $@
@@ -144,10 +128,7 @@ am__v_at_1 =
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__maybe_remake_depfiles = depfiles
-am__depfiles_remade = ./$(DEPDIR)/wrapper_1_0-main.Po \
-	./$(DEPDIR)/wrapper_1_0-wrapper-module.Po \
-	./$(DEPDIR)/wrapper_1_0-wrapper-plug.Po \
-	./$(DEPDIR)/wrapper_2_0-main.Po \
+am__depfiles_remade = ./$(DEPDIR)/wrapper_2_0-main.Po \
 	./$(DEPDIR)/wrapper_2_0-wrapper-module.Po \
 	./$(DEPDIR)/wrapper_2_0-wrapper-plug.Po
 am__mv = mv -f
@@ -169,8 +150,8 @@ AM_V_CCLD = $(am__v_CCLD_@AM_V@)
 am__v_CCLD_ = $(am__v_CCLD_@AM_DEFAULT_V@)
 am__v_CCLD_0 = @echo "  CCLD    " $@;
 am__v_CCLD_1 = 
-SOURCES = $(wrapper_1_0_SOURCES) $(wrapper_2_0_SOURCES)
-DIST_SOURCES = $(am__wrapper_1_0_SOURCES_DIST) $(wrapper_2_0_SOURCES)
+SOURCES = $(wrapper_2_0_SOURCES)
+DIST_SOURCES = $(wrapper_2_0_SOURCES)
 am__can_run_installinfo = \
   case $$AM_UPDATE_INFO_DIR in \
     n|no|NO) false;; \
@@ -219,6 +200,10 @@ CPP = @CPP@
 CPPFLAGS = @CPPFLAGS@
 CYGPATH_W = @CYGPATH_W@
 DATADIRNAME = @DATADIRNAME@
+DBUSMENU_CFLAGS = @DBUSMENU_CFLAGS@
+DBUSMENU_LIBS = @DBUSMENU_LIBS@
+DBUSMENU_REQUIRED_VERSION = @DBUSMENU_REQUIRED_VERSION@
+DBUSMENU_VERSION = @DBUSMENU_VERSION@
 DEFS = @DEFS@
 DEPDIR = @DEPDIR@
 DLLTOOL = @DLLTOOL@
@@ -263,10 +248,6 @@ GMODULE_VERSION = @GMODULE_VERSION@
 GMOFILES = @GMOFILES@
 GMSGFMT = @GMSGFMT@
 GREP = @GREP@
-GTK2_CFLAGS = @GTK2_CFLAGS@
-GTK2_LIBS = @GTK2_LIBS@
-GTK2_REQUIRED_VERSION = @GTK2_REQUIRED_VERSION@
-GTK2_VERSION = @GTK2_VERSION@
 GTKDOC_CHECK = @GTKDOC_CHECK@
 GTKDOC_CHECK_PATH = @GTKDOC_CHECK_PATH@
 GTKDOC_DEPS_CFLAGS = @GTKDOC_DEPS_CFLAGS@
@@ -389,6 +370,8 @@ X_CFLAGS = @X_CFLAGS@
 X_EXTRA_LIBS = @X_EXTRA_LIBS@
 X_LIBS = @X_LIBS@
 X_PRE_LIBS = @X_PRE_LIBS@
+_GI_EXP_DATADIR = @_GI_EXP_DATADIR@
+_GI_EXP_LIBDIR = @_GI_EXP_LIBDIR@
 abs_builddir = @abs_builddir@
 abs_srcdir = @abs_srcdir@
 abs_top_builddir = @abs_top_builddir@
@@ -479,34 +462,6 @@ wrapper_2_0_LDADD = \
 wrapper_2_0_DEPENDENCIES = \
 	$(top_builddir)/libxfce4panel/libxfce4panel-$(LIBXFCE4PANEL_VERSION_API).la
 
-@ENABLE_GTK2_LIBRARY_TRUE@wrapper_1_0_SOURCES = \
-@ENABLE_GTK2_LIBRARY_TRUE@	main.c \
-@ENABLE_GTK2_LIBRARY_TRUE@	wrapper-module.c \
-@ENABLE_GTK2_LIBRARY_TRUE@	wrapper-module.h \
-@ENABLE_GTK2_LIBRARY_TRUE@	wrapper-plug.c \
-@ENABLE_GTK2_LIBRARY_TRUE@	wrapper-plug.h
-
-@ENABLE_GTK2_LIBRARY_TRUE@wrapper_1_0_CFLAGS = \
-@ENABLE_GTK2_LIBRARY_TRUE@	$(GTK2_CFLAGS) \
-@ENABLE_GTK2_LIBRARY_TRUE@	$(GIO_CFLAGS) \
-@ENABLE_GTK2_LIBRARY_TRUE@	$(GMODULE_CFLAGS) \
-@ENABLE_GTK2_LIBRARY_TRUE@	$(LIBXFCE4UTIL_CFLAGS) \
-@ENABLE_GTK2_LIBRARY_TRUE@	$(PLATFORM_CFLAGS)
-
-@ENABLE_GTK2_LIBRARY_TRUE@wrapper_1_0_LDFLAGS = \
-@ENABLE_GTK2_LIBRARY_TRUE@	-no-undefined \
-@ENABLE_GTK2_LIBRARY_TRUE@	$(PLATFORM_LDFLAGS)
-
-@ENABLE_GTK2_LIBRARY_TRUE@wrapper_1_0_LDADD = \
-@ENABLE_GTK2_LIBRARY_TRUE@	$(top_builddir)/libxfce4panel/libxfce4panel-1.0.la \
-@ENABLE_GTK2_LIBRARY_TRUE@	$(GTK2_LIBS) \
-@ENABLE_GTK2_LIBRARY_TRUE@	$(GIO_LIBS) \
-@ENABLE_GTK2_LIBRARY_TRUE@	$(GMODULE_LIBS) \
-@ENABLE_GTK2_LIBRARY_TRUE@	$(LIBXFCE4UTIL_LIBS)
-
-@ENABLE_GTK2_LIBRARY_TRUE@wrapper_1_0_DEPENDENCIES = \
-@ENABLE_GTK2_LIBRARY_TRUE@	$(top_builddir)/libxfce4panel/libxfce4panel-1.0.la
-
 
 #wrapper-marshal.h: $(top_builddir)/panel/panel-marshal.list Makefile
 #	$(AM_V_GEN)glib-genmarshal --header --prefix=wrapper_marshal $< > $@
@@ -534,9 +489,9 @@ $(srcdir)/Makefile.in: @MAINTAINER_MODE_TRUE@ $(srcdir)/Makefile.am  $(am__confi
 	      exit 1;; \
 	  esac; \
 	done; \
-	echo ' cd $(top_srcdir) && $(AUTOMAKE) --gnu wrapper/Makefile'; \
+	echo ' cd $(top_srcdir) && $(AUTOMAKE) --foreign wrapper/Makefile'; \
 	$(am__cd) $(top_srcdir) && \
-	  $(AUTOMAKE) --gnu wrapper/Makefile
+	  $(AUTOMAKE) --foreign wrapper/Makefile
 Makefile: $(srcdir)/Makefile.in $(top_builddir)/config.status
 	@case '$?' in \
 	  *config.status*) \
@@ -604,10 +559,6 @@ clean-wrapperPROGRAMS:
 	echo " rm -f" $$list; \
 	rm -f $$list
 
-wrapper-1.0$(EXEEXT): $(wrapper_1_0_OBJECTS) $(wrapper_1_0_DEPENDENCIES) $(EXTRA_wrapper_1_0_DEPENDENCIES) 
-	@rm -f wrapper-1.0$(EXEEXT)
-	$(AM_V_CCLD)$(wrapper_1_0_LINK) $(wrapper_1_0_OBJECTS) $(wrapper_1_0_LDADD) $(LIBS)
-
 wrapper-2.0$(EXEEXT): $(wrapper_2_0_OBJECTS) $(wrapper_2_0_DEPENDENCIES) $(EXTRA_wrapper_2_0_DEPENDENCIES) 
 	@rm -f wrapper-2.0$(EXEEXT)
 	$(AM_V_CCLD)$(wrapper_2_0_LINK) $(wrapper_2_0_OBJECTS) $(wrapper_2_0_LDADD) $(LIBS)
@@ -618,9 +569,6 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/wrapper_1_0-main.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/wrapper_1_0-wrapper-module.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/wrapper_1_0-wrapper-plug.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/wrapper_2_0-main.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/wrapper_2_0-wrapper-module.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/wrapper_2_0-wrapper-plug.Po@am__quote@ # am--include-marker
@@ -651,48 +599,6 @@ am--depfiles: $(am__depfiles_remade)
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$<' object='$@' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LTCOMPILE) -c -o $@ $<
-
-wrapper_1_0-main.o: main.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(wrapper_1_0_CFLAGS) $(CFLAGS) -MT wrapper_1_0-main.o -MD -MP -MF $(DEPDIR)/wrapper_1_0-main.Tpo -c -o wrapper_1_0-main.o `test -f 'main.c' || echo '$(srcdir)/'`main.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/wrapper_1_0-main.Tpo $(DEPDIR)/wrapper_1_0-main.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='main.c' object='wrapper_1_0-main.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(wrapper_1_0_CFLAGS) $(CFLAGS) -c -o wrapper_1_0-main.o `test -f 'main.c' || echo '$(srcdir)/'`main.c
-
-wrapper_1_0-main.obj: main.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(wrapper_1_0_CFLAGS) $(CFLAGS) -MT wrapper_1_0-main.obj -MD -MP -MF $(DEPDIR)/wrapper_1_0-main.Tpo -c -o wrapper_1_0-main.obj `if test -f 'main.c'; then $(CYGPATH_W) 'main.c'; else $(CYGPATH_W) '$(srcdir)/main.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/wrapper_1_0-main.Tpo $(DEPDIR)/wrapper_1_0-main.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='main.c' object='wrapper_1_0-main.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(wrapper_1_0_CFLAGS) $(CFLAGS) -c -o wrapper_1_0-main.obj `if test -f 'main.c'; then $(CYGPATH_W) 'main.c'; else $(CYGPATH_W) '$(srcdir)/main.c'; fi`
-
-wrapper_1_0-wrapper-module.o: wrapper-module.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(wrapper_1_0_CFLAGS) $(CFLAGS) -MT wrapper_1_0-wrapper-module.o -MD -MP -MF $(DEPDIR)/wrapper_1_0-wrapper-module.Tpo -c -o wrapper_1_0-wrapper-module.o `test -f 'wrapper-module.c' || echo '$(srcdir)/'`wrapper-module.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/wrapper_1_0-wrapper-module.Tpo $(DEPDIR)/wrapper_1_0-wrapper-module.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='wrapper-module.c' object='wrapper_1_0-wrapper-module.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(wrapper_1_0_CFLAGS) $(CFLAGS) -c -o wrapper_1_0-wrapper-module.o `test -f 'wrapper-module.c' || echo '$(srcdir)/'`wrapper-module.c
-
-wrapper_1_0-wrapper-module.obj: wrapper-module.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(wrapper_1_0_CFLAGS) $(CFLAGS) -MT wrapper_1_0-wrapper-module.obj -MD -MP -MF $(DEPDIR)/wrapper_1_0-wrapper-module.Tpo -c -o wrapper_1_0-wrapper-module.obj `if test -f 'wrapper-module.c'; then $(CYGPATH_W) 'wrapper-module.c'; else $(CYGPATH_W) '$(srcdir)/wrapper-module.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/wrapper_1_0-wrapper-module.Tpo $(DEPDIR)/wrapper_1_0-wrapper-module.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='wrapper-module.c' object='wrapper_1_0-wrapper-module.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(wrapper_1_0_CFLAGS) $(CFLAGS) -c -o wrapper_1_0-wrapper-module.obj `if test -f 'wrapper-module.c'; then $(CYGPATH_W) 'wrapper-module.c'; else $(CYGPATH_W) '$(srcdir)/wrapper-module.c'; fi`
-
-wrapper_1_0-wrapper-plug.o: wrapper-plug.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(wrapper_1_0_CFLAGS) $(CFLAGS) -MT wrapper_1_0-wrapper-plug.o -MD -MP -MF $(DEPDIR)/wrapper_1_0-wrapper-plug.Tpo -c -o wrapper_1_0-wrapper-plug.o `test -f 'wrapper-plug.c' || echo '$(srcdir)/'`wrapper-plug.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/wrapper_1_0-wrapper-plug.Tpo $(DEPDIR)/wrapper_1_0-wrapper-plug.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='wrapper-plug.c' object='wrapper_1_0-wrapper-plug.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(wrapper_1_0_CFLAGS) $(CFLAGS) -c -o wrapper_1_0-wrapper-plug.o `test -f 'wrapper-plug.c' || echo '$(srcdir)/'`wrapper-plug.c
-
-wrapper_1_0-wrapper-plug.obj: wrapper-plug.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(wrapper_1_0_CFLAGS) $(CFLAGS) -MT wrapper_1_0-wrapper-plug.obj -MD -MP -MF $(DEPDIR)/wrapper_1_0-wrapper-plug.Tpo -c -o wrapper_1_0-wrapper-plug.obj `if test -f 'wrapper-plug.c'; then $(CYGPATH_W) 'wrapper-plug.c'; else $(CYGPATH_W) '$(srcdir)/wrapper-plug.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/wrapper_1_0-wrapper-plug.Tpo $(DEPDIR)/wrapper_1_0-wrapper-plug.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='wrapper-plug.c' object='wrapper_1_0-wrapper-plug.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(wrapper_1_0_CFLAGS) $(CFLAGS) -c -o wrapper_1_0-wrapper-plug.obj `if test -f 'wrapper-plug.c'; then $(CYGPATH_W) 'wrapper-plug.c'; else $(CYGPATH_W) '$(srcdir)/wrapper-plug.c'; fi`
 
 wrapper_2_0-main.o: main.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(wrapper_2_0_CFLAGS) $(CFLAGS) -MT wrapper_2_0-main.o -MD -MP -MF $(DEPDIR)/wrapper_2_0-main.Tpo -c -o wrapper_2_0-main.o `test -f 'main.c' || echo '$(srcdir)/'`main.c
@@ -874,10 +780,7 @@ clean-am: clean-generic clean-libtool clean-wrapperPROGRAMS \
 	mostlyclean-am
 
 distclean: distclean-am
-		-rm -f ./$(DEPDIR)/wrapper_1_0-main.Po
-	-rm -f ./$(DEPDIR)/wrapper_1_0-wrapper-module.Po
-	-rm -f ./$(DEPDIR)/wrapper_1_0-wrapper-plug.Po
-	-rm -f ./$(DEPDIR)/wrapper_2_0-main.Po
+		-rm -f ./$(DEPDIR)/wrapper_2_0-main.Po
 	-rm -f ./$(DEPDIR)/wrapper_2_0-wrapper-module.Po
 	-rm -f ./$(DEPDIR)/wrapper_2_0-wrapper-plug.Po
 	-rm -f Makefile
@@ -925,10 +828,7 @@ install-ps-am:
 installcheck-am:
 
 maintainer-clean: maintainer-clean-am
-		-rm -f ./$(DEPDIR)/wrapper_1_0-main.Po
-	-rm -f ./$(DEPDIR)/wrapper_1_0-wrapper-module.Po
-	-rm -f ./$(DEPDIR)/wrapper_1_0-wrapper-plug.Po
-	-rm -f ./$(DEPDIR)/wrapper_2_0-main.Po
+		-rm -f ./$(DEPDIR)/wrapper_2_0-main.Po
 	-rm -f ./$(DEPDIR)/wrapper_2_0-wrapper-module.Po
 	-rm -f ./$(DEPDIR)/wrapper_2_0-wrapper-plug.Po
 	-rm -f Makefile

@@ -227,7 +227,7 @@ panel_preferences_dialog_init (PanelPreferencesDialog *dialog)
   g_free (path_new);
   connect_signal ("panel-switch", "clicked", panel_preferences_dialog_panel_switch);
 
-  /* style tab */
+  /* appearance tab */
   object = gtk_builder_get_object (GTK_BUILDER (dialog), "background-style");
   panel_return_if_fail (G_IS_OBJECT (object));
   g_signal_connect_swapped (G_OBJECT (object), "changed",
@@ -487,6 +487,7 @@ panel_preferences_dialog_bindings_update (PanelPreferencesDialog *dialog)
   panel_preferences_dialog_bindings_add (dialog, "background-style", "active", 0);
   panel_preferences_dialog_bindings_add (dialog, "background-rgba", "rgba", 0);
   panel_preferences_dialog_bindings_add (dialog, "icon-size", "value", 0);
+  panel_preferences_dialog_bindings_add (dialog, "dark-mode", "active", 0);
 
   /* watch image changes from the panel */
   dialog->bg_image_notify_handler_id = g_signal_connect_swapped (G_OBJECT (dialog->active),
@@ -529,7 +530,7 @@ panel_preferences_dialog_bindings_update (PanelPreferencesDialog *dialog)
         {
           gtk_combo_box_set_active_iter (GTK_COMBO_BOX (object), &iter);
           output_selected = TRUE;
-          span_monitors_sensitive = TRUE;
+          span_monitors_sensitive = FALSE;
         }
 
       if (n_monitors >= 1)
@@ -649,7 +650,11 @@ panel_preferences_dialog_output_changed (GtkComboBox            *combobox,
       /* monitor spanning does not work when an output is selected */
       object = gtk_builder_get_object (GTK_BUILDER (dialog), "span-monitors");
       panel_return_if_fail (GTK_IS_WIDGET (object));
-      gtk_widget_set_sensitive (GTK_WIDGET (object), output_name == NULL);
+      if (output_name == NULL ||
+          g_strcmp0 ("Automatic", output_name) == 0)
+        gtk_widget_set_sensitive (GTK_WIDGET (object), TRUE);
+      else
+        gtk_widget_set_sensitive (GTK_WIDGET (object), FALSE);
 
       g_free (output_name);
     }

@@ -46,7 +46,6 @@
 
 #include <panel/panel-module.h>
 #include <panel/panel-plugin-external.h>
-#include <panel/panel-plugin-external-46.h>
 #include <panel/panel-window.h>
 #include <panel/panel-dialogs.h>
 
@@ -86,6 +85,8 @@ static void         panel_plugin_external_set_size                (XfcePanelPlug
                                                                    gint                              size);
 static void         panel_plugin_external_set_icon_size           (XfcePanelPluginProvider          *provider,
                                                                    gint                              icon_size);
+static void         panel_plugin_external_set_dark_mode           (XfcePanelPluginProvider          *provider,
+                                                                   gboolean                          dark_mode);
 static void         panel_plugin_external_set_mode                (XfcePanelPluginProvider          *provider,
                                                                    XfcePanelPluginMode               mode);
 static void         panel_plugin_external_set_nrows               (XfcePanelPluginProvider          *provider,
@@ -225,6 +226,7 @@ panel_plugin_external_provider_init (XfcePanelPluginProviderInterface *iface)
   iface->get_unique_id = panel_plugin_external_get_unique_id;
   iface->set_size = panel_plugin_external_set_size;
   iface->set_icon_size = panel_plugin_external_set_icon_size;
+  iface->set_dark_mode = panel_plugin_external_set_dark_mode;
   iface->set_mode = panel_plugin_external_set_mode;
   iface->set_nrows = panel_plugin_external_set_nrows;
   iface->set_screen_position = panel_plugin_external_set_screen_position;
@@ -524,7 +526,7 @@ panel_plugin_external_child_spawn (PanelPluginExternal *external)
   gchar         *program, *cmd_line;
   guint          i;
   gint           tmp_argc;
-  GTimeVal       timestamp;
+  gint64         timestamp;
 
   panel_return_if_fail (PANEL_IS_PLUGIN_EXTERNAL (external));
   panel_return_if_fail (gtk_widget_get_realized (GTK_WIDGET (external)));
@@ -537,7 +539,7 @@ panel_plugin_external_child_spawn (PanelPluginExternal *external)
   if (panel_debug_has_domain (PANEL_DEBUG_GDB)
       || panel_debug_has_domain (PANEL_DEBUG_VALGRIND))
     {
-      g_get_current_time (&timestamp);
+      timestamp = g_get_real_time ();
       cmd_line = NULL;
       program = NULL;
 
@@ -557,7 +559,7 @@ panel_plugin_external_child_spawn (PanelPluginExternal *external)
                                           "-ex 'backtrace full' "
                                           "-ex 'info registers' "
                                           "-args",
-                                          program, g_get_tmp_dir (), timestamp.tv_sec,
+                                          program, g_get_tmp_dir (), timestamp / G_USEC_PER_SEC,
                                           panel_module_get_name (external->module),
                                           argv[PLUGIN_ARGV_UNIQUE_ID]);
             }
@@ -570,7 +572,7 @@ panel_plugin_external_child_spawn (PanelPluginExternal *external)
               cmd_line = g_strdup_printf ("%s "
                                           "--log-file='%s" G_DIR_SEPARATOR_S "%li_valgrind_%s_%s.log' "
                                           "--leak-check=full --show-reachable=yes -v ",
-                                          program, g_get_tmp_dir (), timestamp.tv_sec,
+                                          program, g_get_tmp_dir (), timestamp / G_USEC_PER_SEC,
                                           panel_module_get_name (external->module),
                                           argv[PLUGIN_ARGV_UNIQUE_ID]);
             }
@@ -927,6 +929,26 @@ panel_plugin_external_set_icon_size (XfcePanelPluginProvider *provider,
 
 
 static void
+panel_plugin_external_set_dark_mode (XfcePanelPluginProvider *provider,
+                                     gboolean                 dark_mode)
+{
+  GValue value = { 0, };
+
+  panel_return_if_fail (PANEL_IS_PLUGIN_EXTERNAL (provider));
+  panel_return_if_fail (XFCE_IS_PANEL_PLUGIN_PROVIDER (provider));
+
+  g_value_init (&value, G_TYPE_BOOLEAN);
+  g_value_set_boolean (&value, dark_mode);
+
+  panel_plugin_external_queue_add (PANEL_PLUGIN_EXTERNAL (provider),
+                                   PROVIDER_PROP_TYPE_SET_DARK_MODE, &value);
+
+  g_value_unset (&value);
+}
+
+
+
+static void
 panel_plugin_external_set_mode (XfcePanelPluginProvider *provider,
                                 XfcePanelPluginMode      mode)
 {
@@ -1197,14 +1219,7 @@ panel_plugin_external_set_background_image (PanelPluginExternal *external,
 
   panel_return_if_fail (PANEL_IS_PLUGIN_EXTERNAL (external));
 
-  if (!external->priv->embedded
-      && PANEL_IS_PLUGIN_EXTERNAL_46 (external))
-    {
-      /* hack to set the background of 4.6 plugins before the child is
-       * embedded, so it is directly send with the startup arguments */
-      panel_plugin_external_46_set_background_image (PANEL_PLUGIN_EXTERNAL_46 (external), image);
-    }
-  else if (G_UNLIKELY (image != NULL))
+  if (G_UNLIKELY (image != NULL))
     {
       g_value_init (&value, G_TYPE_STRING);
       g_value_set_string (&value, image);

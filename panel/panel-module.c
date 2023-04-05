@@ -32,17 +32,10 @@
 #include <panel/panel-module.h>
 #include <panel/panel-module-factory.h>
 #include <panel/panel-plugin-external-wrapper.h>
-#include <panel/panel-plugin-external-46.h>
 
 #define PANEL_PLUGINS_LIB_DIR (LIBDIR G_DIR_SEPARATOR_S "panel" G_DIR_SEPARATOR_S "plugins")
 #define PANEL_PLUGINS_LIB_DIR_OLD (LIBDIR G_DIR_SEPARATOR_S "panel-plugins")
 
-static const gchar *compat_paths[] =
-{
-  PANEL_PLUGINS_LIB_DIR_OLD,
-  "/usr/lib/xfce4/panel/plugins",
-  "/usr/lib/xfce4/panel-plugins"
-};
 
 typedef enum _PanelModuleRunMode PanelModuleRunMode;
 typedef enum _PanelModuleUnique  PanelModuleUnique;
@@ -67,8 +60,7 @@ enum _PanelModuleRunMode
 {
   UNKNOWN,    /* Unset */
   INTERNAL,   /* plugin library will be loaded in the panel */
-  WRAPPER,    /* external library with comunication through PanelPluginExternal */
-  EXTERNAL_46 /* external executable with comunication through PanelPluginExternal46 */
+  WRAPPER     /* external library with communication through PanelPluginExternal */
 };
 
 enum _PanelModuleUnique
@@ -85,8 +77,7 @@ struct _PanelModule
   /* module type */
   PanelModuleRunMode   mode;
 
-  /* filename to the library or executable
-   * for an old 4.6 plugin */
+  /* filename of the library */
   gchar               *filename;
 
   /* plugin information from the desktop file */
@@ -98,7 +89,7 @@ struct _PanelModule
   guint                use_count;
   PanelModuleUnique    unique_mode;
 
-  /* module location (null for 4.6 plugins) */
+  /* module location */
   GModule             *library;
 
   /* for non-gobject plugin */
@@ -312,10 +303,8 @@ panel_module_new_from_desktop_file (const gchar *filename,
   XfceRc      *rc;
   const gchar *module_name;
   gchar       *path;
-  const gchar *module_exec;
   const gchar *module_unique;
   gboolean     found;
-  gsize        i;
 
   panel_return_val_if_fail (!panel_str_is_empty (filename), NULL);
   panel_return_val_if_fail (!panel_str_is_empty (name), NULL);
@@ -332,6 +321,14 @@ panel_module_new_from_desktop_file (const gchar *filename,
     {
       g_critical ("Plugin %s: Desktop file \"%s\" has no "
                   "\"Xfce Panel\" group", name, filename);
+      xfce_rc_close (rc);
+      return NULL;
+    }
+
+  if (g_strcmp0 (xfce_rc_read_entry (rc, "X-XFCE-API", "1.0"), "2.0") != 0)
+    {
+      g_critical ("Plugin %s: The Desktop file %s requested the Gtk2 API (v1.0), which is "
+                  "no longer supported.", name, filename);
       xfce_rc_close (rc);
       return NULL;
     }
@@ -356,11 +353,11 @@ panel_module_new_from_desktop_file (const gchar *filename,
       path = g_module_build_path (PANEL_PLUGINS_LIB_DIR, module_name);
       found = g_file_test (path, G_FILE_TEST_EXISTS);
 
-      for (i = 0; !found && i < G_N_ELEMENTS (compat_paths); ++i)
+      if (!found)
         {
           /* deprecated location for module plugin directories */
           g_free (path);
-          path = g_module_build_path (compat_paths[i], module_name);
+          path = g_module_build_path (PANEL_PLUGINS_LIB_DIR_OLD, module_name);
           found = g_file_test (path, G_FILE_TEST_EXISTS);
         }
 
@@ -376,8 +373,7 @@ panel_module_new_from_desktop_file (const gchar *filename,
             {
               module->mode = WRAPPER;
               g_free (module->api);
-              //module->api = g_strdup (xfce_rc_read_entry (rc, "X-XFCE-API", LIBXFCE4PANEL_VERSION_API));
-              module->api = g_strdup (xfce_rc_read_entry (rc, "X-XFCE-API", "1.0"));
+              module->api = g_strdup (xfce_rc_read_entry (rc, "X-XFCE-API", LIBXFCE4PANEL_VERSION_API));
             }
           else
             module->mode = INTERNAL;
@@ -387,24 +383,6 @@ panel_module_new_from_desktop_file (const gchar *filename,
           g_critical ("Plugin %s: There was no module found at \"%s\"",
                       name, path);
           g_free (path);
-        }
-    }
-  else
-    {
-      /* yeah, we support ancient shizzle too... */
-      module_exec = xfce_rc_read_entry_untranslated (rc, "X-XFCE-Exec", NULL);
-      if (module_exec != NULL
-          && g_path_is_absolute (module_exec)
-          && g_file_test (module_exec, G_FILE_TEST_EXISTS))
-        {
-          module = g_object_new (PANEL_TYPE_MODULE, NULL);
-          module->filename = g_strdup (module_exec);
-          module->mode = EXTERNAL_46;
-        }
-      else
-        {
-          g_critical ("Plugin %s: There was no executable found at \"%s\"",
-                      name, module_exec);
         }
     }
 
@@ -504,11 +482,6 @@ panel_module_new_plugin (PanelModule  *module,
     case WRAPPER:
       plugin = panel_plugin_external_wrapper_new (module, unique_id, arguments);
       debug_type = "external-wrapper";
-      break;
-
-    case EXTERNAL_46:
-      plugin = panel_plugin_external_46_new (module, unique_id, arguments);
-      debug_type = "external-46";
       break;
 
     default:

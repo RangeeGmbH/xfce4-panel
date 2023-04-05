@@ -37,7 +37,7 @@
 
 /* I18N: default tooltip of the application menu */
 #define DEFAULT_TITLE     _("Applications")
-#define DEFAULT_ICON_NAME "xfce4-panel-menu"
+#define DEFAULT_ICON_NAME "org.xfce.panel.applicationsmenu"
 #define DEFAULT_ICON_SIZE (16)
 #define DEFAULT_EDITOR    "menulibre"
 
@@ -113,7 +113,7 @@ static gboolean  applications_menu_plugin_menu                 (GtkWidget       
                                                                 GdkEventButton         *event,
                                                                 ApplicationsMenuPlugin *plugin);
 static void      applications_menu_plugin_menu_deactivate      (GtkWidget              *menu,
-                                                                GtkWidget              *button);
+                                                                ApplicationsMenuPlugin *plugin);
 static void      applications_menu_plugin_set_garcon_menu      (ApplicationsMenuPlugin *plugin);
 static void      applications_menu_button_theme_changed        (ApplicationsMenuPlugin *plugin);
 
@@ -243,7 +243,7 @@ applications_menu_plugin_init (ApplicationsMenuPlugin *plugin)
   /* prepare the menu */
   plugin->menu = garcon_gtk_menu_new (NULL);
   g_signal_connect (G_OBJECT (plugin->menu), "selection-done",
-      G_CALLBACK (applications_menu_plugin_menu_deactivate), plugin->button);
+      G_CALLBACK (applications_menu_plugin_menu_deactivate), plugin);
 
   plugin->style_set_id = g_signal_connect_swapped (G_OBJECT (plugin->button), "style-set",
                                                    G_CALLBACK (applications_menu_button_theme_changed), plugin);
@@ -633,8 +633,8 @@ applications_menu_plugin_configure_plugin_edit (GtkWidget              *button,
   panel_return_if_fail (XFCE_IS_APPLICATIONS_MENU_PLUGIN (plugin));
   panel_return_if_fail (GTK_IS_WIDGET (button));
 
-  if (!xfce_spawn_command_line_on_screen (gtk_widget_get_screen (button), plugin->menu_editor,
-                                          FALSE, FALSE, &error))
+  if (!xfce_spawn_command_line (gtk_widget_get_screen (button), plugin->menu_editor,
+                                FALSE, FALSE, TRUE, &error))
     {
       xfce_dialog_show_error (NULL, error, _("Failed to execute command \"%s\"."), plugin->menu_editor);
       g_error_free (error);
@@ -771,14 +771,16 @@ applications_menu_plugin_remote_event (XfcePanelPlugin *panel_plugin,
 
 static void
 applications_menu_plugin_menu_deactivate (GtkWidget *menu,
-                                          GtkWidget *button)
+                                          ApplicationsMenuPlugin *plugin)
 {
-  panel_return_if_fail (button == NULL || GTK_IS_TOGGLE_BUTTON (button));
+  panel_return_if_fail (plugin->button == NULL || GTK_IS_TOGGLE_BUTTON (plugin->button));
   panel_return_if_fail (GTK_IS_MENU (menu));
 
+  xfce_panel_plugin_block_autohide (XFCE_PANEL_PLUGIN (plugin), FALSE);
+
   /* button is NULL when we popup the menu under the cursor position */
-  if (button != NULL)
-    gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (button), FALSE);
+  if (plugin->button != NULL)
+    gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (plugin->button), FALSE);
 
   gtk_menu_popdown (GTK_MENU (menu));
 }
@@ -838,6 +840,8 @@ applications_menu_plugin_menu (GtkWidget              *button,
            && event->type == GDK_BUTTON_PRESS
            && !PANEL_HAS_FLAG (event->state, GDK_CONTROL_MASK)))
     return FALSE;
+
+  xfce_panel_plugin_block_autohide (XFCE_PANEL_PLUGIN (plugin), TRUE);
 
   if (button != NULL)
     gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (button), TRUE);

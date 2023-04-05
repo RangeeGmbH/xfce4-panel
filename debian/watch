@@ -1,3 +1,0 @@
-version=3
-https://archive.xfce.org/src/xfce/@PACKAGE@/4.14/ \
-	@PACKAGE@@ANY_VERSION@@ARCHIVE_EXT@

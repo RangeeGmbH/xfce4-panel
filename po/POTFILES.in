@@ -20,7 +20,6 @@ panel/panel-itembar.c
 panel/panel-module-factory.c
 panel/panel-module.c
 panel/panel-plugin-external.c
-panel/panel-plugin-external-46.c
 panel/panel-plugin-external-wrapper.c
 panel/panel-preferences-dialog.c
 panel/panel-preferences-dialog.glade
@@ -74,9 +73,14 @@ plugins/separator/separator.desktop.in.in
 plugins/showdesktop/showdesktop.c
 plugins/showdesktop/showdesktop.desktop.in.in
 
+plugins/systray/sn-box.c
+plugins/systray/sn-button.c
+plugins/systray/sn-config.c
+plugins/systray/sn-dialog.c
+plugins/systray/sn-dialog.glade
+plugins/systray/sn-plugin.c
 plugins/systray/systray.c
 plugins/systray/systray-box.c
-plugins/systray/systray-dialog.glade
 plugins/systray/systray-manager.c
 plugins/systray/systray-marshal.list
 plugins/systray/systray-socket.c

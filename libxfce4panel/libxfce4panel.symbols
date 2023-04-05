@@ -61,16 +61,6 @@ xfce_arrow_button_set_blinking
 #endif
 #endif
 
-/* xfce-hvbox.h */
-#if IN_HEADER(__XFCE_HVBOX_H__)
-#if IN_SOURCE(__XFCE_HVBOX_C__)
-xfce_hvbox_get_orientation
-xfce_hvbox_get_type
-xfce_hvbox_new
-xfce_hvbox_set_orientation
-#endif
-#endif
-
 /* xfce-panel-convenience.h */
 #if IN_HEADER(__XFCE_PANEL_CONVENIENCE_H__)
 #if IN_SOURCE(__XFCE_PANEL_CONVENIENCE_C__)
@@ -125,6 +115,7 @@ xfce_panel_plugin_add_action_widget
 xfce_panel_plugin_menu_insert_item
 xfce_panel_plugin_menu_show_configure
 xfce_panel_plugin_menu_show_about
+xfce_panel_plugin_menu_destroy
 xfce_panel_plugin_block_menu
 xfce_panel_plugin_unblock_menu
 xfce_panel_plugin_register_menu
@@ -148,6 +139,7 @@ xfce_panel_plugin_provider_get_name
 xfce_panel_plugin_provider_get_unique_id
 xfce_panel_plugin_provider_set_size
 xfce_panel_plugin_provider_set_icon_size
+xfce_panel_plugin_provider_set_dark_mode
 xfce_panel_plugin_provider_set_mode
 xfce_panel_plugin_provider_set_nrows
 xfce_panel_plugin_provider_set_screen_position

@@ -33,14 +33,15 @@
 #include <panel/panel-base-window.h>
 #include <panel/panel-window.h>
 #include <panel/panel-plugin-external.h>
-#include <panel/panel-plugin-external-46.h>
 
 
 
 #define PANEL_BASE_CSS        ".xfce4-panel.background { border-style: solid; }"\
                               ".xfce4-panel.background button { background: transparent; padding: 0; }"\
-                              ".xfce4-panel.background.marching-ants { border: 1px dashed #ff0000; }"
-
+                              ".xfce4-panel.background.marching-ants-dashed { border: 1px dashed #ff0000; }"\
+                              ".xfce4-panel.background.marching-ants-dotted { border: 1px dotted #ff0000; }"
+#define MARCHING_ANTS_DASHED  "marching-ants-dashed"
+#define MARCHING_ANTS_DOTTED  "marching-ants-dotted"
 
 
 static void     panel_base_window_get_property                (GObject              *object,
@@ -204,7 +205,6 @@ panel_base_window_init (PanelBaseWindow *window)
   window->background_rgba = NULL;
   window->enter_opacity = 1.00;
   window->leave_opacity = 1.00;
-  window->leave_opacity_old = 1.00;
 
   window->priv->css_provider = gtk_css_provider_new ();
   window->priv->borders = PANEL_BORDER_NONE;
@@ -522,8 +522,6 @@ panel_base_window_composited_changed (GdkScreen *screen,
 
   if (window->is_composited)
     {
-      if (window->leave_opacity != window->leave_opacity_old)
-        window->leave_opacity = window->leave_opacity_old;
       gtk_widget_set_opacity (GTK_WIDGET (widget), window->leave_opacity);
       panel_base_window_set_plugin_data (window,
                                          panel_base_window_set_plugin_leave_opacity);
@@ -531,11 +529,8 @@ panel_base_window_composited_changed (GdkScreen *screen,
     }
   else
     {
-      /* make sure that the leave opacity is always disabled without compositing, but
-         remember the original value so we can reset it if compositing gets re-enabled */
-      window->leave_opacity_old = window->leave_opacity;
-      window->leave_opacity = 1.0;
-      gtk_widget_set_opacity (GTK_WIDGET (widget), window->leave_opacity);
+      /* make sure to always disable the leave opacity without compositing */
+      gtk_widget_set_opacity (GTK_WIDGET (widget), 1.0);
       panel_base_window_set_plugin_data (window,
                                          panel_base_window_set_plugin_leave_opacity);
     }
@@ -565,17 +560,25 @@ static gboolean
 panel_base_window_active_timeout (gpointer user_data)
 {
   PanelBaseWindow        *window = PANEL_BASE_WINDOW (user_data);
-  GTimeVal                timeval;
   GtkStyleContext        *context;
 
   context = gtk_widget_get_style_context (GTK_WIDGET (window));
-  /* Animate the border à la "marching ants" by adding a dashed border
-     and removing it again every other second */
-  g_get_current_time (&timeval);
-  if (timeval.tv_sec%2 == 0)
-    gtk_style_context_add_class (context, "marching-ants");
+
+  /* Animate the border à la "marching ants" by cycling betwee a dashed and
+     dotted border every other second */
+  if ((g_get_real_time () / G_USEC_PER_SEC) % 2 == 0)
+    {
+      if (gtk_style_context_has_class (context, MARCHING_ANTS_DOTTED))
+        gtk_style_context_remove_class (context, MARCHING_ANTS_DOTTED);
+      gtk_style_context_add_class (context, MARCHING_ANTS_DASHED);
+    }
   else
-    gtk_style_context_remove_class (context, "marching-ants");
+    {
+      if (gtk_style_context_has_class (context, MARCHING_ANTS_DASHED))
+        gtk_style_context_remove_class (context, MARCHING_ANTS_DASHED);
+      gtk_style_context_add_class (context, MARCHING_ANTS_DOTTED);
+    }
+
   gtk_widget_queue_draw (GTK_WIDGET (window));
   return TRUE;
 }
@@ -590,8 +593,12 @@ panel_base_window_active_timeout_destroyed (gpointer user_data)
 
   window->priv->active_timeout_id = 0;
   context = gtk_widget_get_style_context (GTK_WIDGET (window));
+
   /* Stop the marching ants */
-  gtk_style_context_remove_class (context, "marching-ants");
+  if (gtk_style_context_has_class (context, MARCHING_ANTS_DASHED))
+    gtk_style_context_remove_class (context, MARCHING_ANTS_DASHED);
+  if (gtk_style_context_has_class (context, MARCHING_ANTS_DOTTED))
+    gtk_style_context_remove_class (context, MARCHING_ANTS_DOTTED);
 }
 
 
@@ -655,7 +662,7 @@ panel_base_window_reset_background_css (PanelBaseWindow *window) {
                          &background_rgba, NULL);
 
   /* Set correct border style depending on panel position and length */
-  if (priv->borders != PANEL_BORDER_NONE)
+  if (window->background_style == PANEL_BG_STYLE_NONE)
     {
       border_side = g_strdup_printf ("%s %s %s %s",
                                      PANEL_HAS_FLAG (priv->borders, PANEL_BORDER_TOP) ? "solid" : "none",
@@ -740,7 +747,10 @@ panel_base_window_set_plugin_leave_opacity (GtkWidget *widget,
 {
   PanelBaseWindow *window = PANEL_BASE_WINDOW (user_data);
 
-  panel_base_window_set_plugin_opacity (widget, user_data, window->leave_opacity);
+  if (window->is_composited)
+    panel_base_window_set_plugin_opacity (widget, user_data, window->leave_opacity);
+  else
+    panel_base_window_set_plugin_opacity (widget, user_data, 1.0);
 }
 
 
@@ -839,8 +849,6 @@ panel_base_window_get_borders (PanelBaseWindow *window)
   if (priv->active_timeout_id != 0)
     return PANEL_BORDER_TOP | PANEL_BORDER_BOTTOM
            | PANEL_BORDER_LEFT | PANEL_BORDER_RIGHT;
-  else if (window->background_style != PANEL_BG_STYLE_NONE)
-    return PANEL_BORDER_NONE;
 
   return priv->borders;
 }

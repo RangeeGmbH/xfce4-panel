@@ -53,7 +53,6 @@
 #include <panel/panel-dialogs.h>
 #include <panel/panel-dbus-service.h>
 #include <panel/panel-plugin-external.h>
-#include <panel/panel-plugin-external-46.h>
 #include <panel/panel-tic-tac-toe.h>
 
 
@@ -62,7 +61,8 @@
 #define SET_OLD_WM_STRUTS     (FALSE)
 #define DEFAULT_POPUP_DELAY   (225)
 #define DEFAULT_POPDOWN_DELAY (350)
-#define DEFAULT_ATUOHIDE_SIZE (3)
+#define DEFAULT_AUTOHIDE_SIZE (3)
+#define DEFAULT_POPDOWN_SPEED (25)
 #define HANDLE_SPACING        (4)
 #define HANDLE_DOTS           (2)
 #define HANDLE_PIXELS         (2)
@@ -139,6 +139,7 @@ static void         panel_window_size_allocate_set_xy                 (PanelWind
 static void         panel_window_screen_changed                       (GtkWidget        *widget,
                                                                        GdkScreen        *previous_screen);
 static void         panel_window_style_updated                        (GtkWidget        *widget);
+static void         panel_window_update_dark_mode                     (gboolean          dark_mode);
 static void         panel_window_realize                              (GtkWidget        *widget);
 static StrutsEgde   panel_window_screen_struts_edge                   (PanelWindow      *window);
 static void         panel_window_screen_struts_set                    (PanelWindow      *window);
@@ -156,8 +157,11 @@ static void         panel_window_active_window_state_changed          (WnckWindo
                                                                        WnckWindowState   changed,
                                                                        WnckWindowState   new,
                                                                        PanelWindow      *window);
+static void         panel_window_autohide_timeout_destroy             (gpointer          user_data);
+static void         panel_window_autohide_ease_out_timeout_destroy    (gpointer          user_data);
 static void         panel_window_autohide_queue                       (PanelWindow      *window,
                                                                        AutohideState     new_state);
+static gboolean     panel_window_autohide_ease_out                    (gpointer          data);
 static void         panel_window_set_autohide_behavior                (PanelWindow      *window,
                                                                        AutohideBehavior  behavior);
 static void         panel_window_update_autohide_window               (PanelWindow      *window,
@@ -173,6 +177,8 @@ static void         panel_window_plugin_set_mode                      (GtkWidget
 static void         panel_window_plugin_set_size                      (GtkWidget        *widget,
                                                                        gpointer          user_data);
 static void         panel_window_plugin_set_icon_size                 (GtkWidget        *widget,
+                                                                       gpointer          user_data);
+static void         panel_window_plugin_set_dark_mode                 (GtkWidget        *widget,
                                                                        gpointer          user_data);
 static void         panel_window_plugin_set_nrows                     (GtkWidget        *widget,
                                                                        gpointer          user_data);
@@ -192,12 +198,13 @@ enum
   PROP_LENGTH_ADJUST,
   PROP_POSITION_LOCKED,
   PROP_AUTOHIDE_BEHAVIOR,
+  PROP_POPDOWN_SPEED,
   PROP_SPAN_MONITORS,
   PROP_OUTPUT_NAME,
   PROP_POSITION,
   PROP_DISABLE_STRUTS,
   PROP_ICON_SIZE,
-  PROP_ALWAYS_BELOW
+  PROP_DARK_MODE
 };
 
 enum _PluginProp
@@ -206,7 +213,8 @@ enum _PluginProp
   PLUGIN_PROP_SCREEN_POSITION,
   PLUGIN_PROP_NROWS,
   PLUGIN_PROP_SIZE,
-  PLUGIN_PROP_ICON_SIZE
+  PLUGIN_PROP_ICON_SIZE,
+  PLUGIN_PROP_DARK_MODE
 };
 
 enum _AutohideBehavior
@@ -311,6 +319,9 @@ struct _PanelWindow
   gulong               struts[N_STRUTS];
   guint                struts_disabled : 1;
 
+  /* dark mode */
+  gboolean             dark_mode;
+
   /* window positioning */
   guint                size;
   guint                icon_size;
@@ -319,9 +330,9 @@ struct _PanelWindow
   XfcePanelPluginMode  mode;
   guint                nrows;
   SnapPosition         snap_position;
+  gboolean             floating;
   guint                span_monitors : 1;
   gchar               *output_name;
-  guint                always_below : 1;
 
   /* allocated position of the panel */
   GdkRectangle         alloc;
@@ -333,9 +344,12 @@ struct _PanelWindow
   AutohideBehavior     autohide_behavior;
   AutohideState        autohide_state;
   guint                autohide_timeout_id;
+  guint                autohide_ease_out_id;
   gint                 autohide_block;
   gint                 autohide_grab_block;
   gint                 autohide_size;
+  guint                popdown_speed;
+  gint                 popdown_progress;
 
   /* popup/down delay from gtk style */
   gint                 popup_delay;
@@ -430,6 +444,12 @@ panel_window_class_init (PanelWindowClass *klass)
                                                       G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
 
   g_object_class_install_property (gobject_class,
+                                   PROP_DARK_MODE,
+                                   g_param_spec_boolean ("dark-mode", NULL, NULL,
+                                                         FALSE,
+                                                         G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
+
+  g_object_class_install_property (gobject_class,
                                    PROP_NROWS,
                                    g_param_spec_uint ("nrows", NULL, NULL,
                                                       1, 6, 1,
@@ -462,6 +482,12 @@ panel_window_class_init (PanelWindowClass *klass)
                                                       G_PARAM_READWRITE));
 
   g_object_class_install_property (gobject_class,
+                                   PROP_POPDOWN_SPEED,
+                                   g_param_spec_uint ("popdown-speed", NULL, NULL,
+                                                      0, G_MAXINT, 25,
+                                                      G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
+
+  g_object_class_install_property (gobject_class,
                                    PROP_SPAN_MONITORS,
                                    g_param_spec_boolean ("span-monitors", NULL, NULL,
                                                          FALSE,
@@ -472,12 +498,6 @@ panel_window_class_init (PanelWindowClass *klass)
                                    g_param_spec_string ("output-name", NULL, NULL,
                                                         NULL,
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
-
-  g_object_class_install_property (gobject_class,
-                                   PROP_ALWAYS_BELOW,
-                                   g_param_spec_boolean ("always-below", NULL, NULL,
-                                                         FALSE,
-                                                         G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
 
   g_object_class_install_property (gobject_class,
                                    PROP_POSITION,
@@ -512,7 +532,7 @@ panel_window_class_init (PanelWindowClass *klass)
                                                              NULL,
                                                              "Size of hidden panel",
                                                              1, G_MAXINT,
-                                                             DEFAULT_ATUOHIDE_SIZE,
+                                                             DEFAULT_AUTOHIDE_SIZE,
                                                              G_PARAM_READABLE | G_PARAM_STATIC_STRINGS));
 
   /* initialize the atoms */
@@ -539,21 +559,25 @@ panel_window_init (PanelWindow *window)
   window->mode = XFCE_PANEL_PLUGIN_MODE_HORIZONTAL;
   window->size = 48;
   window->icon_size = 0;
+  window->dark_mode = FALSE;
   window->nrows = 1;
   window->length = 0.10;
   window->length_adjust = TRUE;
   window->snap_position = SNAP_POSITION_NONE;
+  window->floating = TRUE;
   window->span_monitors = FALSE;
-  window->always_below = FALSE;
   window->position_locked = FALSE;
   window->autohide_behavior = AUTOHIDE_BEHAVIOR_NEVER;
   window->autohide_state = AUTOHIDE_DISABLED;
   window->autohide_timeout_id = 0;
+  window->autohide_ease_out_id = 0;
   window->autohide_block = 0;
   window->autohide_grab_block = 0;
-  window->autohide_size = DEFAULT_ATUOHIDE_SIZE;
+  window->autohide_size = DEFAULT_AUTOHIDE_SIZE;
   window->popup_delay = DEFAULT_POPUP_DELAY;
   window->popdown_delay = DEFAULT_POPDOWN_DELAY;
+  window->popdown_speed = DEFAULT_POPDOWN_SPEED;
+  window->popdown_progress = 0;
   window->base_x = -1;
   window->base_y = -1;
   window->grab_time = 0;
@@ -602,6 +626,10 @@ panel_window_get_property (GObject    *object,
       g_value_set_uint (value, window->icon_size);
       break;
 
+    case PROP_DARK_MODE:
+      g_value_set_boolean (value, window->dark_mode);
+      break;
+
     case PROP_NROWS:
       g_value_set_uint (value, window->nrows);
       break;
@@ -622,12 +650,12 @@ panel_window_get_property (GObject    *object,
       g_value_set_uint (value, window->autohide_behavior);
       break;
 
-    case PROP_SPAN_MONITORS:
-      g_value_set_boolean (value, window->span_monitors);
+    case PROP_POPDOWN_SPEED:
+      g_value_set_uint (value, window->popdown_speed);
       break;
 
-    case PROP_ALWAYS_BELOW:
-      g_value_set_boolean (value, window->always_below);
+    case PROP_SPAN_MONITORS:
+      g_value_set_boolean (value, window->span_monitors);
       break;
 
     case PROP_OUTPUT_NAME:
@@ -711,6 +739,18 @@ panel_window_set_property (GObject      *object,
       panel_window_plugins_update (window, PLUGIN_PROP_ICON_SIZE);
       break;
 
+    case PROP_DARK_MODE:
+      val_bool = g_value_get_boolean (value);
+      if (window->dark_mode != val_bool)
+        {
+          window->dark_mode = val_bool;
+        }
+
+      /* set dark mode for the main application and plugins */
+      panel_window_update_dark_mode (window->dark_mode);
+      panel_window_plugins_update (window, PLUGIN_PROP_DARK_MODE);
+      break;
+
     case PROP_NROWS:
       val_uint = g_value_get_uint (value);
       if (window->nrows != val_uint)
@@ -762,21 +802,21 @@ panel_window_set_property (GObject      *object,
                                                        AUTOHIDE_BEHAVIOR_ALWAYS));
       break;
 
+
+    case PROP_POPDOWN_SPEED:
+      val_uint = g_value_get_uint (value);
+      if (window->popdown_speed != val_uint)
+        {
+          window->popdown_speed = val_uint;
+        }
+      break;
+
     case PROP_SPAN_MONITORS:
       val_bool = g_value_get_boolean (value);
       if (window->span_monitors != val_bool)
         {
           window->span_monitors = !!val_bool;
           panel_window_screen_layout_changed (window->screen, window);
-        }
-      break;
-
-    case PROP_ALWAYS_BELOW:
-      val_bool = g_value_get_boolean (value);
-      if (window->always_below != val_bool)
-        {
-          window->always_below = !!val_bool;
-          gtk_window_set_keep_below(GTK_WINDOW (window), window->always_below);
         }
       break;
 
@@ -840,6 +880,9 @@ panel_window_finalize (GObject *object)
   /* stop running autohide timeout */
   if (G_UNLIKELY (window->autohide_timeout_id != 0))
     g_source_remove (window->autohide_timeout_id);
+
+  if (G_UNLIKELY (window->autohide_ease_out_id != 0))
+    g_source_remove (window->autohide_ease_out_id);
 
   /* destroy the autohide window */
   if (window->autohide_window != NULL)
@@ -947,7 +990,17 @@ panel_window_enter_notify_event (GtkWidget        *widget,
     {
       /* stop a running autohide timeout */
       if (window->autohide_timeout_id != 0)
-        g_source_remove (window->autohide_timeout_id);
+        {
+          window->autohide_state = AUTOHIDE_VISIBLE;
+          g_source_remove (window->autohide_timeout_id);
+        }
+
+      if (window->autohide_ease_out_id != 0)
+        {
+          g_source_remove (window->autohide_ease_out_id);
+          /* we were in a ease_out animation so restore the original position of the window */
+          panel_window_autohide_queue (window, AUTOHIDE_VISIBLE);
+        }
 
       /* update autohide status */
       if (window->autohide_state == AUTOHIDE_POPDOWN)
@@ -965,17 +1018,18 @@ panel_window_leave_notify_event (GtkWidget        *widget,
 {
   PanelWindow *window = PANEL_WINDOW (widget);
 
-   /* queue an autohide timeout if needed */
+  /* queue an autohide timeout if needed */
   if (event->detail != GDK_NOTIFY_INFERIOR
       && window->autohide_state != AUTOHIDE_DISABLED
-      && window->autohide_state != AUTOHIDE_BLOCKED) {
-    /* simulate a geometry change to check for overlapping windows with intelligent hiding */
-    if (window->autohide_behavior == AUTOHIDE_BEHAVIOR_INTELLIGENTLY)
-      panel_window_active_window_geometry_changed (window->wnck_active_window, window);
-    /* otherwise just hide the panel */
-    else
-      panel_window_autohide_queue (window, AUTOHIDE_POPDOWN);
-  }
+      && window->autohide_state != AUTOHIDE_BLOCKED)
+    {
+      /* simulate a geometry change to check for overlapping windows with intelligent hiding */
+      if (window->autohide_behavior == AUTOHIDE_BEHAVIOR_INTELLIGENTLY)
+        panel_window_active_window_geometry_changed (window->wnck_active_window, window);
+      /* otherwise just hide the panel */
+      else
+        panel_window_autohide_queue (window, AUTOHIDE_POPDOWN_SLOW);
+    }
 
   return (*GTK_WIDGET_CLASS (panel_window_parent_class)->leave_notify_event) (widget, event);
 }
@@ -1190,6 +1244,11 @@ panel_window_grab_notify (GtkWidget *widget,
   PanelWindow *window = PANEL_WINDOW (widget);
   GtkWidget   *current;
 
+  /* there are cases where we pass here only when the grab ends, e.g. when moving
+   * a window in the taskbar, so let's make sure to decrement the autohide counter
+   * only when we have previously incremented it */
+  static gint freeze = 0;
+
   current = gtk_grab_get_current ();
   if (GTK_IS_MENU_SHELL (current))
     {
@@ -1221,10 +1280,16 @@ panel_window_grab_notify (GtkWidget *widget,
       /* avoid hiding the panel when the window is grabbed. this
        * (for example) happens when the user drags in the pager plugin
        * see bug #4597 */
-      if (was_grabbed)
-        panel_window_thaw_autohide (window);
-      else
-        panel_window_freeze_autohide (window);
+      if (!was_grabbed)
+        {
+          freeze++;
+          panel_window_freeze_autohide (window);
+        }
+      else if (freeze > 0)
+        {
+          freeze--;
+          panel_window_thaw_autohide (window);
+        }
     }
 }
 
@@ -1378,6 +1443,10 @@ panel_window_size_allocate (GtkWidget     *widget,
   if (G_UNLIKELY (window->autohide_state == AUTOHIDE_HIDDEN
                   || window->autohide_state == AUTOHIDE_POPUP))
     {
+      /* autohide timeout is already running, so let's wait with hiding the panel */
+      if (window->autohide_timeout_id != 0)
+        return;
+
       /* window is invisible */
       window->alloc.x = window->alloc.y = -9999;
 
@@ -1415,9 +1484,46 @@ panel_window_size_allocate (GtkWidget     *widget,
       panel_window_size_allocate_set_xy (window, w, h, &x, &y);
       panel_base_window_move_resize (PANEL_BASE_WINDOW (window->autohide_window),
                                      x, y, w, h);
+
+      /* slide out the panel window with popdown_speed, but ignore panels that are floating, i.e. not
+         attached to a GdkScreen border (i.e. including panels which are on a monitor border, but
+         at are at the same time between two monitors) */
+G_GNUC_BEGIN_IGNORE_DEPRECATIONS
+      if (IS_HORIZONTAL (window)
+          && (((y + h) == gdk_screen_get_height (window->screen))
+               || (y == 0)))
+        {
+          window->popdown_progress = window->alloc.height;
+          window->floating = FALSE;
+        }
+      else if (!IS_HORIZONTAL (window)
+               && (((x + w) == gdk_screen_get_width (window->screen))
+                    || (x == 0)))
+        {
+          window->popdown_progress = window->alloc.width;
+          window->floating = FALSE;
+        }
+      else
+        window->floating = TRUE;
+G_GNUC_END_IGNORE_DEPRECATIONS
+
+      /* make the panel invisible without animation */
+      if (window->floating
+          || window->popdown_speed == 0)
+        {
+          /* cancel any pending animations */
+          if (window->autohide_ease_out_id != 0)
+            g_source_remove (window->autohide_ease_out_id);
+
+          gtk_window_move (GTK_WINDOW (window), window->alloc.x, window->alloc.y);
+        }
     }
   else
     {
+      /* stop a running autohide animation */
+      if (window->autohide_ease_out_id != 0)
+        g_source_remove (window->autohide_ease_out_id);
+
       /* update the allocation */
       panel_window_size_allocate_set_xy (window, alloc->width,
           alloc->height, &window->alloc.x, &window->alloc.y);
@@ -1431,9 +1537,9 @@ panel_window_size_allocate (GtkWidget     *widget,
       if (window->autohide_window != NULL)
         panel_base_window_move_resize (PANEL_BASE_WINDOW (window->autohide_window),
                                        -9999, -9999, -1, -1);
-    }
 
-  gtk_window_move (GTK_WINDOW (window), window->alloc.x, window->alloc.y);
+      gtk_window_move (GTK_WINDOW (window), window->alloc.x, window->alloc.y);
+    }
 
   child = gtk_bin_get_child (GTK_BIN (widget));
   if (G_LIKELY (child != NULL))
@@ -1604,6 +1710,24 @@ panel_window_screen_changed (GtkWidget *widget,
   panel_window_update_autohide_window (window, wnck_screen, wnck_window);
 }
 
+
+
+static void
+panel_window_update_dark_mode (gboolean dark_mode)
+{
+  GtkSettings *gtk_settings;
+
+  gtk_settings = gtk_settings_get_default ();
+
+  if (!dark_mode)
+    gtk_settings_reset_property (gtk_settings,
+                                 "gtk-application-prefer-dark-theme");
+
+  g_object_set (gtk_settings,
+                "gtk-application-prefer-dark-theme",
+                dark_mode,
+                NULL);
+}
 
 
 static void
@@ -2278,15 +2402,29 @@ panel_window_active_window_geometry_changed (WnckWindow  *active_window,
     {
       if (wnck_window_get_window_type (active_window) != WNCK_WINDOW_DESKTOP)
         {
+          GdkWindow *gdkwindow;
+          GtkBorder extents;
+
           /* obtain position and dimensions from the active window */
           wnck_window_get_geometry (active_window,
                                     &window_area.x, &window_area.y,
                                     &window_area.width, &window_area.height);
 
+          /* if a window uses client-side decorations, check the _GTK_FRAME_EXTENTS
+           * application window property to get its actual size without the shadows */
+          gdkwindow = gdk_x11_window_foreign_new_for_display (gdk_display_get_default (),
+                                                              wnck_window_get_xid (active_window));
+          if (gdkwindow && xfce_has_gtk_frame_extents (gdkwindow, &extents))
+            {
+              window_area.x += extents.left;
+              window_area.y += extents.top;
+              window_area.width -= extents.left + extents.right;
+              window_area.height -= extents.top + extents.bottom;
+            }
           /* if a window is shaded, check the height of the window's
            * decoration as exposed through the _NET_FRAME_EXTENTS application
            * window property */
-          if (wnck_window_is_shaded (active_window))
+          else if (wnck_window_is_shaded (active_window))
           {
             Display *display;
             Atom real_type;
@@ -2324,7 +2462,21 @@ panel_window_active_window_geometry_changed (WnckWindow  *active_window,
           if (window->autohide_state != AUTOHIDE_HIDDEN)
             {
               if (gdk_rectangle_intersect (&panel_area,  &window_area, NULL))
-                panel_window_autohide_queue (window, AUTOHIDE_HIDDEN);
+                {
+                  /* get the pointer position */
+                  GdkDisplay* display = gdk_display_get_default ();
+                  GdkSeat* seat = gdk_display_get_default_seat (display);
+                  GdkDevice* device = gdk_seat_get_pointer (seat);
+                  gint pointer_x, pointer_y;
+                  gdk_device_get_position (device, NULL, &pointer_x, &pointer_y);
+
+                  /* check if the cursor is outside the panel area before proceeding */
+                  if (pointer_x < panel_area.x
+                      || pointer_y < panel_area.y
+                      || pointer_x > panel_area.x + panel_area.width
+                      || pointer_y > panel_area.y + panel_area.height)
+                    panel_window_autohide_queue (window, AUTOHIDE_HIDDEN);
+                }
             }
           else
             {
@@ -2376,6 +2528,14 @@ panel_window_autohide_timeout (gpointer user_data)
   /* move the windows around */
   gtk_widget_queue_resize (GTK_WIDGET (window));
 
+  /* check whether the panel should be animated on autohide */
+  if (window->floating == FALSE
+      || window->popdown_speed > 0)
+    window->autohide_ease_out_id =
+            g_timeout_add_full (G_PRIORITY_LOW, 25,
+                                panel_window_autohide_ease_out, window,
+                                panel_window_autohide_ease_out_timeout_destroy);
+
   return FALSE;
 }
 
@@ -2385,6 +2545,95 @@ static void
 panel_window_autohide_timeout_destroy (gpointer user_data)
 {
   PANEL_WINDOW (user_data)->autohide_timeout_id = 0;
+}
+
+
+
+/* Cubic ease out function based on Robert Penner's Easing Functions,
+   which are licensed under MIT and BSD license
+   http://robertpenner.com/easing/ */
+static guint
+panel_window_cubic_ease_out (guint p)
+{
+  guint f = (p - 1);
+  return f * f * f + 1;
+}
+
+
+
+static gboolean
+panel_window_autohide_ease_out (gpointer data)
+{
+  PanelWindow  *window = PANEL_WINDOW (data);
+  PanelBorders  borders;
+  gint          x, y, w, h, progress;
+  gboolean      ret = TRUE;
+
+  if (window->autohide_ease_out_id == 0)
+    return FALSE;
+
+  gtk_window_get_position (GTK_WINDOW (window), &x, &y);
+G_GNUC_BEGIN_IGNORE_DEPRECATIONS
+  w = gdk_screen_get_width (window->screen);
+  h = gdk_screen_get_height (window->screen);
+G_GNUC_END_IGNORE_DEPRECATIONS
+  borders = panel_base_window_get_borders (PANEL_BASE_WINDOW (window));
+
+  if (IS_HORIZONTAL (window))
+    {
+      progress = panel_window_cubic_ease_out (window->alloc.height - window->popdown_progress) / window->popdown_speed;
+      if (PANEL_HAS_FLAG (borders, PANEL_BORDER_BOTTOM))
+        {
+          y -= progress;
+
+          if (y < 0 - window->alloc.height)
+            ret = FALSE;
+        }
+      else if (PANEL_HAS_FLAG (borders, PANEL_BORDER_TOP))
+        {
+          y += progress;
+
+          if (y > h + window->alloc.height)
+            ret = FALSE;
+        }
+      /* if the panel has no borders, we don't animate */
+      else
+        ret = FALSE;
+    }
+  else
+    {
+      progress = panel_window_cubic_ease_out (window->alloc.width - window->popdown_progress) / window->popdown_speed;
+      if (PANEL_HAS_FLAG (borders, PANEL_BORDER_RIGHT))
+        {
+          x -= progress;
+
+          if (x < 0 - window->alloc.width)
+            ret = FALSE;
+        }
+      else if (PANEL_HAS_FLAG (borders, PANEL_BORDER_LEFT))
+        {
+          x += progress;
+
+          if (x > (w + window->alloc.width))
+            ret = FALSE;
+        }
+      /* if the panel has no borders, we don't animate */
+      else
+        ret = FALSE;
+    }
+
+  window->popdown_progress--;
+  gtk_window_move (GTK_WINDOW (window), x, y);
+
+  return ret;
+}
+
+
+
+static void
+panel_window_autohide_ease_out_timeout_destroy (gpointer user_data)
+{
+  PANEL_WINDOW (user_data)->autohide_ease_out_id = 0;
 }
 
 
@@ -2400,6 +2649,9 @@ panel_window_autohide_queue (PanelWindow   *window,
   /* stop pending timeout */
   if (window->autohide_timeout_id != 0)
     g_source_remove (window->autohide_timeout_id);
+
+  if (window->autohide_ease_out_id != 0)
+    g_source_remove (window->autohide_ease_out_id);
 
   /* set new autohide state */
   window->autohide_state = new_state;
@@ -2467,6 +2719,9 @@ panel_window_autohide_drag_leave (GtkWidget      *widget,
   if (window->autohide_timeout_id != 0)
     g_source_remove (window->autohide_timeout_id);
 
+  if (window->autohide_ease_out_id != 0)
+    g_source_remove (window->autohide_ease_out_id);
+
   /* update the status */
   if (window->autohide_state == AUTOHIDE_POPUP)
     window->autohide_state = AUTOHIDE_HIDDEN;
@@ -2512,75 +2767,74 @@ panel_window_set_autohide_behavior (PanelWindow *window,
   /* remember the new behavior */
   window->autohide_behavior = behavior;
 
-    /* create an autohide window only if we are autohiding at all */
-    if (window->autohide_behavior != AUTOHIDE_BEHAVIOR_NEVER)
+  /* create an autohide window only if we are autohiding at all */
+  if (window->autohide_behavior != AUTOHIDE_BEHAVIOR_NEVER)
     {
-      /* create an authoide window; doing this only when it doesn't exist
+      /* create an authohide window; doing this only when it doesn't exist
        * yet allows us to transition between "always autohide" and "intelligently
        * autohide" without recreating the window */
       if (window->autohide_window == NULL)
-      {
-        /* create the window */
-        panel_return_if_fail (window->autohide_window == NULL);
-        popup = g_object_new (PANEL_TYPE_BASE_WINDOW,
-                              "type", GTK_WINDOW_TOPLEVEL,
-                              "decorated", FALSE,
-                              "resizable", TRUE,
-                              "type-hint", GDK_WINDOW_TYPE_HINT_DOCK,
-                              "gravity", GDK_GRAVITY_STATIC,
-                              "name", "XfcePanelWindowHidden",
-                              NULL);
-
-        /* move the window offscreen */
-        panel_base_window_move_resize (PANEL_BASE_WINDOW (popup),
-                                       -9999, -9999, 3, 3);
-
-        /* bind some properties to sync the two windows */
-        for (i = 0; i < G_N_ELEMENTS (properties); i++)
         {
-          g_object_bind_property (G_OBJECT (window), properties[i],
-                                  G_OBJECT (popup), properties[i],
-                                  G_BINDING_DEFAULT);
+          /* create the window */
+          panel_return_if_fail (window->autohide_window == NULL);
+          popup = g_object_new (PANEL_TYPE_BASE_WINDOW,
+                                "type", GTK_WINDOW_TOPLEVEL,
+                                "decorated", FALSE,
+                                "resizable", TRUE,
+                                "type-hint", GDK_WINDOW_TYPE_HINT_DOCK,
+                                "gravity", GDK_GRAVITY_STATIC,
+                                "name", "XfcePanelWindowHidden",
+                                NULL);
+
+          /* move the window offscreen */
+          panel_base_window_move_resize (PANEL_BASE_WINDOW (popup),
+                                         -9999, -9999, 3, 3);
+
+          /* bind some properties to sync the two windows */
+          for (i = 0; i < G_N_ELEMENTS (properties); i++)
+            {
+              g_object_bind_property (G_OBJECT (window), properties[i],
+                                      G_OBJECT (popup), properties[i],
+                                      G_BINDING_DEFAULT);
+            }
+
+          /* respond to drag motion */
+          gtk_drag_dest_set_track_motion (GTK_WIDGET (window), TRUE);
+
+          /* signals for pointer enter/leave events */
+          g_signal_connect (G_OBJECT (popup), "enter-notify-event",
+              G_CALLBACK (panel_window_autohide_event), window);
+          g_signal_connect (G_OBJECT (popup), "leave-notify-event",
+              G_CALLBACK (panel_window_autohide_event), window);
+
+          /* show/hide the panel on drag events */
+          gtk_drag_dest_set (popup, 0, NULL, 0, 0);
+          gtk_drag_dest_set_track_motion (popup, TRUE);
+          g_signal_connect (G_OBJECT (popup), "drag-motion",
+              G_CALLBACK (panel_window_autohide_drag_motion), window);
+          g_signal_connect (G_OBJECT (popup), "drag-leave",
+              G_CALLBACK (panel_window_autohide_drag_leave), window);
+
+          /* show the window */
+          window->autohide_window = popup;
+          gtk_widget_show (popup);
         }
-
-        /* respond to drag motion */
-        gtk_drag_dest_set_track_motion (GTK_WIDGET (window), TRUE);
-
-        /* signals for pointer enter/leave events */
-        g_signal_connect (G_OBJECT (popup), "enter-notify-event",
-            G_CALLBACK (panel_window_autohide_event), window);
-        g_signal_connect (G_OBJECT (popup), "leave-notify-event",
-            G_CALLBACK (panel_window_autohide_event), window);
-
-        /* show/hide the panel on drag events */
-        gtk_drag_dest_set (popup, 0, NULL, 0, 0);
-        gtk_drag_dest_set_track_motion (popup, TRUE);
-        g_signal_connect (G_OBJECT (popup), "drag-motion",
-            G_CALLBACK (panel_window_autohide_drag_motion), window);
-        g_signal_connect (G_OBJECT (popup), "drag-leave",
-            G_CALLBACK (panel_window_autohide_drag_leave), window);
-
-        /* show the window */
-        window->autohide_window = popup;
-        gtk_widget_show (popup);
-      }
 
       if (window->autohide_behavior == AUTOHIDE_BEHAVIOR_ALWAYS)
-      {
-        /* start autohide by hiding the panel straight away */
-        if (window->autohide_state != AUTOHIDE_HIDDEN)
         {
-          panel_window_autohide_queue (window,
-              window->autohide_block == 0 ? AUTOHIDE_POPDOWN_SLOW : AUTOHIDE_BLOCKED);
+          /* start autohide by hiding the panel straight away */
+          if (window->autohide_state != AUTOHIDE_HIDDEN)
+          {
+            panel_window_autohide_queue (window,
+                window->autohide_block == 0 ? AUTOHIDE_POPDOWN_SLOW : AUTOHIDE_BLOCKED);
+          }
         }
-      }
       else if (window->autohide_behavior == AUTOHIDE_BEHAVIOR_INTELLIGENTLY)
         {
           /* start intelligent autohide by making the panel visible initially */
           if (window->autohide_state != AUTOHIDE_VISIBLE)
             {
-              panel_window_autohide_queue (window,
-                  window->autohide_block == 0 ? AUTOHIDE_POPUP : AUTOHIDE_BLOCKED);
+              panel_window_autohide_queue (window, AUTOHIDE_VISIBLE);
             }
         }
     }
@@ -2705,8 +2959,6 @@ panel_window_menu_popup (PanelWindow    *window,
   GtkWidget *item;
   GtkWidget *image;
 
-  return;
-
   panel_return_if_fail (PANEL_IS_WINDOW (window));
 
   /* freeze autohide */
@@ -2798,8 +3050,10 @@ G_GNUC_END_IGNORE_DEPRECATIONS
   gtk_widget_show (item);
 
   /* help item */
+  image = gtk_image_new_from_icon_name ("help-browser", GTK_ICON_SIZE_MENU);
 G_GNUC_BEGIN_IGNORE_DEPRECATIONS
   item = gtk_image_menu_item_new_with_mnemonic (_("_Help"));
+  gtk_image_menu_item_set_image (GTK_IMAGE_MENU_ITEM (item), image);
 G_GNUC_END_IGNORE_DEPRECATIONS
   g_signal_connect (G_OBJECT (item), "activate",
       G_CALLBACK (panel_window_menu_help), NULL);
@@ -2807,8 +3061,10 @@ G_GNUC_END_IGNORE_DEPRECATIONS
   gtk_widget_show (item);
 
   /* about item */
+  image = gtk_image_new_from_icon_name ("help-about", GTK_ICON_SIZE_MENU);
 G_GNUC_BEGIN_IGNORE_DEPRECATIONS
   item = gtk_image_menu_item_new_with_mnemonic (_("_About"));
+  gtk_image_menu_item_set_image (GTK_IMAGE_MENU_ITEM (item), image);
 G_GNUC_END_IGNORE_DEPRECATIONS
   g_signal_connect (G_OBJECT (item), "activate",
       G_CALLBACK (panel_dialogs_show_about), NULL);
@@ -2861,6 +3117,10 @@ panel_window_plugins_update (PanelWindow *window,
       func = panel_window_plugin_set_icon_size;
       break;
 
+    case PLUGIN_PROP_DARK_MODE:
+      func = panel_window_plugin_set_dark_mode;
+      break;
+
     default:
       panel_assert_not_reached ();
       return;
@@ -2911,6 +3171,19 @@ panel_window_plugin_set_icon_size (GtkWidget *widget,
 
   xfce_panel_plugin_provider_set_icon_size (XFCE_PANEL_PLUGIN_PROVIDER (widget),
                                             PANEL_WINDOW (user_data)->icon_size);
+}
+
+
+
+static void
+panel_window_plugin_set_dark_mode (GtkWidget *widget,
+                                   gpointer   user_data)
+{
+  panel_return_if_fail (XFCE_IS_PANEL_PLUGIN_PROVIDER (widget));
+  panel_return_if_fail (PANEL_IS_WINDOW (user_data));
+
+  xfce_panel_plugin_provider_set_dark_mode (XFCE_PANEL_PLUGIN_PROVIDER (widget),
+                                            PANEL_WINDOW (user_data)->dark_mode);
 }
 
 
@@ -3082,6 +3355,7 @@ panel_window_set_povider_info (PanelWindow *window,
   panel_window_plugin_set_screen_position (provider, window);
   panel_window_plugin_set_size (provider, window);
   panel_window_plugin_set_icon_size (provider, window);
+  panel_window_plugin_set_dark_mode (provider, window);
   panel_window_plugin_set_nrows (provider, window);
 }
 
@@ -3187,7 +3461,6 @@ panel_window_migrate_autohide_property (PanelWindow   *window,
                                         const gchar   *property_base)
 {
   gboolean autohide;
-  gchar   *new_property;
   gchar   *old_property;
 
   panel_return_if_fail (PANEL_IS_WINDOW (window));
@@ -3199,7 +3472,7 @@ panel_window_migrate_autohide_property (PanelWindow   *window,
   /* check if we have an old "autohide" property for this panel */
   if (xfconf_channel_has_property (xfconf, old_property))
     {
-      new_property = g_strdup_printf ("%s/autohide-behavior", property_base);
+      gchar *new_property = g_strdup_printf ("%s/autohide-behavior", property_base);
 
       /* migrate from old "autohide" to new "autohide-behavior" if the latter
        * isn't set already */
@@ -3224,5 +3497,9 @@ panel_window_migrate_autohide_property (PanelWindow   *window,
           /* the new property is already set, simply remove the old property */
           xfconf_channel_reset_property (xfconf, old_property, FALSE);
         }
+
+      g_free (new_property);
     }
+
+  g_free (old_property);
 }

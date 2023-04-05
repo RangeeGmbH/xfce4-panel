@@ -237,7 +237,7 @@ struct _XfceTasklistChild
   guint                   unique_id;
 
   /* last time this window was focused */
-  GTimeVal                last_focused;
+  gint64                  last_focused;
 
   /* list of windows in case of a group button */
   GSList                 *windows;
@@ -339,6 +339,9 @@ static XfceTasklistChild *xfce_tasklist_button_new                       (WnckWi
                                                                           XfceTasklist         *tasklist);
 
 /* tasklist group buttons */
+static void               xfce_tasklist_group_button_menu_close          (GtkWidget            *menuitem,
+                                                                          XfceTasklistChild    *child,
+                                                                          guint32               time);
 static gboolean           xfce_tasklist_group_button_button_draw         (GtkWidget            *widget,
                                                                           cairo_t         *cr,
                                                                           XfceTasklistChild    *group_child);
@@ -508,7 +511,7 @@ xfce_tasklist_class_init (XfceTasklistClass *klass)
                                    PROP_LABEL_DECORATIONS,
                                    g_param_spec_boolean ("label-decorations",
                                                          NULL, NULL,
-                                                         TRUE,
+                                                         FALSE,
                                                          G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
 
   gtk_widget_class_install_style_property (gtkwidget_class,
@@ -588,7 +591,7 @@ xfce_tasklist_init (XfceTasklist *tasklist)
   tasklist->wrap_windows = FALSE;
   tasklist->all_blinking = TRUE;
   tasklist->middle_click = XFCE_TASKLIST_MIDDLE_CLICK_DEFAULT;
-  tasklist->label_decorations = TRUE;
+  tasklist->label_decorations = FALSE;
 #ifdef GDK_WINDOWING_X11
   tasklist->wireframe_window = 0;
 #endif
@@ -627,15 +630,16 @@ static GdkPixbuf *
 xfce_tasklist_get_window_icon_from_theme (WnckWindow *window,
                                           GdkPixbuf  *fallback)
 {
-  GdkPixbuf    *pixbuf;
+  GdkPixbuf    *pixbuf = NULL;
   int           size = gdk_pixbuf_get_width (fallback);
   GtkIconTheme *theme = gtk_icon_theme_get_default ();
   const char   *name = wnck_window_get_class_instance_name (window);
 
   /* return the most likely icon if found */
-  pixbuf = gtk_icon_theme_load_icon (theme, name, size, GTK_ICON_LOOKUP_FORCE_SIZE, NULL);
+  if (name != NULL)
+    pixbuf = gtk_icon_theme_load_icon (theme, name, size, GTK_ICON_LOOKUP_FORCE_SIZE, NULL);
 
-  if (pixbuf)
+  if (pixbuf != NULL)
     return pixbuf;
 
   return fallback;
@@ -984,11 +988,7 @@ xfce_tasklist_size_sort_window (gconstpointer a,
   const XfceTasklistChild *child_b = b;
   glong                    diff;
 
-  diff = child_a->last_focused.tv_sec - child_b->last_focused.tv_sec;
-  if (diff != 0)
-    return CLAMP (diff, -1, 1);
-
-  diff = child_a->last_focused.tv_usec - child_b->last_focused.tv_usec;
+  diff = child_a->last_focused - child_b->last_focused;
   return CLAMP (diff, -1, 1);
 }
 
@@ -1722,7 +1722,7 @@ xfce_tasklist_active_window_changed (WnckScreen   *screen,
       /* update timestamp for window */
       if (child->window == active_window)
         {
-          g_get_current_time (&child->last_focused);
+          child->last_focused = g_get_real_time ();
           /* the active window is in a group, so find the group button */
           if (child->type == CHILD_TYPE_GROUP_MENU)
             {
@@ -2365,20 +2365,32 @@ xfce_tasklist_wireframe_update (XfceTasklist      *tasklist,
 {
   Display              *dpy;
   GdkDisplay           *gdpy;
+  GdkWindow            *gdkwindow;
   gint                  x, y, width, height;
   XSetWindowAttributes  attrs;
   GC                    gc;
   XRectangle            xrect;
+  GtkBorder             extents;
 
   panel_return_if_fail (XFCE_IS_TASKLIST (tasklist));
   panel_return_if_fail (tasklist->show_wireframes == TRUE);
   panel_return_if_fail (WNCK_IS_WINDOW (child->window));
 
-  /* get the window geometry */
-  wnck_window_get_geometry (child->window, &x, &y, &width, &height);
-
   gdpy = gtk_widget_get_display (GTK_WIDGET (tasklist));
   dpy = GDK_DISPLAY_XDISPLAY (gdpy);
+
+  /* get the window geometry */
+  wnck_window_get_geometry (child->window, &x, &y, &width, &height);
+  /* check if we're dealing with a CSD window */
+  gdkwindow = gdk_x11_window_lookup_for_display (gdpy,
+                                                 wnck_window_get_xid (child->window));
+  if (gdkwindow && xfce_has_gtk_frame_extents (gdkwindow, &extents))
+    {
+      x += extents.left;
+      y += extents.top;
+      width -= extents.left + extents.right;
+      height -= extents.top + extents.bottom;
+    }
 
   if (G_LIKELY (tasklist->wireframe_window != 0))
     {
@@ -2943,6 +2955,89 @@ xfce_tasklist_button_enter_notify_event (GtkWidget         *button,
 
 
 static void
+xfce_tasklist_button_start_new_instance_clicked (GtkMenuItem       *item,
+                                                 XfceTasklistChild *child)
+{
+  GError *error = NULL;
+  const gchar *path = g_object_get_data (G_OBJECT (item), "exe-path");
+  if (!g_spawn_command_line_async (path, &error))
+    {
+      GtkWidget *dialog =
+        gtk_message_dialog_new (NULL,
+                                0,
+                                GTK_MESSAGE_ERROR,
+                                GTK_BUTTONS_OK,
+                                _("Unable to start new instance of '%s'"),
+                                path);
+      gtk_message_dialog_format_secondary_text (GTK_MESSAGE_DIALOG (dialog),
+                                                "%s", error->message);
+      gtk_window_set_title (GTK_WINDOW (dialog), _("Error"));
+      g_error_free (error);
+      gtk_dialog_run (GTK_DIALOG (dialog));
+      gtk_widget_destroy (dialog);
+    }
+}
+
+
+
+static gchar *
+xfce_tasklist_button_get_child_path (XfceTasklistChild *child)
+{
+  gchar *path = NULL;
+  WnckApplication *app = wnck_window_get_application (child->window);
+  int pid = wnck_application_get_pid (app);
+  if (pid > 0)
+    {
+      gchar *link = g_strdup_printf ("/proc/%d/exe", pid);
+      if (g_file_test (link, G_FILE_TEST_EXISTS | G_FILE_TEST_IS_SYMLINK))
+        path = g_file_read_link (link, NULL);
+      g_free (link);
+    }
+  return path;
+}
+
+
+static void
+xfce_tasklist_button_add_launch_new_instance_item (XfceTasklistChild *child,
+                                                   GtkWidget         *menu,
+                                                   gboolean           append)
+{
+  gchar     *path;
+  GtkWidget *sep;
+  GtkWidget *item;
+
+  /* add "Launch New Instance" item to menu if supported by the platform */
+  path = xfce_tasklist_button_get_child_path (child);
+
+  if (path == NULL)
+    return;
+
+  sep = gtk_separator_menu_item_new ();
+  gtk_widget_show (sep);
+
+  item = gtk_menu_item_new_with_label (_("Launch New Instance..."));
+  g_object_set_data_full (G_OBJECT (item), "exe-path", path, g_free);
+  gtk_widget_show (item);
+  g_signal_connect (item,
+                    "activate",
+                    G_CALLBACK (xfce_tasklist_button_start_new_instance_clicked),
+                    child);
+
+  if (append)
+    {
+      gtk_menu_shell_append (GTK_MENU_SHELL (menu), sep);
+      gtk_menu_shell_append (GTK_MENU_SHELL (menu), item);
+    }
+  else
+    {
+      gtk_menu_shell_prepend (GTK_MENU_SHELL (menu), sep);
+      gtk_menu_shell_prepend (GTK_MENU_SHELL (menu), item);
+    }
+}
+
+
+
+static void
 xfce_tasklist_button_menu_destroy (GtkWidget         *menu,
                                    XfceTasklistChild *child)
 {
@@ -2984,6 +3079,7 @@ xfce_tasklist_button_button_press_event (GtkWidget         *button,
   if (event->button == 3 && !GTK_IS_MENU_ITEM (button))
     {
       menu = wnck_action_menu_new (child->window);
+      xfce_tasklist_button_add_launch_new_instance_item (child, menu, FALSE);
       g_signal_connect (G_OBJECT (menu), "selection-done",
           G_CALLBACK (xfce_tasklist_button_menu_destroy), child);
 
@@ -3041,7 +3137,11 @@ xfce_tasklist_button_button_release_event (GtkWidget         *button,
               break;
 
             case XFCE_TASKLIST_MIDDLE_CLICK_CLOSE_WINDOW:
-              wnck_window_close (child->window, event->time);
+              if (child->type == CHILD_TYPE_GROUP_MENU
+                  && GTK_IS_MENU_ITEM (button))
+                xfce_tasklist_group_button_menu_close (button, child, event->time);
+              else
+                wnck_window_close (child->window, event->time);
               return TRUE;
 
             case XFCE_TASKLIST_MIDDLE_CLICK_MINIMIZE_WINDOW:
@@ -3072,6 +3172,21 @@ xfce_tasklist_button_enter_notify_event_disconnected (gpointer  data,
       xfce_tasklist_button_geometry_changed, child);
 
   g_object_unref (G_OBJECT (child->window));
+}
+
+
+
+static void
+xfce_tasklist_button_proxy_menu_item_activate (GtkMenuItem       *mi,
+                                               XfceTasklistChild *child)
+{
+  gint64 timestamp;
+
+  panel_return_if_fail (XFCE_IS_TASKLIST (child->tasklist));
+  panel_return_if_fail (GTK_IS_MENU_ITEM (mi));
+
+  timestamp = g_get_real_time () / 1000;
+  xfce_tasklist_button_activate (child, timestamp);
 }
 
 
@@ -3153,6 +3268,8 @@ G_GNUC_END_IGNORE_DEPRECATIONS
 
   g_signal_connect (G_OBJECT (mi), "button-press-event",
       G_CALLBACK (xfce_tasklist_button_button_press_event), child);
+  g_signal_connect (G_OBJECT (mi), "activate",
+      G_CALLBACK (xfce_tasklist_button_proxy_menu_item_activate), child);
   g_signal_connect (G_OBJECT (mi), "button-release-event",
       G_CALLBACK (xfce_tasklist_button_button_release_event), child);
 
@@ -3377,7 +3494,7 @@ xfce_tasklist_button_drag_data_received (GtkWidget         *button,
       || (!xfce_tasklist_horizontal (tasklist) && y >= allocation.height / 2))
     sibling = g_list_next (sibling);
 
-  xid = *((gulong *) gtk_selection_data_get_data (selection_data));
+  xid = *((gulong *) (gpointer) gtk_selection_data_get_data (selection_data));
   for (li = tasklist->windows; li != NULL; li = li->next)
     {
       child = li->data;
@@ -3588,6 +3705,23 @@ xfce_tasklist_group_button_menu_close_all (XfceTasklistChild *group_child)
 
 
 
+static void
+xfce_tasklist_group_button_menu_close (GtkWidget         *menuitem,
+                                       XfceTasklistChild *child,
+                                       guint32            time)
+{
+  GtkWidget *menu = gtk_widget_get_parent (menuitem);
+
+  panel_return_if_fail (WNCK_IS_WINDOW (child->window));
+  panel_return_if_fail (GTK_IS_MENU (menu));
+
+  gtk_container_remove (GTK_CONTAINER (menu), menuitem);
+  gtk_menu_popdown (GTK_MENU (menu));
+  wnck_window_close (child->window, time);
+}
+
+
+
 static GtkWidget *
 xfce_tasklist_group_button_menu (XfceTasklistChild *group_child,
                                  gboolean           action_menu_entries)
@@ -3616,6 +3750,9 @@ xfce_tasklist_group_button_menu (XfceTasklistChild *group_child,
           if (action_menu_entries)
             gtk_menu_item_set_submenu (GTK_MENU_ITEM (mi),
                 wnck_action_menu_new (child->window));
+
+          if (li->next == NULL)
+            xfce_tasklist_button_add_launch_new_instance_item (child, menu, TRUE);
         }
     }
 

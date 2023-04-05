@@ -132,9 +132,15 @@ am__uninstall_files_from_dir = { \
 am__installdirs = "$(DESTDIR)$(plugindir)" "$(DESTDIR)$(desktopdir)"
 LTLIBRARIES = $(plugin_LTLIBRARIES)
 am__DEPENDENCIES_1 =
-am__objects_1 = libsystray_la-systray-marshal.lo
-am_libsystray_la_OBJECTS = $(am__objects_1) libsystray_la-systray.lo \
-	libsystray_la-systray-box.lo libsystray_la-systray-manager.lo \
+am__objects_1 = libsystray_la-sn-watcher.lo \
+	libsystray_la-systray-marshal.lo
+am_libsystray_la_OBJECTS = $(am__objects_1) libsystray_la-sn-config.lo \
+	libsystray_la-sn-backend.lo libsystray_la-sn-button.lo \
+	libsystray_la-sn-box.lo libsystray_la-sn-dialog.lo \
+	libsystray_la-sn-icon-box.lo libsystray_la-sn-item.lo \
+	libsystray_la-sn-plugin.lo libsystray_la-sn-util.lo \
+	libsystray_la-systray.lo libsystray_la-systray-box.lo \
+	libsystray_la-systray-manager.lo \
 	libsystray_la-systray-socket.lo
 libsystray_la_OBJECTS = $(am_libsystray_la_OBJECTS)
 AM_V_lt = $(am__v_lt_@AM_V@)
@@ -159,7 +165,17 @@ am__v_at_1 =
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__maybe_remake_depfiles = depfiles
-am__depfiles_remade = ./$(DEPDIR)/libsystray_la-systray-box.Plo \
+am__depfiles_remade = ./$(DEPDIR)/libsystray_la-sn-backend.Plo \
+	./$(DEPDIR)/libsystray_la-sn-box.Plo \
+	./$(DEPDIR)/libsystray_la-sn-button.Plo \
+	./$(DEPDIR)/libsystray_la-sn-config.Plo \
+	./$(DEPDIR)/libsystray_la-sn-dialog.Plo \
+	./$(DEPDIR)/libsystray_la-sn-icon-box.Plo \
+	./$(DEPDIR)/libsystray_la-sn-item.Plo \
+	./$(DEPDIR)/libsystray_la-sn-plugin.Plo \
+	./$(DEPDIR)/libsystray_la-sn-util.Plo \
+	./$(DEPDIR)/libsystray_la-sn-watcher.Plo \
+	./$(DEPDIR)/libsystray_la-systray-box.Plo \
 	./$(DEPDIR)/libsystray_la-systray-manager.Plo \
 	./$(DEPDIR)/libsystray_la-systray-marshal.Plo \
 	./$(DEPDIR)/libsystray_la-systray-socket.Plo \
@@ -235,6 +251,10 @@ CPP = @CPP@
 CPPFLAGS = @CPPFLAGS@
 CYGPATH_W = @CYGPATH_W@
 DATADIRNAME = @DATADIRNAME@
+DBUSMENU_CFLAGS = @DBUSMENU_CFLAGS@
+DBUSMENU_LIBS = @DBUSMENU_LIBS@
+DBUSMENU_REQUIRED_VERSION = @DBUSMENU_REQUIRED_VERSION@
+DBUSMENU_VERSION = @DBUSMENU_VERSION@
 DEFS = @DEFS@
 DEPDIR = @DEPDIR@
 DLLTOOL = @DLLTOOL@
@@ -279,10 +299,6 @@ GMODULE_VERSION = @GMODULE_VERSION@
 GMOFILES = @GMOFILES@
 GMSGFMT = @GMSGFMT@
 GREP = @GREP@
-GTK2_CFLAGS = @GTK2_CFLAGS@
-GTK2_LIBS = @GTK2_LIBS@
-GTK2_REQUIRED_VERSION = @GTK2_REQUIRED_VERSION@
-GTK2_VERSION = @GTK2_VERSION@
 GTKDOC_CHECK = @GTKDOC_CHECK@
 GTKDOC_CHECK_PATH = @GTKDOC_CHECK_PATH@
 GTKDOC_DEPS_CFLAGS = @GTKDOC_DEPS_CFLAGS@
@@ -405,6 +421,8 @@ X_CFLAGS = @X_CFLAGS@
 X_EXTRA_LIBS = @X_EXTRA_LIBS@
 X_LIBS = @X_LIBS@
 X_PRE_LIBS = @X_PRE_LIBS@
+_GI_EXP_DATADIR = @_GI_EXP_DATADIR@
+_GI_EXP_LIBDIR = @_GI_EXP_LIBDIR@
 abs_builddir = @abs_builddir@
 abs_srcdir = @abs_srcdir@
 abs_top_builddir = @abs_top_builddir@
@@ -466,16 +484,38 @@ AM_CPPFLAGS = \
 	$(PLATFORM_CPPFLAGS)
 
 plugindir = $(libdir)/xfce4/panel/plugins
+
+# Keep the legacy "systray" name to ease the migration for users
 plugin_LTLIBRARIES = \
 	libsystray.la
 
 libsystray_built_sources = \
-	systray-dialog_ui.h \
+	sn-watcher.h \
+	sn-watcher.c \
+	sn-dialog-ui.h \
 	systray-marshal.c \
 	systray-marshal.h
 
 libsystray_la_SOURCES = \
 	$(libsystray_built_sources) \
+	sn-config.c \
+	sn-config.h \
+	sn-backend.c \
+	sn-backend.h \
+	sn-button.c \
+	sn-button.h \
+	sn-box.c \
+	sn-box.h \
+	sn-dialog.c \
+	sn-dialog.h \
+	sn-icon-box.c \
+	sn-icon-box.h \
+	sn-item.c \
+	sn-item.h \
+	sn-plugin.c \
+	sn-plugin.h \
+	sn-util.c \
+	sn-util.h \
 	systray.c \
 	systray.h \
 	systray-box.c \
@@ -491,7 +531,8 @@ libsystray_la_CFLAGS = \
 	$(XFCONF_CFLAGS) \
 	$(LIBXFCE4UTIL_CFLAGS) \
 	$(LIBXFCE4UI_CFLAGS) \
-	$(PLATFORM_CFLAGS)
+	$(PLATFORM_CFLAGS) \
+	$(DBUSMENU_CFLAGS)
 
 libsystray_la_LDFLAGS = \
 	-avoid-version \
@@ -507,7 +548,8 @@ libsystray_la_LIBADD = \
 	$(GTK_LIBS) \
 	$(LIBXFCE4UTIL_LIBS) \
 	$(LIBXFCE4UI_LIBS) \
-	$(XFCONF_LIBS)
+	$(XFCONF_LIBS) \
+	$(DBUSMENU_LIBS)
 
 libsystray_la_DEPENDENCIES = \
 	$(top_builddir)/libxfce4panel/libxfce4panel-$(LIBXFCE4PANEL_VERSION_API).la \
@@ -522,7 +564,7 @@ desktop_in_files = systray.desktop.in.in
 desktop_DATA = $(desktop_in_files:.desktop.in.in=.desktop)
 EXTRA_DIST = \
 	$(desktop_in_files) \
-	systray-dialog.glade \
+	sn-dialog.glade \
 	systray-marshal.list
 
 DISTCLEANFILES = $(desktop_DATA) $(am__append_1)
@@ -547,9 +589,9 @@ $(srcdir)/Makefile.in: @MAINTAINER_MODE_TRUE@ $(srcdir)/Makefile.am  $(am__confi
 	      exit 1;; \
 	  esac; \
 	done; \
-	echo ' cd $(top_srcdir) && $(AUTOMAKE) --gnu plugins/systray/Makefile'; \
+	echo ' cd $(top_srcdir) && $(AUTOMAKE) --foreign plugins/systray/Makefile'; \
 	$(am__cd) $(top_srcdir) && \
-	  $(AUTOMAKE) --gnu plugins/systray/Makefile
+	  $(AUTOMAKE) --foreign plugins/systray/Makefile
 Makefile: $(srcdir)/Makefile.in $(top_builddir)/config.status
 	@case '$?' in \
 	  *config.status*) \
@@ -614,6 +656,16 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libsystray_la-sn-backend.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libsystray_la-sn-box.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libsystray_la-sn-button.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libsystray_la-sn-config.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libsystray_la-sn-dialog.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libsystray_la-sn-icon-box.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libsystray_la-sn-item.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libsystray_la-sn-plugin.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libsystray_la-sn-util.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libsystray_la-sn-watcher.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libsystray_la-systray-box.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libsystray_la-systray-manager.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libsystray_la-systray-marshal.Plo@am__quote@ # am--include-marker
@@ -647,12 +699,82 @@ am--depfiles: $(am__depfiles_remade)
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LTCOMPILE) -c -o $@ $<
 
+libsystray_la-sn-watcher.lo: sn-watcher.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libsystray_la_CFLAGS) $(CFLAGS) -MT libsystray_la-sn-watcher.lo -MD -MP -MF $(DEPDIR)/libsystray_la-sn-watcher.Tpo -c -o libsystray_la-sn-watcher.lo `test -f 'sn-watcher.c' || echo '$(srcdir)/'`sn-watcher.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libsystray_la-sn-watcher.Tpo $(DEPDIR)/libsystray_la-sn-watcher.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='sn-watcher.c' object='libsystray_la-sn-watcher.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libsystray_la_CFLAGS) $(CFLAGS) -c -o libsystray_la-sn-watcher.lo `test -f 'sn-watcher.c' || echo '$(srcdir)/'`sn-watcher.c
+
 libsystray_la-systray-marshal.lo: systray-marshal.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libsystray_la_CFLAGS) $(CFLAGS) -MT libsystray_la-systray-marshal.lo -MD -MP -MF $(DEPDIR)/libsystray_la-systray-marshal.Tpo -c -o libsystray_la-systray-marshal.lo `test -f 'systray-marshal.c' || echo '$(srcdir)/'`systray-marshal.c
 @am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libsystray_la-systray-marshal.Tpo $(DEPDIR)/libsystray_la-systray-marshal.Plo
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='systray-marshal.c' object='libsystray_la-systray-marshal.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libsystray_la_CFLAGS) $(CFLAGS) -c -o libsystray_la-systray-marshal.lo `test -f 'systray-marshal.c' || echo '$(srcdir)/'`systray-marshal.c
+
+libsystray_la-sn-config.lo: sn-config.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libsystray_la_CFLAGS) $(CFLAGS) -MT libsystray_la-sn-config.lo -MD -MP -MF $(DEPDIR)/libsystray_la-sn-config.Tpo -c -o libsystray_la-sn-config.lo `test -f 'sn-config.c' || echo '$(srcdir)/'`sn-config.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libsystray_la-sn-config.Tpo $(DEPDIR)/libsystray_la-sn-config.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='sn-config.c' object='libsystray_la-sn-config.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libsystray_la_CFLAGS) $(CFLAGS) -c -o libsystray_la-sn-config.lo `test -f 'sn-config.c' || echo '$(srcdir)/'`sn-config.c
+
+libsystray_la-sn-backend.lo: sn-backend.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libsystray_la_CFLAGS) $(CFLAGS) -MT libsystray_la-sn-backend.lo -MD -MP -MF $(DEPDIR)/libsystray_la-sn-backend.Tpo -c -o libsystray_la-sn-backend.lo `test -f 'sn-backend.c' || echo '$(srcdir)/'`sn-backend.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libsystray_la-sn-backend.Tpo $(DEPDIR)/libsystray_la-sn-backend.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='sn-backend.c' object='libsystray_la-sn-backend.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libsystray_la_CFLAGS) $(CFLAGS) -c -o libsystray_la-sn-backend.lo `test -f 'sn-backend.c' || echo '$(srcdir)/'`sn-backend.c
+
+libsystray_la-sn-button.lo: sn-button.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libsystray_la_CFLAGS) $(CFLAGS) -MT libsystray_la-sn-button.lo -MD -MP -MF $(DEPDIR)/libsystray_la-sn-button.Tpo -c -o libsystray_la-sn-button.lo `test -f 'sn-button.c' || echo '$(srcdir)/'`sn-button.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libsystray_la-sn-button.Tpo $(DEPDIR)/libsystray_la-sn-button.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='sn-button.c' object='libsystray_la-sn-button.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libsystray_la_CFLAGS) $(CFLAGS) -c -o libsystray_la-sn-button.lo `test -f 'sn-button.c' || echo '$(srcdir)/'`sn-button.c
+
+libsystray_la-sn-box.lo: sn-box.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libsystray_la_CFLAGS) $(CFLAGS) -MT libsystray_la-sn-box.lo -MD -MP -MF $(DEPDIR)/libsystray_la-sn-box.Tpo -c -o libsystray_la-sn-box.lo `test -f 'sn-box.c' || echo '$(srcdir)/'`sn-box.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libsystray_la-sn-box.Tpo $(DEPDIR)/libsystray_la-sn-box.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='sn-box.c' object='libsystray_la-sn-box.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libsystray_la_CFLAGS) $(CFLAGS) -c -o libsystray_la-sn-box.lo `test -f 'sn-box.c' || echo '$(srcdir)/'`sn-box.c
+
+libsystray_la-sn-dialog.lo: sn-dialog.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libsystray_la_CFLAGS) $(CFLAGS) -MT libsystray_la-sn-dialog.lo -MD -MP -MF $(DEPDIR)/libsystray_la-sn-dialog.Tpo -c -o libsystray_la-sn-dialog.lo `test -f 'sn-dialog.c' || echo '$(srcdir)/'`sn-dialog.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libsystray_la-sn-dialog.Tpo $(DEPDIR)/libsystray_la-sn-dialog.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='sn-dialog.c' object='libsystray_la-sn-dialog.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libsystray_la_CFLAGS) $(CFLAGS) -c -o libsystray_la-sn-dialog.lo `test -f 'sn-dialog.c' || echo '$(srcdir)/'`sn-dialog.c
+
+libsystray_la-sn-icon-box.lo: sn-icon-box.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libsystray_la_CFLAGS) $(CFLAGS) -MT libsystray_la-sn-icon-box.lo -MD -MP -MF $(DEPDIR)/libsystray_la-sn-icon-box.Tpo -c -o libsystray_la-sn-icon-box.lo `test -f 'sn-icon-box.c' || echo '$(srcdir)/'`sn-icon-box.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libsystray_la-sn-icon-box.Tpo $(DEPDIR)/libsystray_la-sn-icon-box.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='sn-icon-box.c' object='libsystray_la-sn-icon-box.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libsystray_la_CFLAGS) $(CFLAGS) -c -o libsystray_la-sn-icon-box.lo `test -f 'sn-icon-box.c' || echo '$(srcdir)/'`sn-icon-box.c
+
+libsystray_la-sn-item.lo: sn-item.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libsystray_la_CFLAGS) $(CFLAGS) -MT libsystray_la-sn-item.lo -MD -MP -MF $(DEPDIR)/libsystray_la-sn-item.Tpo -c -o libsystray_la-sn-item.lo `test -f 'sn-item.c' || echo '$(srcdir)/'`sn-item.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libsystray_la-sn-item.Tpo $(DEPDIR)/libsystray_la-sn-item.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='sn-item.c' object='libsystray_la-sn-item.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libsystray_la_CFLAGS) $(CFLAGS) -c -o libsystray_la-sn-item.lo `test -f 'sn-item.c' || echo '$(srcdir)/'`sn-item.c
+
+libsystray_la-sn-plugin.lo: sn-plugin.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libsystray_la_CFLAGS) $(CFLAGS) -MT libsystray_la-sn-plugin.lo -MD -MP -MF $(DEPDIR)/libsystray_la-sn-plugin.Tpo -c -o libsystray_la-sn-plugin.lo `test -f 'sn-plugin.c' || echo '$(srcdir)/'`sn-plugin.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libsystray_la-sn-plugin.Tpo $(DEPDIR)/libsystray_la-sn-plugin.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='sn-plugin.c' object='libsystray_la-sn-plugin.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libsystray_la_CFLAGS) $(CFLAGS) -c -o libsystray_la-sn-plugin.lo `test -f 'sn-plugin.c' || echo '$(srcdir)/'`sn-plugin.c
+
+libsystray_la-sn-util.lo: sn-util.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libsystray_la_CFLAGS) $(CFLAGS) -MT libsystray_la-sn-util.lo -MD -MP -MF $(DEPDIR)/libsystray_la-sn-util.Tpo -c -o libsystray_la-sn-util.lo `test -f 'sn-util.c' || echo '$(srcdir)/'`sn-util.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libsystray_la-sn-util.Tpo $(DEPDIR)/libsystray_la-sn-util.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='sn-util.c' object='libsystray_la-sn-util.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libsystray_la_CFLAGS) $(CFLAGS) -c -o libsystray_la-sn-util.lo `test -f 'sn-util.c' || echo '$(srcdir)/'`sn-util.c
 
 libsystray_la-systray.lo: systray.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libsystray_la_CFLAGS) $(CFLAGS) -MT libsystray_la-systray.lo -MD -MP -MF $(DEPDIR)/libsystray_la-systray.Tpo -c -o libsystray_la-systray.lo `test -f 'systray.c' || echo '$(srcdir)/'`systray.c
@@ -841,7 +963,17 @@ clean-am: clean-generic clean-libtool clean-pluginLTLIBRARIES \
 	mostlyclean-am
 
 distclean: distclean-am
-		-rm -f ./$(DEPDIR)/libsystray_la-systray-box.Plo
+		-rm -f ./$(DEPDIR)/libsystray_la-sn-backend.Plo
+	-rm -f ./$(DEPDIR)/libsystray_la-sn-box.Plo
+	-rm -f ./$(DEPDIR)/libsystray_la-sn-button.Plo
+	-rm -f ./$(DEPDIR)/libsystray_la-sn-config.Plo
+	-rm -f ./$(DEPDIR)/libsystray_la-sn-dialog.Plo
+	-rm -f ./$(DEPDIR)/libsystray_la-sn-icon-box.Plo
+	-rm -f ./$(DEPDIR)/libsystray_la-sn-item.Plo
+	-rm -f ./$(DEPDIR)/libsystray_la-sn-plugin.Plo
+	-rm -f ./$(DEPDIR)/libsystray_la-sn-util.Plo
+	-rm -f ./$(DEPDIR)/libsystray_la-sn-watcher.Plo
+	-rm -f ./$(DEPDIR)/libsystray_la-systray-box.Plo
 	-rm -f ./$(DEPDIR)/libsystray_la-systray-manager.Plo
 	-rm -f ./$(DEPDIR)/libsystray_la-systray-marshal.Plo
 	-rm -f ./$(DEPDIR)/libsystray_la-systray-socket.Plo
@@ -891,7 +1023,17 @@ install-ps-am:
 installcheck-am:
 
 maintainer-clean: maintainer-clean-am
-		-rm -f ./$(DEPDIR)/libsystray_la-systray-box.Plo
+		-rm -f ./$(DEPDIR)/libsystray_la-sn-backend.Plo
+	-rm -f ./$(DEPDIR)/libsystray_la-sn-box.Plo
+	-rm -f ./$(DEPDIR)/libsystray_la-sn-button.Plo
+	-rm -f ./$(DEPDIR)/libsystray_la-sn-config.Plo
+	-rm -f ./$(DEPDIR)/libsystray_la-sn-dialog.Plo
+	-rm -f ./$(DEPDIR)/libsystray_la-sn-icon-box.Plo
+	-rm -f ./$(DEPDIR)/libsystray_la-sn-item.Plo
+	-rm -f ./$(DEPDIR)/libsystray_la-sn-plugin.Plo
+	-rm -f ./$(DEPDIR)/libsystray_la-sn-util.Plo
+	-rm -f ./$(DEPDIR)/libsystray_la-sn-watcher.Plo
+	-rm -f ./$(DEPDIR)/libsystray_la-systray-box.Plo
 	-rm -f ./$(DEPDIR)/libsystray_la-systray-manager.Plo
 	-rm -f ./$(DEPDIR)/libsystray_la-systray-marshal.Plo
 	-rm -f ./$(DEPDIR)/libsystray_la-systray-socket.Plo
@@ -936,15 +1078,22 @@ uninstall-am: uninstall-desktopDATA uninstall-pluginLTLIBRARIES
 
 @INTLTOOL_DESKTOP_RULE@
 
+@MAINTAINER_MODE_TRUE@sn-watcher.h:
+@MAINTAINER_MODE_TRUE@sn-watcher.c: sn-watcher.xml Makefile
+@MAINTAINER_MODE_TRUE@	$(AM_V_GEN) $(GDBUS_CODEGEN) \
+@MAINTAINER_MODE_TRUE@	--interface-prefix org.kde.StatusNotifierWatcher \
+@MAINTAINER_MODE_TRUE@	--generate-c-code sn-watcher \
+@MAINTAINER_MODE_TRUE@	$(srcdir)/sn-watcher.xml
+
+@MAINTAINER_MODE_TRUE@sn-dialog-ui.h: sn-dialog.glade
+@MAINTAINER_MODE_TRUE@	$(AM_V_GEN) xdt-csource --static --strip-comments --strip-content --name=sn_dialog_ui $< >$@
+
 @MAINTAINER_MODE_TRUE@systray-marshal.h: systray-marshal.list Makefile
 @MAINTAINER_MODE_TRUE@	$(AM_V_GEN) glib-genmarshal --header --internal --prefix=_systray_marshal $< > $@
 
 @MAINTAINER_MODE_TRUE@systray-marshal.c: systray-marshal.list Makefile
 @MAINTAINER_MODE_TRUE@	$(AM_V_GEN) echo "#include \"systray-marshal.h\"" > $@ \
 @MAINTAINER_MODE_TRUE@	&& glib-genmarshal --prefix=_systray_marshal --body $< >> $@
-
-@MAINTAINER_MODE_TRUE@systray-dialog_ui.h: systray-dialog.glade
-@MAINTAINER_MODE_TRUE@	$(AM_V_GEN) xdt-csource --static --strip-comments --strip-content --name=systray_dialog_ui $< >$@
 
 # vi:set ts=8 sw=8 noet ai nocindent syntax=automake:
 

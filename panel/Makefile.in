@@ -116,7 +116,6 @@ am_xfce4_panel_OBJECTS = $(am__objects_1) xfce4_panel-main.$(OBJEXT) \
 	xfce4_panel-panel-module-factory.$(OBJEXT) \
 	xfce4_panel-panel-plugin-external.$(OBJEXT) \
 	xfce4_panel-panel-plugin-external-wrapper.$(OBJEXT) \
-	xfce4_panel-panel-plugin-external-46.$(OBJEXT) \
 	xfce4_panel-panel-preferences-dialog.$(OBJEXT) \
 	xfce4_panel-panel-tic-tac-toe.$(OBJEXT) \
 	xfce4_panel-panel-window.$(OBJEXT)
@@ -156,7 +155,6 @@ am__depfiles_remade = ./$(DEPDIR)/xfce4_panel-main.Po \
 	./$(DEPDIR)/xfce4_panel-panel-marshal.Po \
 	./$(DEPDIR)/xfce4_panel-panel-module-factory.Po \
 	./$(DEPDIR)/xfce4_panel-panel-module.Po \
-	./$(DEPDIR)/xfce4_panel-panel-plugin-external-46.Po \
 	./$(DEPDIR)/xfce4_panel-panel-plugin-external-wrapper-exported.Po \
 	./$(DEPDIR)/xfce4_panel-panel-plugin-external-wrapper.Po \
 	./$(DEPDIR)/xfce4_panel-panel-plugin-external.Po \
@@ -232,6 +230,10 @@ CPP = @CPP@
 CPPFLAGS = @CPPFLAGS@
 CYGPATH_W = @CYGPATH_W@
 DATADIRNAME = @DATADIRNAME@
+DBUSMENU_CFLAGS = @DBUSMENU_CFLAGS@
+DBUSMENU_LIBS = @DBUSMENU_LIBS@
+DBUSMENU_REQUIRED_VERSION = @DBUSMENU_REQUIRED_VERSION@
+DBUSMENU_VERSION = @DBUSMENU_VERSION@
 DEFS = @DEFS@
 DEPDIR = @DEPDIR@
 DLLTOOL = @DLLTOOL@
@@ -276,10 +278,6 @@ GMODULE_VERSION = @GMODULE_VERSION@
 GMOFILES = @GMOFILES@
 GMSGFMT = @GMSGFMT@
 GREP = @GREP@
-GTK2_CFLAGS = @GTK2_CFLAGS@
-GTK2_LIBS = @GTK2_LIBS@
-GTK2_REQUIRED_VERSION = @GTK2_REQUIRED_VERSION@
-GTK2_VERSION = @GTK2_VERSION@
 GTKDOC_CHECK = @GTKDOC_CHECK@
 GTKDOC_CHECK_PATH = @GTKDOC_CHECK_PATH@
 GTKDOC_DEPS_CFLAGS = @GTKDOC_DEPS_CFLAGS@
@@ -402,6 +400,8 @@ X_CFLAGS = @X_CFLAGS@
 X_EXTRA_LIBS = @X_EXTRA_LIBS@
 X_LIBS = @X_LIBS@
 X_PRE_LIBS = @X_PRE_LIBS@
+_GI_EXP_DATADIR = @_GI_EXP_DATADIR@
+_GI_EXP_LIBDIR = @_GI_EXP_LIBDIR@
 abs_builddir = @abs_builddir@
 abs_srcdir = @abs_srcdir@
 abs_top_builddir = @abs_top_builddir@
@@ -503,8 +503,6 @@ xfce4_panel_SOURCES = \
 	panel-plugin-external.h \
 	panel-plugin-external-wrapper.c \
 	panel-plugin-external-wrapper.h \
-	panel-plugin-external-46.c \
-	panel-plugin-external-46.h \
 	panel-preferences-dialog.c \
 	panel-preferences-dialog.h \
 	panel-tic-tac-toe.c \
@@ -579,9 +577,9 @@ $(srcdir)/Makefile.in: @MAINTAINER_MODE_TRUE@ $(srcdir)/Makefile.am  $(am__confi
 	      exit 1;; \
 	  esac; \
 	done; \
-	echo ' cd $(top_srcdir) && $(AUTOMAKE) --gnu panel/Makefile'; \
+	echo ' cd $(top_srcdir) && $(AUTOMAKE) --foreign panel/Makefile'; \
 	$(am__cd) $(top_srcdir) && \
-	  $(AUTOMAKE) --gnu panel/Makefile
+	  $(AUTOMAKE) --foreign panel/Makefile
 Makefile: $(srcdir)/Makefile.in $(top_builddir)/config.status
 	@case '$?' in \
 	  *config.status*) \
@@ -671,7 +669,6 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/xfce4_panel-panel-marshal.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/xfce4_panel-panel-module-factory.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/xfce4_panel-panel-module.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/xfce4_panel-panel-plugin-external-46.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/xfce4_panel-panel-plugin-external-wrapper-exported.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/xfce4_panel-panel-plugin-external-wrapper.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/xfce4_panel-panel-plugin-external.Po@am__quote@ # am--include-marker
@@ -916,20 +913,6 @@ xfce4_panel-panel-plugin-external-wrapper.obj: panel-plugin-external-wrapper.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(xfce4_panel_CFLAGS) $(CFLAGS) -c -o xfce4_panel-panel-plugin-external-wrapper.obj `if test -f 'panel-plugin-external-wrapper.c'; then $(CYGPATH_W) 'panel-plugin-external-wrapper.c'; else $(CYGPATH_W) '$(srcdir)/panel-plugin-external-wrapper.c'; fi`
 
-xfce4_panel-panel-plugin-external-46.o: panel-plugin-external-46.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(xfce4_panel_CFLAGS) $(CFLAGS) -MT xfce4_panel-panel-plugin-external-46.o -MD -MP -MF $(DEPDIR)/xfce4_panel-panel-plugin-external-46.Tpo -c -o xfce4_panel-panel-plugin-external-46.o `test -f 'panel-plugin-external-46.c' || echo '$(srcdir)/'`panel-plugin-external-46.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/xfce4_panel-panel-plugin-external-46.Tpo $(DEPDIR)/xfce4_panel-panel-plugin-external-46.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='panel-plugin-external-46.c' object='xfce4_panel-panel-plugin-external-46.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(xfce4_panel_CFLAGS) $(CFLAGS) -c -o xfce4_panel-panel-plugin-external-46.o `test -f 'panel-plugin-external-46.c' || echo '$(srcdir)/'`panel-plugin-external-46.c
-
-xfce4_panel-panel-plugin-external-46.obj: panel-plugin-external-46.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(xfce4_panel_CFLAGS) $(CFLAGS) -MT xfce4_panel-panel-plugin-external-46.obj -MD -MP -MF $(DEPDIR)/xfce4_panel-panel-plugin-external-46.Tpo -c -o xfce4_panel-panel-plugin-external-46.obj `if test -f 'panel-plugin-external-46.c'; then $(CYGPATH_W) 'panel-plugin-external-46.c'; else $(CYGPATH_W) '$(srcdir)/panel-plugin-external-46.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/xfce4_panel-panel-plugin-external-46.Tpo $(DEPDIR)/xfce4_panel-panel-plugin-external-46.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='panel-plugin-external-46.c' object='xfce4_panel-panel-plugin-external-46.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(xfce4_panel_CFLAGS) $(CFLAGS) -c -o xfce4_panel-panel-plugin-external-46.obj `if test -f 'panel-plugin-external-46.c'; then $(CYGPATH_W) 'panel-plugin-external-46.c'; else $(CYGPATH_W) '$(srcdir)/panel-plugin-external-46.c'; fi`
-
 xfce4_panel-panel-preferences-dialog.o: panel-preferences-dialog.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(xfce4_panel_CFLAGS) $(CFLAGS) -MT xfce4_panel-panel-preferences-dialog.o -MD -MP -MF $(DEPDIR)/xfce4_panel-panel-preferences-dialog.Tpo -c -o xfce4_panel-panel-preferences-dialog.o `test -f 'panel-preferences-dialog.c' || echo '$(srcdir)/'`panel-preferences-dialog.c
 @am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/xfce4_panel-panel-preferences-dialog.Tpo $(DEPDIR)/xfce4_panel-panel-preferences-dialog.Po
@@ -1121,7 +1104,6 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/xfce4_panel-panel-marshal.Po
 	-rm -f ./$(DEPDIR)/xfce4_panel-panel-module-factory.Po
 	-rm -f ./$(DEPDIR)/xfce4_panel-panel-module.Po
-	-rm -f ./$(DEPDIR)/xfce4_panel-panel-plugin-external-46.Po
 	-rm -f ./$(DEPDIR)/xfce4_panel-panel-plugin-external-wrapper-exported.Po
 	-rm -f ./$(DEPDIR)/xfce4_panel-panel-plugin-external-wrapper.Po
 	-rm -f ./$(DEPDIR)/xfce4_panel-panel-plugin-external.Po
@@ -1185,7 +1167,6 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/xfce4_panel-panel-marshal.Po
 	-rm -f ./$(DEPDIR)/xfce4_panel-panel-module-factory.Po
 	-rm -f ./$(DEPDIR)/xfce4_panel-panel-module.Po
-	-rm -f ./$(DEPDIR)/xfce4_panel-panel-plugin-external-46.Po
 	-rm -f ./$(DEPDIR)/xfce4_panel-panel-plugin-external-wrapper-exported.Po
 	-rm -f ./$(DEPDIR)/xfce4_panel-panel-plugin-external-wrapper.Po
 	-rm -f ./$(DEPDIR)/xfce4_panel-panel-plugin-external.Po

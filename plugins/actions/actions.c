@@ -37,6 +37,7 @@
 
 
 
+#define DEFAULT_TITLE    _("Session Menu")
 #define DEFAULT_ICON_SIZE (16)
 #define DEFAULT_TIMEOUT   (30)
 
@@ -71,12 +72,22 @@ typedef enum
 }
 AppearanceType;
 
+typedef enum
+{
+  BUTTON_TITLE_TYPE_FULLNAME,
+  BUTTON_TITLE_TYPE_USERNAME,
+  BUTTON_TITLE_TYPE_USERID,
+  BUTTON_TITLE_TYPE_CUSTOM
+}
+ButtonTitleType;
+
 enum
 {
   PROP_0,
   PROP_ITEMS,
   PROP_APPEARANCE,
-  PROP_INVERT_ORIENTATION,
+  PROP_BUTTON_TITLE,
+  PROP_CUSTOM_TITLE,
   PROP_ASK_CONFIRMATION
 };
 
@@ -98,9 +109,10 @@ struct _ActionsPlugin
   XfcePanelPlugin __parent__;
 
   AppearanceType  type;
+  ButtonTitleType button_title;
+  gchar          *custom_title;
   GPtrArray      *items;
   GtkWidget      *menu;
-  guint           invert_orientation : 1;
   guint           ask_confirmation : 1;
   guint           pack_idle_id;
 };
@@ -154,32 +166,32 @@ static ActionEntry action_entries[] =
     N_("_Log Out"),
     N_("Are you sure you want to log out?"),
     N_("Logging out in %d seconds."),
-    "system-log-out",
-    NULL
+    "xfsm-logout",
+    "system-log-out"
   },
   { ACTION_TYPE_LOGOUT_DIALOG,
     "logout",
     N_("Log Out..."),
     N_("Log _Out..."),
     NULL, NULL, /* already shows a dialog */
-    "system-log-out",
-    NULL
+    "xfsm-logout",
+    "system-log-out"
   },
   { ACTION_TYPE_SWITCH_USER,
     "switch-user",
     N_("Switch User"),
     N_("_Switch User"),
     NULL, NULL, /* not needed */
-    "system-users",
-    NULL
+    "xfsm-switch-user",
+    "system-users"
   },
   { ACTION_TYPE_LOCK_SCREEN,
     "lock-screen",
     N_("Lock Screen"),
     N_("Loc_k Screen"),
     NULL, NULL, /* not needed */
-    "system-lock-screen",
-    NULL
+    "xfsm-lock",
+    "system-lock-screen"
   },
   { ACTION_TYPE_HIBERNATE,
     "hibernate",
@@ -187,8 +199,8 @@ static ActionEntry action_entries[] =
     N_("_Hibernate"),
     N_("Do you want to suspend to disk?"),
     N_("Hibernating computer in %d seconds."),
-    "system-hibernate",
-    NULL
+    "xfsm-hibernate",
+    "system-hibernate"
   },
   { ACTION_TYPE_HYBRID_SLEEP,
     "hybrid-sleep",
@@ -196,7 +208,7 @@ static ActionEntry action_entries[] =
     N_("_Hybrid Sleep"),
     N_("Do you want to hibernate and suspend the system?"),
     N_("Hibernating and Suspending computer in %d seconds."),
-    "system-suspend-hibernate",
+    "xfsm-hibernate",
     "system-hibernate"
   },
   { ACTION_TYPE_SUSPEND,
@@ -205,8 +217,8 @@ static ActionEntry action_entries[] =
     N_("Sus_pend"),
     N_("Do you want to suspend to RAM?"),
     N_("Suspending computer in %d seconds."),
-    "system-suspend",
-    NULL
+    "xfsm-suspend",
+    "system-suspend"
   },
   { ACTION_TYPE_RESTART,
     "restart",
@@ -214,8 +226,8 @@ static ActionEntry action_entries[] =
     N_("_Restart"),
     N_("Are you sure you want to restart?"),
     N_("Restarting computer in %d seconds."),
-    "system-reboot",
-    NULL
+    "xfsm-reboot",
+    "system-reboot"
   },
   { ACTION_TYPE_SHUTDOWN,
     "shutdown",
@@ -223,8 +235,8 @@ static ActionEntry action_entries[] =
     N_("Shut _Down"),
     N_("Are you sure you want to shut down?"),
     N_("Turning off computer in %d seconds."),
-    "system-shutdown",
-    NULL
+    "xfsm-shutdown",
+    "system-shutdown"
   }
 };
 
@@ -273,11 +285,20 @@ actions_plugin_class_init (ActionsPluginClass *klass)
                                                       G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
 
   g_object_class_install_property (gobject_class,
-                                   PROP_INVERT_ORIENTATION,
-                                   g_param_spec_boolean ("invert-orientation",
-                                                         NULL, NULL,
-                                                         FALSE,
-                                                         G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
+                                   PROP_BUTTON_TITLE,
+                                   g_param_spec_uint ("button-title",
+                                                      NULL, NULL,
+                                                      BUTTON_TITLE_TYPE_FULLNAME,
+                                                      BUTTON_TITLE_TYPE_CUSTOM,
+                                                      BUTTON_TITLE_TYPE_FULLNAME,
+                                                      G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
+
+  g_object_class_install_property (gobject_class,
+                                   PROP_CUSTOM_TITLE,
+                                   g_param_spec_string ("custom-title",
+                                                        NULL, NULL,
+                                                        DEFAULT_TITLE,
+                                                        G_PARAM_READWRITE));
 
   g_object_class_install_property (gobject_class,
                                    PROP_ASK_CONFIRMATION,
@@ -295,7 +316,7 @@ static void
 actions_plugin_init (ActionsPlugin *plugin)
 {
   plugin->type = APPEARANCE_TYPE_MENU;
-  plugin->invert_orientation = FALSE;
+  plugin->button_title = BUTTON_TITLE_TYPE_FULLNAME;
   plugin->ask_confirmation = TRUE;
 }
 
@@ -330,8 +351,13 @@ actions_plugin_get_property (GObject    *object,
       g_value_set_uint (value, plugin->type);
       break;
 
-    case PROP_INVERT_ORIENTATION:
-      g_value_set_boolean (value, plugin->invert_orientation);
+    case PROP_BUTTON_TITLE:
+      g_value_set_uint (value, plugin->button_title);
+      break;
+
+    case PROP_CUSTOM_TITLE:
+      g_value_set_string (value, plugin->custom_title == NULL ?
+                          DEFAULT_TITLE : plugin->custom_title);
       break;
 
     case PROP_ASK_CONFIRMATION:
@@ -369,8 +395,14 @@ actions_plugin_set_property (GObject      *object,
       actions_plugin_pack (plugin);
       break;
 
-    case PROP_INVERT_ORIENTATION:
-      plugin->invert_orientation = g_value_get_boolean (value);
+    case PROP_BUTTON_TITLE:
+      plugin->button_title = g_value_get_uint (value);
+      actions_plugin_pack (plugin);
+      break;
+
+    case PROP_CUSTOM_TITLE:
+      g_free (plugin->custom_title);
+      plugin->custom_title = g_value_dup_string (value);
       actions_plugin_pack (plugin);
       break;
 
@@ -394,7 +426,8 @@ actions_plugin_construct (XfcePanelPlugin *panel_plugin)
   {
     { "items", G_TYPE_PTR_ARRAY },
     { "appearance", G_TYPE_UINT },
-    { "invert-orientation", G_TYPE_BOOLEAN },
+    { "button-title", G_TYPE_UINT },
+    { "custom-title", G_TYPE_STRING },
     { "ask-confirmation", G_TYPE_BOOLEAN },
     { NULL }
   };
@@ -456,11 +489,14 @@ actions_plugin_size_changed (XfcePanelPlugin *panel_plugin,
 
           for (li = children; li != NULL; li = li->next)
             {
-              gtk_widget_set_size_request (GTK_WIDGET (li->data),
-                                           max_size, max_size);
-              icon = GTK_IMAGE (gtk_bin_get_child (GTK_BIN (li->data)));
-              icon_size = xfce_panel_plugin_get_icon_size (panel_plugin);
-              gtk_image_set_pixel_size (GTK_IMAGE (icon), icon_size);
+              if (!GTK_IS_SEPARATOR (li->data))
+                {
+                  gtk_widget_set_size_request (GTK_WIDGET (li->data),
+                                               max_size, max_size);
+                  icon = GTK_IMAGE (gtk_bin_get_child (GTK_BIN (li->data)));
+                  icon_size = xfce_panel_plugin_get_icon_size (panel_plugin);
+                  gtk_image_set_pixel_size (GTK_IMAGE (icon), icon_size);
+                }
             }
         }
     }
@@ -567,6 +603,20 @@ actions_plugin_lookup_entry (const gchar *name)
 
 
 static void
+actions_plugin_combo_title_changed_cb (GtkWidget *widget,
+                                       gpointer   user_data)
+{
+  GtkBuilder *builder = GTK_BUILDER (user_data);
+
+  gtk_widget_set_sensitive (GTK_WIDGET (gtk_builder_get_object (builder, "entry-cust-title")),
+                            gtk_combo_box_get_active (GTK_COMBO_BOX (widget)) == 3);
+  gtk_widget_set_sensitive (GTK_WIDGET (gtk_builder_get_object (builder, "label-cust-title")),
+                            gtk_combo_box_get_active (GTK_COMBO_BOX (widget)) == 3);
+}
+
+
+
+static void
 actions_plugin_configure_plugin (XfcePanelPlugin *panel_plugin)
 {
   ActionsPlugin *plugin = XFCE_ACTIONS_PLUGIN (panel_plugin);
@@ -600,13 +650,23 @@ actions_plugin_configure_plugin (XfcePanelPlugin *panel_plugin)
                           G_OBJECT (combo), "active",
                           G_BINDING_SYNC_CREATE | G_BINDING_BIDIRECTIONAL);
 
-  object = gtk_builder_get_object (builder, "invert-orientation");
-  g_object_bind_property (G_OBJECT (plugin), "invert-orientation",
-                          G_OBJECT (object), "active",
+  object = gtk_builder_get_object (builder, "revealer-title");
+  g_object_bind_property (G_OBJECT (plugin), "appearance",
+                          object, "reveal-child",
                           G_BINDING_SYNC_CREATE | G_BINDING_BIDIRECTIONAL);
-  g_object_bind_property (G_OBJECT (combo), "active",
-                          G_OBJECT (object), "sensitive",
-                          G_BINDING_SYNC_CREATE | G_BINDING_BIDIRECTIONAL | G_BINDING_INVERT_BOOLEAN);
+
+  combo = gtk_builder_get_object (builder, "combo-title");
+  g_object_bind_property (G_OBJECT (plugin), "button-title",
+                          G_OBJECT (combo), "active",
+                          G_BINDING_SYNC_CREATE | G_BINDING_BIDIRECTIONAL);
+
+  object = gtk_builder_get_object (builder, "entry-cust-title");
+  g_object_bind_property (G_OBJECT (plugin), "custom-title",
+                          G_OBJECT (object), "text",
+                          G_BINDING_SYNC_CREATE | G_BINDING_BIDIRECTIONAL);
+
+  g_signal_connect (combo, "changed", G_CALLBACK (actions_plugin_combo_title_changed_cb), builder);
+  actions_plugin_combo_title_changed_cb (GTK_WIDGET (combo), builder);
 
   object = gtk_builder_get_object (builder, "confirmation-dialog");
   g_object_bind_property (G_OBJECT (plugin), "ask-confirmation",
@@ -834,7 +894,7 @@ actions_plugin_action_dbus_xfsm (const gchar  *method,
         {
           retval = g_dbus_proxy_call_sync (proxy, method,
                                            NULL,
-                                           G_DBUS_PROXY_FLAGS_NONE,
+                                           G_DBUS_CALL_FLAGS_NONE,
                                            -1,
                                            NULL,
                                            error);
@@ -1150,7 +1210,7 @@ actions_plugin_pack_idle (gpointer data)
   GtkWidget           *label;
   GtkWidget           *button;
   GtkWidget           *widget;
-  const gchar         *username;
+  const gchar         *button_title;
   GtkWidget           *child;
   GtkWidget           *box;
   guint                i;
@@ -1180,8 +1240,6 @@ actions_plugin_pack_idle (gpointer data)
       else
         orientation = GTK_ORIENTATION_HORIZONTAL;
 
-      if (plugin->invert_orientation)
-        orientation = !orientation;
       box = gtk_box_new (orientation, 0);
       gtk_container_add (GTK_CONTAINER (plugin), box);
       gtk_widget_show (box);
@@ -1191,13 +1249,6 @@ actions_plugin_pack_idle (gpointer data)
           val = g_ptr_array_index (plugin->items, i);
           name = g_value_get_string (val);
           if (name == NULL || *name != '+')
-            continue;
-
-          /* skip separators when packing buttons in the opposite
-           * orientation */
-          if (plugin->invert_orientation !=
-              (xfce_panel_plugin_get_mode (XFCE_PANEL_PLUGIN (plugin)) == XFCE_PANEL_PLUGIN_MODE_DESKBAR)
-              && g_strcmp0 (name + 1, "separator") == 0)
             continue;
 
           widget = actions_plugin_action_button (plugin, name + 1, orientation, &type);
@@ -1214,15 +1265,40 @@ actions_plugin_pack_idle (gpointer data)
     }
   else
     {
-      /* get a decent username, not the glib defaults */
-      username = g_get_real_name ();
-      if (panel_str_is_empty (username)
-          || strcmp (username, "Unknown") == 0)
+      switch (plugin->button_title)
         {
-          username = g_get_user_name ();
-          if (panel_str_is_empty (username)
-              || strcmp (username, "somebody") == 0)
-            username = _("John Doe");
+          case BUTTON_TITLE_TYPE_FULLNAME:
+            /* get a decent username, not the glib defaults */
+            button_title = g_get_real_name ();
+            if (panel_str_is_empty (button_title)
+                || strcmp (button_title, "Unknown") == 0)
+              {
+                button_title = g_get_user_name ();
+                if (panel_str_is_empty (button_title)
+                    || strcmp (button_title, "username") == 0)
+                  button_title = _("Little Mouse");
+              }
+            break;
+
+          case BUTTON_TITLE_TYPE_USERNAME:
+            button_title = g_get_user_name ();
+            if (panel_str_is_empty (button_title))
+              button_title = "username";
+            break;
+
+          case BUTTON_TITLE_TYPE_USERID:
+            {
+              char buf[16];
+              snprintf(buf, sizeof(buf), "%u", (unsigned)getuid());
+              button_title = buf;
+            }
+            break;
+
+          default:
+          case BUTTON_TITLE_TYPE_CUSTOM:
+            button_title = (plugin->custom_title == NULL?
+                            DEFAULT_TITLE : plugin->custom_title);
+            break;
         }
 
       button = xfce_arrow_button_new (GTK_ARROW_NONE);
@@ -1234,7 +1310,7 @@ actions_plugin_pack_idle (gpointer data)
           G_CALLBACK (actions_plugin_menu), plugin);
       gtk_widget_show (button);
 
-      label = gtk_label_new (username);
+      label = gtk_label_new (button_title);
       gtk_container_add (GTK_CONTAINER (button), label);
       mode = xfce_panel_plugin_get_mode (XFCE_PANEL_PLUGIN (plugin));
       gtk_label_set_angle (GTK_LABEL (label),
@@ -1331,8 +1407,6 @@ actions_plugin_menu (GtkWidget     *button,
   GtkWidget    *mi;
   ActionType    type;
   ActionType    allowed_types;
-
-  return;
 
   panel_return_if_fail (XFCE_IS_ACTIONS_PLUGIN (plugin));
   panel_return_if_fail (button != NULL);

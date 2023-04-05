@@ -23,7 +23,6 @@
 
 #include <gtk/gtk.h>
 #include <libxfce4panel/libxfce4panel-enums.h>
-#include <libxfce4panel/xfce-panel-macros-46.h>
 
 G_BEGIN_DECLS
 
@@ -209,6 +208,8 @@ void                  xfce_panel_plugin_menu_insert_item    (XfcePanelPlugin   *
 void                  xfce_panel_plugin_menu_show_configure (XfcePanelPlugin   *plugin);
 
 void                  xfce_panel_plugin_menu_show_about     (XfcePanelPlugin   *plugin);
+
+void                  xfce_panel_plugin_menu_destroy        (XfcePanelPlugin   *plugin);
 
 gboolean              xfce_panel_plugin_get_locked          (XfcePanelPlugin   *plugin);
 

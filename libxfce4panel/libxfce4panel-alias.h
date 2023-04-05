@@ -52,22 +52,6 @@ extern __typeof (xfce_arrow_button_set_blinking) IA__xfce_arrow_button_set_blink
 
 #endif
 #endif
-#ifdef __XFCE_HVBOX_H__
-#if 1
-extern __typeof (xfce_hvbox_get_orientation) IA__xfce_hvbox_get_orientation __attribute((visibility("hidden")));
-#define xfce_hvbox_get_orientation IA__xfce_hvbox_get_orientation
-
-extern __typeof (xfce_hvbox_get_type) IA__xfce_hvbox_get_type __attribute((visibility("hidden")));
-#define xfce_hvbox_get_type IA__xfce_hvbox_get_type
-
-extern __typeof (xfce_hvbox_new) IA__xfce_hvbox_new __attribute((visibility("hidden")));
-#define xfce_hvbox_new IA__xfce_hvbox_new
-
-extern __typeof (xfce_hvbox_set_orientation) IA__xfce_hvbox_set_orientation __attribute((visibility("hidden")));
-#define xfce_hvbox_set_orientation IA__xfce_hvbox_set_orientation
-
-#endif
-#endif
 #ifdef __XFCE_PANEL_CONVENIENCE_H__
 #if 1
 extern __typeof (xfce_panel_create_button) IA__xfce_panel_create_button __attribute((visibility("hidden"))) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
@@ -195,6 +179,9 @@ extern __typeof (xfce_panel_plugin_menu_show_configure) IA__xfce_panel_plugin_me
 extern __typeof (xfce_panel_plugin_menu_show_about) IA__xfce_panel_plugin_menu_show_about __attribute((visibility("hidden")));
 #define xfce_panel_plugin_menu_show_about IA__xfce_panel_plugin_menu_show_about
 
+extern __typeof (xfce_panel_plugin_menu_destroy) IA__xfce_panel_plugin_menu_destroy __attribute((visibility("hidden")));
+#define xfce_panel_plugin_menu_destroy IA__xfce_panel_plugin_menu_destroy
+
 extern __typeof (xfce_panel_plugin_block_menu) IA__xfce_panel_plugin_block_menu __attribute((visibility("hidden")));
 #define xfce_panel_plugin_block_menu IA__xfce_panel_plugin_block_menu
 
@@ -249,6 +236,9 @@ extern __typeof (xfce_panel_plugin_provider_set_size) IA__xfce_panel_plugin_prov
 
 extern __typeof (xfce_panel_plugin_provider_set_icon_size) IA__xfce_panel_plugin_provider_set_icon_size __attribute((visibility("hidden")));
 #define xfce_panel_plugin_provider_set_icon_size IA__xfce_panel_plugin_provider_set_icon_size
+
+extern __typeof (xfce_panel_plugin_provider_set_dark_mode) IA__xfce_panel_plugin_provider_set_dark_mode __attribute((visibility("hidden")));
+#define xfce_panel_plugin_provider_set_dark_mode IA__xfce_panel_plugin_provider_set_dark_mode
 
 extern __typeof (xfce_panel_plugin_provider_set_mode) IA__xfce_panel_plugin_provider_set_mode __attribute((visibility("hidden")));
 #define xfce_panel_plugin_provider_set_mode IA__xfce_panel_plugin_provider_set_mode

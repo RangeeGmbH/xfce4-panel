@@ -101,6 +101,10 @@ struct _PagerPlugin
   XfcePanelPlugin __parent__;
 
   GtkWidget     *pager;
+  GObject       *numbering_switch;
+  GObject       *numbering_label;
+  GObject       *scrolling_switch;
+  GObject       *scrolling_label;
 
   WnckScreen    *wnck_screen;
 
@@ -109,6 +113,7 @@ struct _PagerPlugin
   guint          wrap_workspaces : 1;
   guint          miniature_view : 1;
   gint           rows;
+  gboolean       numbering;
   gfloat         ratio;
 };
 
@@ -118,7 +123,8 @@ enum
   PROP_WORKSPACE_SCROLLING,
   PROP_WRAP_WORKSPACES,
   PROP_MINIATURE_VIEW,
-  PROP_ROWS
+  PROP_ROWS,
+  PROP_NUMBERING
 };
 
 
@@ -181,6 +187,13 @@ pager_plugin_class_init (PagerPluginClass *klass)
                                                       NULL, NULL,
                                                       1, 50, 1,
                                                       G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
+
+  g_object_class_install_property (gobject_class,
+                                   PROP_NUMBERING,
+                                   g_param_spec_boolean ("numbering",
+                                                         NULL, NULL,
+                                                         FALSE,
+                                                         G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
 }
 
 
@@ -193,6 +206,7 @@ pager_plugin_init (PagerPlugin *plugin)
   plugin->wrap_workspaces = FALSE;
   plugin->miniature_view = TRUE;
   plugin->rows = 1;
+  plugin->numbering = FALSE;
   plugin->ratio = 1.0;
   plugin->pager = NULL;
 }
@@ -225,6 +239,10 @@ pager_plugin_get_property (GObject    *object,
 
     case PROP_ROWS:
       g_value_set_uint (value, plugin->rows);
+      break;
+
+    case PROP_NUMBERING:
+      g_value_set_boolean (value, plugin->numbering);
       break;
 
     default:
@@ -273,6 +291,14 @@ pager_plugin_set_property (GObject      *object,
         }
       break;
 
+    case PROP_NUMBERING:
+      plugin->numbering = g_value_get_boolean (value);
+
+      if (plugin->pager != NULL
+          && !plugin->miniature_view)
+        pager_buttons_set_numbering (XFCE_PAGER_BUTTONS (plugin->pager), plugin->numbering);
+      break;
+
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -313,6 +339,8 @@ pager_plugin_style_updated (GtkWidget *pager,
                                GTK_STYLE_PROVIDER_PRIORITY_THEME);
   gdk_rgba_free (bg_color);
   g_free (color_string);
+  g_free (css_string);
+  g_object_unref (provider);
 }
 
 
@@ -451,6 +479,7 @@ G_GNUC_END_IGNORE_DEPRECATIONS
       plugin->pager = pager_buttons_new (plugin->wnck_screen);
       pager_buttons_set_n_rows (XFCE_PAGER_BUTTONS (plugin->pager), plugin->rows);
       pager_buttons_set_orientation (XFCE_PAGER_BUTTONS (plugin->pager), orientation);
+      pager_buttons_set_numbering (XFCE_PAGER_BUTTONS (plugin->pager), plugin->numbering);
     }
 
   gtk_container_add (GTK_CONTAINER (plugin), plugin->pager);
@@ -502,6 +531,7 @@ pager_plugin_construct (XfcePanelPlugin *panel_plugin)
     { "wrap-workspaces", G_TYPE_BOOLEAN },
     { "miniature-view", G_TYPE_BOOLEAN },
     { "rows", G_TYPE_UINT },
+    { "numbering", G_TYPE_BOOLEAN },
     { NULL }
   };
 
@@ -515,7 +545,7 @@ G_GNUC_END_IGNORE_DEPRECATIONS
       G_CALLBACK (pager_plugin_configure_workspace_settings), NULL);
   gtk_widget_show (mi);
 
-  image = gtk_image_new_from_icon_name ("xfce4-workspaces", GTK_ICON_SIZE_MENU);
+  image = gtk_image_new_from_icon_name ("org.xfce.panel.pager", GTK_ICON_SIZE_MENU);
 G_GNUC_BEGIN_IGNORE_DEPRECATIONS
   gtk_image_menu_item_set_image (GTK_IMAGE_MENU_ITEM (mi), image);
 G_GNUC_END_IGNORE_DEPRECATIONS
@@ -590,8 +620,8 @@ pager_plugin_configure_workspace_settings (GtkWidget *button)
     screen = gdk_screen_get_default ();
 
   /* try to start the settings dialog */
-  if (!xfce_spawn_command_line_on_screen (screen, WORKSPACE_SETTINGS_COMMAND,
-                                          FALSE, FALSE, &error))
+  if (!xfce_spawn_command_line (screen, WORKSPACE_SETTINGS_COMMAND,
+                                FALSE, FALSE, TRUE, &error))
     {
       /* show an error dialog */
       toplevel = gtk_widget_get_toplevel (button);
@@ -678,14 +708,8 @@ pager_plugin_configure_plugin (XfcePanelPlugin *panel_plugin)
   g_signal_connect (G_OBJECT (object), "clicked",
       G_CALLBACK (pager_plugin_configure_workspace_settings), dialog);
 
-  object = gtk_builder_get_object (builder, "workspace-scrolling");
-  panel_return_if_fail (GTK_IS_TOGGLE_BUTTON (object));
-  g_object_bind_property (G_OBJECT (plugin), "workspace-scrolling",
-                          G_OBJECT (object), "active",
-                          G_BINDING_SYNC_CREATE | G_BINDING_BIDIRECTIONAL);
-
-  object = gtk_builder_get_object (builder, "miniature-view");
-  panel_return_if_fail (GTK_IS_TOGGLE_BUTTON (object));
+  object = gtk_builder_get_object (builder, "appearance");
+  panel_return_if_fail (GTK_IS_COMBO_BOX (object));
   g_object_bind_property (G_OBJECT (plugin), "miniature-view",
                           G_OBJECT (object), "active",
                           G_BINDING_SYNC_CREATE | G_BINDING_BIDIRECTIONAL);
@@ -694,6 +718,32 @@ pager_plugin_configure_plugin (XfcePanelPlugin *panel_plugin)
   panel_return_if_fail (GTK_IS_ADJUSTMENT (object));
   g_object_bind_property (G_OBJECT (plugin), "rows",
                           G_OBJECT (object), "value",
+                          G_BINDING_SYNC_CREATE | G_BINDING_BIDIRECTIONAL);
+
+  plugin->scrolling_label = gtk_builder_get_object (builder, "workspace-scrolling-label");
+  g_object_bind_property (G_OBJECT (plugin), "miniature-view",
+                          G_OBJECT (plugin->scrolling_label), "visible",
+                          G_BINDING_SYNC_CREATE | G_BINDING_DEFAULT | G_BINDING_INVERT_BOOLEAN);
+  plugin->scrolling_switch = gtk_builder_get_object (builder, "workspace-scrolling");
+  panel_return_if_fail (GTK_IS_SWITCH (plugin->scrolling_switch));
+  g_object_bind_property (G_OBJECT (plugin), "miniature-view",
+                          G_OBJECT (plugin->scrolling_switch), "visible",
+                          G_BINDING_SYNC_CREATE | G_BINDING_DEFAULT | G_BINDING_INVERT_BOOLEAN);
+  g_object_bind_property (G_OBJECT (plugin), "workspace-scrolling",
+                          G_OBJECT (plugin->scrolling_switch), "active",
+                          G_BINDING_SYNC_CREATE | G_BINDING_BIDIRECTIONAL);
+
+  plugin->numbering_label = gtk_builder_get_object (builder, "numbering-label");
+  g_object_bind_property (G_OBJECT (plugin), "miniature-view",
+                          G_OBJECT (plugin->numbering_label), "visible",
+                          G_BINDING_SYNC_CREATE | G_BINDING_DEFAULT | G_BINDING_INVERT_BOOLEAN);
+  plugin->numbering_switch = gtk_builder_get_object (builder, "numbering");
+  panel_return_if_fail (GTK_IS_SWITCH (plugin->numbering_switch));
+  g_object_bind_property (G_OBJECT (plugin), "miniature-view",
+                          G_OBJECT (plugin->numbering_switch), "visible",
+                          G_BINDING_SYNC_CREATE | G_BINDING_DEFAULT | G_BINDING_INVERT_BOOLEAN);
+  g_object_bind_property (G_OBJECT (plugin), "numbering",
+                          G_OBJECT (plugin->numbering_switch), "active",
                           G_BINDING_SYNC_CREATE | G_BINDING_BIDIRECTIONAL);
 
   /* update the rows limit */
@@ -724,18 +774,6 @@ pager_plugin_get_preferred_width (GtkWidget *widget,
   else if (plugin->miniature_view)
     {
       n_workspaces = wnck_screen_get_workspace_count (plugin->wnck_screen);
-      if (n_workspaces == 1)
-        {
-           WnckWorkspace *active_ws;
-           /* check if we ware in viewport mode */
-           active_ws = wnck_screen_get_active_workspace (plugin->wnck_screen);
-           if (wnck_workspace_is_virtual (active_ws))
-             {
-               /* number of rows * number of columns */
-               n_workspaces = (wnck_workspace_get_width (active_ws) / wnck_screen_get_width (plugin->wnck_screen))
-                               * (wnck_workspace_get_height (active_ws) / wnck_screen_get_height (plugin->wnck_screen));
-             }
-        }
       n_cols = MAX (1, (n_workspaces + plugin->rows - 1) / plugin->rows);
       min_width = nat_width = (gint) (xfce_panel_plugin_get_size (XFCE_PANEL_PLUGIN (plugin)) / plugin->rows * plugin->ratio * n_cols);
     }

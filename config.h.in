@@ -23,6 +23,9 @@
    the CoreFoundation framework. */
 #undef HAVE_CFPREFERENCESCOPYAPPVALUE
 
+/* Define if dbusmenu-gtk3-0.4 >= 16.04.0 present */
+#undef HAVE_DBUSMENU
+
 /* Define to 1 if you have the `dcgettext' function. */
 #undef HAVE_DCGETTEXT
 
@@ -35,11 +38,8 @@
 /* Define if the GNU gettext() function is already present or preinstalled. */
 #undef HAVE_GETTEXT
 
-/* Define if gio-unix-2.0 >= 2.42.0 present */
+/* Define if gio-unix-2.0 >= 2.50.0 present */
 #undef HAVE_GIO_UNIX
-
-/* Define if gtk+-2.0 >= 2.20.0 present */
-#undef HAVE_GTK2
 
 /* Define to 1 if you have the <inttypes.h> header file. */
 #undef HAVE_INTTYPES_H

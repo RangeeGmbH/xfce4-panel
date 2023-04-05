@@ -476,7 +476,14 @@ launcher_dialog_tree_save (LauncherPluginDialog *dialog)
   xfconf_array_free (array);
 }
 
+static gboolean
+launcher_dialog_tree_save_cb (gpointer user_data)
+{
+  LauncherPluginDialog *dialog = user_data;
 
+  launcher_dialog_tree_save (dialog);
+  return FALSE;
+}
 
 static void
 launcher_dialog_tree_drag_data_received (GtkWidget            *treeview,
@@ -778,7 +785,7 @@ launcher_dialog_item_desktop_item_edit (GtkWidget            *widget,
 
   /* spawn item editor */
   screen = gtk_widget_get_screen (widget);
-  if (!xfce_spawn_command_line_on_screen (screen, command, FALSE, FALSE, &error))
+  if (!xfce_spawn_command_line (screen, command, FALSE, FALSE, TRUE, &error))
     {
       toplevel = gtk_widget_get_toplevel (widget);
       xfce_dialog_show_error (GTK_WINDOW (toplevel), error,
@@ -1016,7 +1023,7 @@ launcher_dialog_tree_row_changed (GtkTreeModel         *model,
   panel_return_if_fail (GTK_IS_BUILDER (dialog->builder));
 
   /* item moved with dnd, save the tree to update the plugin */
-  gdk_threads_add_idle ((GSourceFunc) (void (*)(void)) launcher_dialog_tree_save, dialog);
+  gdk_threads_add_idle (launcher_dialog_tree_save_cb, dialog);
 
   /* select the moved item to there is no selection change on reload */
   treeview = gtk_builder_get_object (dialog->builder, "item-treeview");

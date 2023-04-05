@@ -14,7 +14,7 @@ SUBDIRS = \
 distclean-local:
 	rm -rf *.spec *.cache *~
 
-distuninstallcheck_listfiles = 						\ 
+distuninstallcheck_listfiles = 						\
 	find . -type f -print | grep -v ./share/icons/hicolor/icon-theme.cache
 
 desktopdir = $(datadir)/applications
@@ -39,7 +39,8 @@ EXTRA_DIST = \
 	intltool-merge.in \
 	intltool-update.in \
 	m4/introspection.m4 \
-	m4/vapigen.m4
+	m4/vapigen.m4 \
+	README.md
 
 DISTCLEANFILES = \
 	$(desktop_DATA) \

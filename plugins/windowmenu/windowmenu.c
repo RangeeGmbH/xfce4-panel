@@ -1010,8 +1010,6 @@ G_GNUC_END_IGNORE_DEPRECATIONS
   g_signal_connect (G_OBJECT (mi), "button-release-event",
       G_CALLBACK (window_menu_plugin_menu_window_item_activate), window);
 
-  g_free (utf8);
-  g_free (decorated);
 
   /* make the label pretty on long window names */
   label = gtk_bin_get_child (GTK_BIN (mi));
@@ -1026,6 +1024,9 @@ G_GNUC_END_IGNORE_DEPRECATIONS
       gtk_label_set_markup (GTK_LABEL (label), label_text);
       g_free (label_text);
     }
+
+  g_free (decorated);
+  g_free (utf8);
 
   gtk_label_set_ellipsize (GTK_LABEL (label), plugin->ellipsize_mode);
   gtk_label_set_max_width_chars (GTK_LABEL (label), plugin->max_width_chars);
@@ -1174,7 +1175,6 @@ window_menu_plugin_menu_new (WindowMenuPlugin *plugin)
   WnckWindow           *window;
   PangoFontDescription *italic, *bold;
   gint                  urgent_windows = 0;
-  gboolean              has_windows;
   gboolean              is_empty = TRUE;
   guint                 n_workspaces = 0;
   const gchar          *name = NULL;
@@ -1227,7 +1227,7 @@ window_menu_plugin_menu_new (WindowMenuPlugin *plugin)
           is_empty = FALSE;
         }
 
-      for (li = windows, has_windows = FALSE; li != NULL; li = li->next)
+      for (li = windows; li != NULL; li = li->next)
         {
           window = WNCK_WINDOW (li->data);
 
@@ -1250,9 +1250,6 @@ window_menu_plugin_menu_new (WindowMenuPlugin *plugin)
           mi = window_menu_plugin_menu_window_item_new (window, plugin, italic, bold, w, h);
           gtk_menu_shell_append (GTK_MENU_SHELL (menu), mi);
           gtk_widget_show (mi);
-
-          /* this workspace is not empty */
-          has_windows = TRUE;
 
           /* menu is not empty anymore */
           is_empty = FALSE;

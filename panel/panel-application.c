@@ -43,7 +43,6 @@
 
 #include <panel/panel-dbus-service.h>
 #include <panel/panel-base-window.h>
-#include <panel/panel-plugin-external-46.h>
 #include <panel/panel-window.h>
 #include <panel/panel-application.h>
 #include <panel/panel-itembar.h>
@@ -53,8 +52,9 @@
 #include <panel/panel-dialogs.h>
 #include <panel/panel-plugin-external.h>
 
-#define AUTOSAVE_INTERVAL (10 * 60)
-#define MIGRATE_BIN       HELPERDIR G_DIR_SEPARATOR_S "migrate"
+#define AUTOSAVE_INTERVAL   (10 * 60)
+#define MIGRATE_BIN         HELPERDIR G_DIR_SEPARATOR_S "migrate"
+#define PANELS_PROPERTY_BASE "/panels"
 
 
 
@@ -289,6 +289,7 @@ panel_application_xfconf_window_bindings (PanelApplication *application,
   {
     { "position-locked", G_TYPE_BOOLEAN },
     { "autohide-behavior", G_TYPE_UINT },
+    { "popdown-speed", G_TYPE_UINT },
     { "span-monitors", G_TYPE_BOOLEAN },
     { "mode", G_TYPE_UINT },
     { "size", G_TYPE_UINT },
@@ -304,14 +305,18 @@ panel_application_xfconf_window_bindings (PanelApplication *application,
     { "output-name", G_TYPE_STRING },
     { "position", G_TYPE_STRING },
     { "disable-struts", G_TYPE_BOOLEAN },
-    { "always-below", G_TYPE_BOOLEAN },
+    { NULL }
+  };
+  const PanelProperty  global_properties[] =
+  {
+    { "dark-mode", G_TYPE_BOOLEAN },
     { NULL }
   };
 
   panel_return_if_fail (XFCONF_IS_CHANNEL (application->xfconf));
 
   /* create the property base */
-  property_base = g_strdup_printf ("/panels/panel-%d", panel_window_get_id (window));
+  property_base = g_strdup_printf ("%s/panel-%d", PANELS_PROPERTY_BASE, panel_window_get_id (window));
 
   /* migrate old autohide property */
   panel_window_migrate_autohide_property (window, application->xfconf, property_base);
@@ -319,6 +324,8 @@ panel_application_xfconf_window_bindings (PanelApplication *application,
   /* bind all the properties */
   panel_properties_bind (application->xfconf, G_OBJECT (window),
                          property_base, properties, save_properties);
+  panel_properties_bind (application->xfconf, G_OBJECT (window),
+                         PANELS_PROPERTY_BASE, global_properties, save_properties);
 
   /* set locking for this panel */
   panel_window_set_locked (window,
@@ -799,13 +806,6 @@ panel_application_plugin_insert (PanelApplication  *application,
   /* add signal to monitor provider signals */
   g_signal_connect (G_OBJECT (provider), "provider-signal",
       G_CALLBACK (panel_application_plugin_provider_signal), application);
-
-  /* work around the problem that we need a background before
-   * realizing for 4.6 panel plugins */
-  if (PANEL_BASE_WINDOW (window)->background_style == PANEL_BG_STYLE_IMAGE
-      && PANEL_IS_PLUGIN_EXTERNAL_46 (provider))
-    panel_plugin_external_set_background_image (PANEL_PLUGIN_EXTERNAL (provider),
-        PANEL_BASE_WINDOW (window)->background_image);
 
   /* add the item to the panel */
   itembar = gtk_bin_get_child (GTK_BIN (window));
@@ -1481,7 +1481,7 @@ panel_application_new_window (PanelApplication *application,
   GtkWidget          *itembar;
   gchar              *property;
   gint                idx;
-  static const gchar *props[] = { "mode", "size", "nrows", "icon-size" };
+  static const gchar *props[] = { "mode", "size", "nrows", "icon-size", "dark-mode" };
   guint               i;
   gchar              *position;
   static gint         unqiue_id_counter = 1;
@@ -1506,7 +1506,7 @@ panel_application_new_window (PanelApplication *application,
   /* put the window in its own group */
   window_group = gtk_window_group_new ();
   gtk_window_group_add_window (window_group, GTK_WINDOW (window));
-  g_object_weak_ref (G_OBJECT (window), (GWeakNotify) g_object_unref, window_group);
+  g_object_weak_ref (G_OBJECT (window), _panel_utils_weak_notify, window_group);
 
   /* add the window to internal list */
   application->windows = g_slist_append (application->windows, window);

@@ -4,7 +4,7 @@ dnl Edit that file instead!
 dnl
 
 dnl
-dnl Copyright (c) 2004 - 2008 The Xfce development team
+dnl Copyright (c) 2004 - 2020 The Xfce development team
 dnl
 dnl 2005-2007 Jasper Huijsmans <jasper@xfce.org>
 dnl 2006-2008 Nick Schermer <nick@xfce.org>
@@ -17,10 +17,10 @@ m4_define([libxfce4panel_verinfo], [4:0:0]) dnl current:revision:age
 m4_define([libxfce4panel_version_api], [2.0])
 m4_define([xfce4_panel_config_version], [2])
 m4_define([xfce4_panel_version_major], [4])
-m4_define([xfce4_panel_version_minor], [14])
+m4_define([xfce4_panel_version_minor], [16])
 m4_define([xfce4_panel_version_micro], [3])
 m4_define([xfce4_panel_version_nano],  []) dnl leave this empty to have no nano version
-m4_define([xfce4_panel_version_build], [f3553ee6])
+m4_define([xfce4_panel_version_build], [1a7ed33f])
 m4_define([xfce4_panel_version_tag], [])
 m4_define([xfce4_panel_version], [xfce4_panel_version_major().xfce4_panel_version_minor().xfce4_panel_version_micro()ifelse(xfce4_panel_version_nano(), [], [], [.xfce4_panel_version_nano()])ifelse(xfce4_panel_version_tag(), [git], [xfce4_panel_version_tag()-xfce4_panel_version_build()], [xfce4_panel_version_tag()])])
 
@@ -32,20 +32,20 @@ m4_define([panel_debug_default], [ifelse(xfce4_panel_version_tag(), [git], [yes]
 dnl ***************************
 dnl *** Initialize autoconf ***
 dnl ***************************
-AC_COPYRIGHT([Copyright (c) 2002 - 2011
+AC_COPYRIGHT([Copyright (c) 2002 - 2020
         The Xfce development team. All rights reserved.
 
 Written for Xfce by Jasper Huijsmans <jasper@xfce.org>
 and Nick Schermer <nick@xfce.org>.])
-AC_INIT([xfce4-panel], [xfce4_panel_version], [http://bugzilla.xfce.org/], [xfce4-panel])
-AC_PREREQ([2.60])
+AC_INIT([xfce4-panel],[xfce4_panel_version],[http://bugzilla.xfce.org/],[xfce4-panel])
+AC_PREREQ([2.69])
 AC_REVISION([xfce4_panel_version_build])
 
 dnl ***************************
 dnl *** Initialize automake ***
 dnl ***************************
 AC_CONFIG_HEADERS([config.h])
-AM_INIT_AUTOMAKE([1.8 no-dist-gzip dist-bzip2 tar-ustar])
+AM_INIT_AUTOMAKE([1.8 no-dist-gzip dist-bzip2 tar-ustar foreign])
 AM_MAINTAINER_MODE()
 AC_CONFIG_MACRO_DIRS([m4])
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
@@ -63,15 +63,14 @@ AC_SUBST([HELPER_PATH_PREFIX])
 dnl *******************************
 dnl *** Check for UNIX variants ***
 dnl *******************************
-AC_AIX()
-AC_ISC_POSIX()
+AC_USE_SYSTEM_EXTENSIONS
 
 dnl ********************************
 dnl *** Check for basic programs ***
 dnl ********************************
 AC_PROG_CC()
 AM_PROG_CC_C_O()
-AC_PROG_LD()
+LT_PATH_LD([])
 AC_PROG_INSTALL()
 IT_PROG_INTLTOOL([0.35.0])
 AC_CHECK_PROGS([PERL], [perl5 perl])
@@ -123,7 +122,7 @@ AC_CHECK_FUNCS([bind_textdomain_codeset])
 dnl ******************************
 dnl *** Check for i18n support ***
 dnl ******************************
-XDT_I18N([am ar ast be bg bn ca cs da de el en_AU en_GB eo es et eu fa_IR fi fr gl he hr hu hy_AM id ie is it ja ka kk ko lt lv ms nb nl nn oc pa pl pt_BR pt ro ru si sk sl sq sr sv te th tr ug uk ur_PK ur vi zh_CN zh_HK zh_TW ])
+XDT_I18N([])
 
 dnl *******************************
 dnl *** Check for X11 installed ***
@@ -145,33 +144,31 @@ fi
 dnl ***********************************
 dnl *** Check for required packages ***
 dnl ***********************************
-XDT_CHECK_PACKAGE([LIBXFCE4UTIL], [libxfce4util-1.0], [4.13.0])
+XDT_CHECK_PACKAGE([LIBXFCE4UTIL], [libxfce4util-1.0], [4.15.6])
 XDT_CHECK_PACKAGE([GARCON], [garcon-1], [0.5.0])
 XDT_CHECK_PACKAGE([GARCON_GTK3], [garcon-gtk3-1], [0.5.0])
-XDT_CHECK_PACKAGE([LIBXFCE4UI], [libxfce4ui-2], [4.13.0])
+XDT_CHECK_PACKAGE([LIBXFCE4UI], [libxfce4ui-2], [4.15.8])
 XDT_CHECK_PACKAGE([XFCONF], [libxfconf-0], [4.13.2])
 XDT_CHECK_PACKAGE([GTK], [gtk+-3.0], [3.22.0])
 XDT_CHECK_PACKAGE([EXO], [exo-2], [0.11.2])
-XDT_CHECK_PACKAGE([GLIB], [glib-2.0], [2.42.0])
-XDT_CHECK_PACKAGE([GIO], [gio-2.0], [2.42.0])
-PKG_CHECK_MODULES([GIO_UNIX], [gio-unix-2.0 >= 2.42.0])
-XDT_CHECK_PACKAGE([GMODULE], [gmodule-2.0], [2.42.0])
+XDT_CHECK_PACKAGE([GLIB], [glib-2.0], [2.50.0])
+XDT_CHECK_PACKAGE([GIO], [gio-2.0], [2.50.0])
+PKG_CHECK_MODULES([GIO_UNIX], [gio-unix-2.0 >= 2.50.0])
+XDT_CHECK_PACKAGE([GMODULE], [gmodule-2.0], [2.50.0])
 XDT_CHECK_PACKAGE([CAIRO], [cairo], [1.0.0])
 XDT_CHECK_PACKAGE([LIBWNCK], [libwnck-3.0], [3.0])
 
-dnl ***********************************************************
-dnl *** Optional support for a GTK+2 version of the library ***
-dnl ***********************************************************
-XDT_CHECK_OPTIONAL_PACKAGE([GTK2],
-                           [gtk+-2.0], [2.20.0], [gtk2],
-                           [GTK+ 2 support])
-AM_CONDITIONAL([ENABLE_GTK2_LIBRARY], [test "x$GTK2_FOUND" = "xyes"])
+dnl *********************************************
+dnl *** Optional DBUSMENU for StatusNotifiers ***
+dnl *********************************************
+XDT_CHECK_OPTIONAL_PACKAGE([DBUSMENU], [dbusmenu-gtk3-0.4],
+                           [16.04.0], [dbusmenu-gtk3], [dbusmenu features])
 
 dnl **********************************
 dnl *** Optional GIO UNIX features ***
 dnl **********************************
 XDT_CHECK_OPTIONAL_PACKAGE([GIO_UNIX], [gio-unix-2.0],
-                           [2.42.0], [gio-unix], [GIO UNIX features])
+                           [2.50.0], [gio-unix], [GIO UNIX features])
 
 dnl ***************************************
 dnl *** Check for gobject-introspection ***
@@ -251,21 +248,19 @@ AC_MSG_CHECKING([PLATFORM_LDFLAGS])
 AC_MSG_RESULT([$PLATFORM_LDFLAGS])
 AC_SUBST([PLATFORM_LDFLAGS])
 
-AC_OUTPUT([
+AC_CONFIG_FILES([
 Makefile
 common/Makefile
 docs/Makefile
-docs/references/Makefile
-docs/references/version.xml
+docs/reference/Makefile
 icons/Makefile
 icons/16x16/Makefile
-icons/22x22/Makefile
 icons/24x24/Makefile
 icons/32x32/Makefile
 icons/48x48/Makefile
+icons/128x128/Makefile
 icons/scalable/Makefile
 libxfce4panel/Makefile
-libxfce4panel/libxfce4panel-1.0.pc
 libxfce4panel/libxfce4panel-2.0.pc
 libxfce4panel/libxfce4panel-config.h
 migrate/Makefile
@@ -297,6 +292,7 @@ plugins/windowmenu/Makefile
 plugins/windowmenu/windowmenu.desktop.in
 po/Makefile.in
 ])
+AC_OUTPUT
 
 dnl ***************************
 dnl *** Print configuration ***
@@ -306,9 +302,4 @@ echo "Build Configuration:"
 echo
 echo "* Debug Support:          $enable_debug"
 echo "* GNU Visibility:         $have_gnuc_visibility"
-if test x"$GTK2_FOUND" = x"yes"; then
-echo "* GTK+ 2 Support:         yes"
-else
-echo "* GTK+ 2 Support:         no"
-fi
 echo

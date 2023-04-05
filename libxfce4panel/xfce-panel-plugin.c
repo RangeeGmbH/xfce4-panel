@@ -28,9 +28,7 @@
 #endif
 
 #include <gtk/gtk.h>
-#if GTK_CHECK_VERSION (3, 0, 0)
 #include <gtk/gtkx.h>
-#endif
 #include <glib.h>
 #include <libxfce4util/libxfce4util.h>
 
@@ -95,6 +93,8 @@ static void          xfce_panel_plugin_set_size               (XfcePanelPluginPr
                                                                gint                              size);
 static void          xfce_panel_plugin_set_icon_size          (XfcePanelPluginProvider          *provider,
                                                                gint                              icon_size);
+static void          xfce_panel_plugin_set_dark_mode          (XfcePanelPluginProvider          *provider,
+                                                               gboolean                          dark_mode);
 static void          xfce_panel_plugin_set_mode               (XfcePanelPluginProvider          *provider,
                                                                XfcePanelPluginMode               mode);
 static void          xfce_panel_plugin_set_nrows              (XfcePanelPluginProvider          *provider,
@@ -132,6 +132,7 @@ enum
   PROP_ORIENTATION,
   PROP_SIZE,
   PROP_ICON_SIZE,
+  PROP_DARK_MODE,
   PROP_SMALL,
   PROP_SCREEN_POSITION,
   PROP_EXPAND,
@@ -179,6 +180,7 @@ struct _XfcePanelPluginPrivate
   gchar              **arguments;
   gint                 size; /* single row size */
   gint                 icon_size;
+  gboolean             dark_mode;
   guint                expand : 1;
   guint                shrink : 1;
   guint                nrows;
@@ -241,7 +243,7 @@ xfce_panel_plugin_class_init (XfcePanelPluginClass *klass)
    * @plugin : an #XfcePanelPlugin.
    *
    * This signal is emmitted when the About entry in the right-click
-   * menu is clicked. Plugin writes can use it to show information
+   * menu is clicked. Plugin writers can use it to show information
    * about the plugin and display credits of the developers, translators
    * and other contributors.
    *
@@ -261,7 +263,7 @@ xfce_panel_plugin_class_init (XfcePanelPluginClass *klass)
    * @plugin : an #XfcePanelPlugin.
    *
    * This signal is emmitted when the Properties entry in the right-click
-   * menu is clicked. Plugin writes can use this signal to open a
+   * menu is clicked. Plugin writers can use this signal to open a
    * plugin settings dialog.
    *
    * See also: xfce_panel_plugin_menu_show_configure() and
@@ -593,6 +595,22 @@ xfce_panel_plugin_class_init (XfcePanelPluginClass *klass)
                         | G_PARAM_STATIC_STRINGS);
 
   /**
+   * XfcePanelPlugin:dark-mode:
+   *
+   * Whether the #XfcePanelPlugin shall request the Gtk dark theme variant (based on the panel
+   * setting).
+   *
+   * Since: 4.14
+   **/
+  plugin_props[PROP_DARK_MODE] =
+      g_param_spec_boolean ("dark-mode",
+                            "Dark Mode",
+                            "Whether or not to request the Gtk dark theme variant",
+                            FALSE,
+                            G_PARAM_READWRITE
+                            | G_PARAM_STATIC_STRINGS);
+
+  /**
    * XfcePanelPlugin:screen-position:
    *
    * The #XfceScreenPosition of the #XfcePanelPlugin. Plugin writer can use it
@@ -611,8 +629,8 @@ xfce_panel_plugin_class_init (XfcePanelPluginClass *klass)
   /**
    * XfcePanelPlugin:small:
    *
-   * Wether the #XfcePanelPlugin is small enough to fit a single row of a multi-row panel.
-   * Plugin writes can use it to read or set this property, but xfce_panel_plugin_set_small()
+   * Whether the #XfcePanelPlugin is small enough to fit a single row of a multi-row panel.
+   * Plugin writers can use it to read or set this property, but xfce_panel_plugin_set_small()
    * is recommended.
    *
    * Since: 4.10
@@ -628,7 +646,7 @@ xfce_panel_plugin_class_init (XfcePanelPluginClass *klass)
   /**
    * XfcePanelPlugin:expand:
    *
-   * Wether the #XfcePanelPlugin expands on the panel. Plugin writes can use it
+   * Whether the #XfcePanelPlugin expands on the panel. Plugin writers can use it
    * to read or set this property, but xfce_panel_plugin_set_expand()
    * is recommended.
    **/
@@ -643,8 +661,8 @@ xfce_panel_plugin_class_init (XfcePanelPluginClass *klass)
   /**
    * XfcePanelPlugin:shrink:
    *
-   * Wether the #XfcePanelPlugin can shrink when there is no space left on the panel.
-   * Plugin writes can use it to read or set this property, but xfce_panel_plugin_set_shrink()
+   * Whether the #XfcePanelPlugin can shrink when there is no space left on the panel.
+   * Plugin writers can use it to read or set this property, but xfce_panel_plugin_set_shrink()
    * is recommended.
    *
    * Since: 4.10
@@ -710,6 +728,7 @@ xfce_panel_plugin_init (XfcePanelPlugin *plugin)
   plugin->priv->arguments = NULL;
   plugin->priv->size = 0;
   plugin->priv->icon_size = 0;
+  plugin->priv->dark_mode = FALSE;
   plugin->priv->small = FALSE;
   plugin->priv->expand = FALSE;
   plugin->priv->shrink = FALSE;
@@ -746,6 +765,7 @@ xfce_panel_plugin_provider_init (XfcePanelPluginProviderInterface *iface)
   iface->get_unique_id = (ProviderToPluginInt) xfce_panel_plugin_get_unique_id;
   iface->set_size = xfce_panel_plugin_set_size;
   iface->set_icon_size = xfce_panel_plugin_set_icon_size;
+  iface->set_dark_mode = xfce_panel_plugin_set_dark_mode;
   iface->set_mode = xfce_panel_plugin_set_mode;
   iface->set_nrows = xfce_panel_plugin_set_nrows;
   iface->set_screen_position = xfce_panel_plugin_set_screen_position;
@@ -821,6 +841,10 @@ xfce_panel_plugin_get_property (GObject    *object,
       g_value_set_uint (value, private->icon_size);
       break;
 
+    case PROP_DARK_MODE:
+      g_value_set_boolean (value, private->dark_mode);
+      break;
+
     case PROP_NROWS:
       g_value_set_uint (value, private->nrows);
       break;
@@ -890,6 +914,11 @@ xfce_panel_plugin_set_property (GObject      *object,
 
     case PROP_ARGUMENTS:
       private->arguments = g_value_dup_boxed (value);
+      break;
+
+    case PROP_DARK_MODE:
+      xfce_panel_plugin_set_dark_mode (XFCE_PANEL_PLUGIN_PROVIDER (object),
+                                       g_value_get_boolean (value));
       break;
 
     case PROP_SMALL:
@@ -1017,8 +1046,6 @@ xfce_panel_plugin_button_press_event (GtkWidget      *widget,
   if (event->button == 3
       || (event->button == 1 && modifiers == GDK_CONTROL_MASK))
     {
-      return FALSE;
-
       /* get the panel menu */
       menu = xfce_panel_plugin_menu_get (plugin);
 
@@ -1028,12 +1055,7 @@ xfce_panel_plugin_button_press_event (GtkWidget      *widget,
         gtk_widget_set_sensitive (item, plugin->priv->menu_blocked == 0);
 
       /* popup the menu */
-#if GTK_CHECK_VERSION (3, 0, 0)
       gtk_menu_popup_at_pointer (menu, (GdkEvent *) event);
-#else
-      gtk_menu_popup (menu, NULL, NULL, NULL, NULL,
-                      event->button, event->time);
-#endif
       return TRUE;
     }
 
@@ -1043,8 +1065,10 @@ xfce_panel_plugin_button_press_event (GtkWidget      *widget,
 
 
 static gboolean
-xfce_panel_plugin_idle_move (XfcePanelPlugin *plugin)
+xfce_panel_plugin_idle_move (gpointer user_data)
 {
+  XfcePanelPlugin *plugin = user_data;
+
   panel_return_val_if_fail (XFCE_IS_PANEL_PLUGIN (plugin), FALSE);
   panel_return_val_if_fail (XFCE_IS_PANEL_PLUGIN_PROVIDER (plugin), FALSE);
 
@@ -1064,7 +1088,7 @@ xfce_panel_plugin_menu_move (XfcePanelPlugin *plugin)
   panel_return_if_fail (XFCE_IS_PANEL_PLUGIN_PROVIDER (plugin));
 
   /* wait for the popup to go down */
-  g_idle_add ((GSourceFunc) (void (*)(void)) xfce_panel_plugin_idle_move, plugin);
+  g_idle_add (xfce_panel_plugin_idle_move, plugin);
 }
 
 
@@ -1085,7 +1109,7 @@ xfce_panel_plugin_menu_remove (XfcePanelPlugin *plugin)
   gtk_window_set_screen (GTK_WINDOW (dialog),
       gtk_widget_get_screen (GTK_WIDGET (plugin)));
   gtk_message_dialog_format_secondary_text (GTK_MESSAGE_DIALOG (dialog),
-      _("If you remove the item from the panel, it is permanently lost."));
+      _("Removing the item from the panel also means its configuration will be lost."));
   gtk_dialog_add_buttons (GTK_DIALOG (dialog), _("_Cancel"),
       GTK_RESPONSE_NO, _("_Remove"), GTK_RESPONSE_YES, NULL);
   gtk_dialog_set_default_response (GTK_DIALOG (dialog), GTK_RESPONSE_NO);
@@ -1175,26 +1199,6 @@ xfce_panel_plugin_menu_panel_help (XfcePanelPlugin *plugin)
 
 
 
-static void
-xfce_panel_plugin_menu_destroy (XfcePanelPlugin *plugin)
-{
-  GSList *li;
-
-  panel_return_if_fail (XFCE_IS_PANEL_PLUGIN (plugin));
-
-  if (plugin->priv->menu != NULL)
-    {
-      /* remove custom items before they get destroyed */
-      for (li = plugin->priv->menu_items; li != NULL; li = li->next)
-        gtk_container_remove (GTK_CONTAINER (plugin->priv->menu), GTK_WIDGET (li->data));
-
-      gtk_menu_detach (GTK_MENU (plugin->priv->menu));
-      plugin->priv->menu = NULL;
-    }
-}
-
-
-
 static GtkMenu *
 xfce_panel_plugin_menu_get (XfcePanelPlugin *plugin)
 {
@@ -1218,6 +1222,10 @@ xfce_panel_plugin_menu_get (XfcePanelPlugin *plugin)
       gtk_menu_shell_append (GTK_MENU_SHELL (menu), item);
       gtk_widget_set_sensitive (item, FALSE);
       gtk_widget_show (item);
+
+      /* add custom menu items */
+      for (li = plugin->priv->menu_items; li != NULL; li = li->next)
+        gtk_menu_shell_append (GTK_MENU_SHELL (menu), GTK_WIDGET (li->data));
 
       /* separator */
       item = gtk_separator_menu_item_new ();
@@ -1270,10 +1278,6 @@ G_GNUC_BEGIN_IGNORE_DEPRECATIONS
           gtk_image_menu_item_set_image (GTK_IMAGE_MENU_ITEM (item), image);
 G_GNUC_END_IGNORE_DEPRECATIONS
           gtk_widget_show (image);
-
-          /* add custom menu items */
-          for (li = plugin->priv->menu_items; li != NULL; li = li->next)
-            gtk_menu_shell_append (GTK_MENU_SHELL (menu), GTK_WIDGET (li->data));
 
           /* separator */
           item = gtk_separator_menu_item_new ();
@@ -1494,6 +1498,35 @@ xfce_panel_plugin_set_icon_size (XfcePanelPluginProvider *provider,
       /* also update the size so the icon gets re-rendered */
       xfce_panel_plugin_set_size (provider, -1);
     }
+}
+
+
+
+static void
+xfce_panel_plugin_set_dark_mode (XfcePanelPluginProvider *provider,
+                                 gboolean                 dark_mode)
+{
+#if GTK_CHECK_VERSION (3, 0, 0)
+  XfcePanelPlugin *plugin = XFCE_PANEL_PLUGIN (provider);
+  GtkSettings *gtk_settings;
+
+  if (G_LIKELY (plugin->priv->dark_mode != dark_mode))
+    {
+      plugin->priv->dark_mode = dark_mode;
+      g_object_notify_by_pspec (G_OBJECT (plugin), plugin_props[PROP_DARK_MODE]);
+
+      gtk_settings = gtk_widget_get_settings (GTK_WIDGET (plugin));
+
+      if (!dark_mode)
+        gtk_settings_reset_property (gtk_settings,
+                                     "gtk-application-prefer-dark-theme");
+
+      g_object_set (gtk_settings,
+                    "gtk-application-prefer-dark-theme",
+                    dark_mode,
+                    NULL);
+    }
+#endif
 }
 
 
@@ -1938,7 +1971,7 @@ xfce_panel_plugin_get_expand (XfcePanelPlugin *plugin)
  * @plugin : an #XfcePanelPlugin.
  * @expand : whether to expand the plugin.
  *
- * Wether the plugin should expand of not
+ * Whether the plugin should expand of not
  **/
 void
 xfce_panel_plugin_set_expand (XfcePanelPlugin *plugin,
@@ -1995,7 +2028,7 @@ xfce_panel_plugin_get_shrink (XfcePanelPlugin *plugin)
  * @plugin : an #XfcePanelPlugin.
  * @shrink : whether the plugin can shrink.
  *
- * Wether the plugin can shrink if the size on the panel
+ * Whether the plugin can shrink if the size on the panel
  * is limited. This does not work if the plugin is expanded.
  **/
 void
@@ -2265,7 +2298,8 @@ xfce_panel_plugin_add_action_widget (XfcePanelPlugin *plugin,
  * @item   : a #GtkMenuItem.
  *
  * Insert a custom menu item to the plugin's right click menu. This item
- * is packed below the "Move" menu item.
+ * is packed below the first item in the menu, which displays the plugin's
+ * name.
  **/
 void
 xfce_panel_plugin_menu_insert_item (XfcePanelPlugin *plugin,
@@ -2353,6 +2387,44 @@ xfce_panel_plugin_menu_show_about (XfcePanelPlugin *plugin)
   xfce_panel_plugin_provider_emit_signal (XFCE_PANEL_PLUGIN_PROVIDER (plugin),
                                           PROVIDER_SIGNAL_SHOW_ABOUT);
 }
+
+
+
+/**
+ * xfce_panel_plugin_menu_destroy:
+ * @plugin : an #XfcePanelPlugin.
+ *
+ * Remove all custom menu items added through #xfce_panel_plugin_menu_insert_item
+ * from the menu.
+ **/
+ void
+ xfce_panel_plugin_menu_destroy (XfcePanelPlugin *plugin)
+ {
+   GSList *li;
+
+   panel_return_if_fail (XFCE_IS_PANEL_PLUGIN (plugin));
+   panel_return_if_fail (XFCE_PANEL_PLUGIN_CONSTRUCTED (plugin));
+
+   /* ignore the request for destruction if the menu is popped up */
+   if (plugin->priv->menu != NULL && !gtk_widget_get_visible (GTK_WIDGET (plugin->priv->menu)))
+     {
+       /* remove custom items before they get destroyed */
+       for (li = plugin->priv->menu_items; li != NULL; li = li->next)
+         {
+           if (GTK_IS_WIDGET (li->data))
+             {
+               gtk_container_remove (GTK_CONTAINER (plugin->priv->menu), GTK_WIDGET (li->data));
+               g_object_unref (li->data);
+             }
+           xfce_panel_plugin_menu_item_destroy (GTK_WIDGET (li->data), plugin);
+         }
+       g_slist_free (li);
+
+       gtk_menu_detach (GTK_MENU (plugin->priv->menu));
+       plugin->priv->menu = NULL;
+     }
+ }
+
 
 
 
@@ -2503,12 +2575,8 @@ xfce_panel_plugin_arrow_type (XfcePanelPlugin *plugin)
 {
   XfceScreenPosition  screen_position;
   GdkScreen          *screen;
-#if GTK_CHECK_VERSION (3, 0, 0)
   GdkDisplay         *display;
   GdkMonitor         *monitor;
-#else
-  gint                monitor_num;
-#endif
   GdkRectangle        geometry;
   gint                x, y;
   GdkWindow          *window;
@@ -2536,14 +2604,10 @@ xfce_panel_plugin_arrow_type (XfcePanelPlugin *plugin)
 
       /* get the monitor geometry */
       screen = gtk_widget_get_screen (GTK_WIDGET (plugin));
-#if GTK_CHECK_VERSION (3, 0, 0)
       display = gdk_screen_get_display (screen);
       monitor = gdk_display_get_monitor_at_window (display, window);
       gdk_monitor_get_geometry (monitor, &geometry);
-#else
-      monitor_num = gdk_screen_get_monitor_at_window (screen, window);
-      gdk_screen_get_monitor_geometry (screen, monitor_num, &geometry);
-#endif
+
       /* get the plugin root origin */
       gdk_window_get_root_origin (window, &x, &y);
 
@@ -2563,11 +2627,11 @@ xfce_panel_plugin_arrow_type (XfcePanelPlugin *plugin)
  * @menu_widget   : a #GtkWidget that will be used as popup menu.
  * @attach_widget : (allow-none): a #GtkWidget relative to which the menu should be positioned.
  * @x             : (out): return location for the x coordinate.
- * @y             : (out): return location for the x coordinate.
+ * @y             : (out): return location for the y coordinate.
  *
- * The menu widget is positioned relative to @attach_widget.
- * If @attach_widget is NULL, the menu widget is instead positioned
- * relative to @panel_plugin.
+ * Computes the x and y coordinates to position the @menu_widget
+ * relative to @attach_widget. If @attach_widget is NULL, the computed
+ * position will be relative to @plugin.
  *
  * This function is intended for custom menu widgets.
  * For a regular #GtkMenu you should use xfce_panel_plugin_position_menu()
@@ -2585,13 +2649,8 @@ xfce_panel_plugin_position_widget (XfcePanelPlugin *plugin,
   GtkRequisition  requisition;
   GdkScreen      *screen;
   GdkRectangle    geometry;
-#if GTK_CHECK_VERSION (3, 0, 0)
   GdkDisplay     *display;
   GdkMonitor     *monitor;
-#else
-  gint            monitor_num;
-#endif
-  GTimeVal        now_t, end_t;
   GtkWidget      *toplevel, *plug;
   gint            px, py;
   GtkAllocation   alloc;
@@ -2614,11 +2673,7 @@ xfce_panel_plugin_position_widget (XfcePanelPlugin *plugin,
     gtk_widget_realize (attach_widget);
 
   /* get the menu/widget size request */
-#if GTK_CHECK_VERSION (3, 0, 0)
   gtk_widget_get_preferred_size (menu_widget, &requisition, NULL);
-#else
-  gtk_widget_size_request (menu_widget, &requisition);
-#endif
 
   /* get the root position of the attach widget */
   toplevel = gtk_widget_get_toplevel (attach_widget);
@@ -2628,14 +2683,8 @@ xfce_panel_plugin_position_widget (XfcePanelPlugin *plugin,
   plug = gtk_widget_get_ancestor (attach_widget, GTK_TYPE_PLUG);
   if (plug != NULL)
     {
-#if GTK_CHECK_VERSION (3, 0, 0)
        gdk_window_get_geometry (gtk_plug_get_socket_window (GTK_PLUG (plug)),
                                 &px, &py, NULL, NULL);
-#else
-       gdk_window_get_geometry (gtk_plug_get_socket_window (GTK_PLUG (plug)),
-                                &px, &py, NULL, NULL, NULL);
-#endif
-
        *x += px;
        *y += py;
     }
@@ -2645,8 +2694,7 @@ xfce_panel_plugin_position_widget (XfcePanelPlugin *plugin,
    * use the coordinates */
   if (plugin->priv->panel_lock > 0)
     {
-      g_get_current_time (&end_t);
-      g_time_val_add (&end_t, G_USEC_PER_SEC / 2);
+      gint64 end_t = g_get_monotonic_time () + G_USEC_PER_SEC / 2;
 
       while (*x == -9999 && *y == -9999)
         {
@@ -2656,10 +2704,7 @@ xfce_panel_plugin_position_widget (XfcePanelPlugin *plugin,
           gdk_window_get_position (gtk_widget_get_window (attach_widget), x, y);
 
           /* don't try longer then 1/2 a second */
-          g_get_current_time (&now_t);
-          if (now_t.tv_sec > end_t.tv_sec
-              || (now_t.tv_sec == end_t.tv_sec
-                  && now_t.tv_usec > end_t.tv_usec))
+          if (g_get_monotonic_time () > end_t)
             break;
         }
     }
@@ -2690,14 +2735,9 @@ xfce_panel_plugin_position_widget (XfcePanelPlugin *plugin,
 
   /* get the monitor geometry */
   screen = gtk_widget_get_screen (attach_widget);
-#if GTK_CHECK_VERSION (3, 0, 0)
   display = gdk_screen_get_display (screen);
   monitor = gdk_display_get_monitor_at_window (display, gtk_widget_get_window (attach_widget));
   gdk_monitor_get_geometry (monitor, &geometry);
-#else
-  monitor_num = gdk_screen_get_monitor_at_window (screen, gtk_widget_get_window (attach_widget));
-  gdk_screen_get_monitor_geometry (screen, monitor_num, &geometry);
-#endif
 
   /* keep the menu inside the screen */
   if (*x > geometry.x + geometry.width - requisition.width)
@@ -2774,15 +2814,10 @@ xfce_panel_plugin_position_menu (GtkMenu  *menu,
   xfce_panel_plugin_position_widget (XFCE_PANEL_PLUGIN (panel_plugin),
                                      GTK_WIDGET (menu), attach_widget, x, y);
 
-#if GTK_CHECK_VERSION (3, 0, 0)
   /* FIXME */
   /* A workaround for Gtk3 popup menus with scroll buttons */
   /* Menus are "pushed in" anyway */
   *push_in = FALSE;
-#else
-  /* keep the menu inside screen */
-  *push_in = TRUE;
-#endif
 }
 
 
@@ -2818,13 +2853,13 @@ xfce_panel_plugin_focus_widget (XfcePanelPlugin *plugin,
  * @plugin  : an #XfcePanelPlugin.
  * @blocked : new blocking state of this plugin.
  *
- * Wether this plugin blocks the autohide functality of the panel. Use
+ * Whether this plugin blocks the autohide functionality of the panel. Use
  * this when you 'popup' something that is visually attached to the
  * plugin at it will look weird for a user if the panel will hide while
  * he/she is working in the popup.
  *
- * For menus it there is xfce_panel_plugin_register_menu() which will
- * take care of this.
+ * For menus use xfce_panel_plugin_register_menu() which will take care
+ * of this.
  **/
 void
 xfce_panel_plugin_block_autohide (XfcePanelPlugin *plugin,

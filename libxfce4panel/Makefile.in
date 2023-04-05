@@ -90,29 +90,21 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
-
-#
-# Gtk+ 2 support library
-#
-@ENABLE_GTK2_LIBRARY_TRUE@am__append_1 = libxfce4panel-1.0.la
-@ENABLE_GTK2_LIBRARY_TRUE@am__append_2 = libxfce4panel-1.0.pc
-@MAINTAINER_MODE_TRUE@am__append_3 = \
+@MAINTAINER_MODE_TRUE@am__append_1 = \
 @MAINTAINER_MODE_TRUE@	$(libxfce4panel_built_sources)
 
-@HAVE_INTROSPECTION_TRUE@am__append_4 = libxfce4panel-2.0.gir
-@HAVE_INTROSPECTION_TRUE@am__append_5 = $(gir_DATA) $(typelib_DATA)
+@HAVE_INTROSPECTION_TRUE@am__append_2 = Libxfce4panel-2.0.gir
+@HAVE_INTROSPECTION_TRUE@am__append_3 = $(gir_DATA) $(typelib_DATA)
 subdir = libxfce4panel
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/configure.ac
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
-DIST_COMMON = $(srcdir)/Makefile.am \
-	$(am__libxfce4panel1_include_HEADERS_DIST) \
-	$(libxfce4panel_include_HEADERS) $(am__DIST_COMMON)
+DIST_COMMON = $(srcdir)/Makefile.am $(libxfce4panel_include_HEADERS) \
+	$(am__DIST_COMMON)
 mkinstalldirs = $(install_sh) -d
 CONFIG_HEADER = $(top_builddir)/config.h
-CONFIG_CLEAN_FILES = libxfce4panel-1.0.pc libxfce4panel-2.0.pc \
-	libxfce4panel-config.h
+CONFIG_CLEAN_FILES = libxfce4panel-2.0.pc libxfce4panel-config.h
 CONFIG_CLEAN_VPATH_FILES =
 am__vpath_adj_setup = srcdirstrip=`echo "$(srcdir)" | sed 's|.|.|g'`;
 am__vpath_adj = case $$p in \
@@ -143,57 +135,17 @@ am__uninstall_files_from_dir = { \
   }
 am__installdirs = "$(DESTDIR)$(libdir)" "$(DESTDIR)$(girdir)" \
 	"$(DESTDIR)$(pkgconfigdir)" "$(DESTDIR)$(typelibdir)" \
-	"$(DESTDIR)$(vapidir)" \
-	"$(DESTDIR)$(libxfce4panel1_includedir)" \
-	"$(DESTDIR)$(libxfce4panel_includedir)"
+	"$(DESTDIR)$(vapidir)" "$(DESTDIR)$(libxfce4panel_includedir)"
 LTLIBRARIES = $(lib_LTLIBRARIES)
 am__DEPENDENCIES_1 =
-@ENABLE_GTK2_LIBRARY_TRUE@libxfce4panel_1_0_la_DEPENDENCIES =  \
-@ENABLE_GTK2_LIBRARY_TRUE@	$(am__DEPENDENCIES_1) \
-@ENABLE_GTK2_LIBRARY_TRUE@	$(am__DEPENDENCIES_1)
-am__libxfce4panel_1_0_la_SOURCES_DIST = libxfce4panel-enum-types.h \
-	libxfce4panel-alias.h libxfce4panel-aliasdef.c \
-	libxfce4panel-enum-types.c libxfce4panel-marshal.c \
-	libxfce4panel-marshal.h libxfce4panel.h libxfce4panel-config.h \
-	libxfce4panel-enums.h xfce-arrow-button.h \
-	xfce-panel-convenience.h xfce-panel-macros.h \
-	xfce-panel-macros-46.h xfce-panel-plugin.h \
-	xfce-panel-plugin-provider.h xfce-panel-image.h \
-	libxfce4panel-config.c xfce-arrow-button.c xfce-hvbox.c \
-	xfce-panel-convenience.c xfce-panel-plugin.c \
-	xfce-panel-plugin-provider.c xfce-panel-image.c
-am__objects_1 =
-am__objects_2 = $(am__objects_1) \
-	libxfce4panel_1_0_la-libxfce4panel-aliasdef.lo \
-	libxfce4panel_1_0_la-libxfce4panel-enum-types.lo \
-	libxfce4panel_1_0_la-libxfce4panel-marshal.lo
-@ENABLE_GTK2_LIBRARY_TRUE@am_libxfce4panel_1_0_la_OBJECTS =  \
-@ENABLE_GTK2_LIBRARY_TRUE@	$(am__objects_2) $(am__objects_1) \
-@ENABLE_GTK2_LIBRARY_TRUE@	libxfce4panel_1_0_la-libxfce4panel-config.lo \
-@ENABLE_GTK2_LIBRARY_TRUE@	libxfce4panel_1_0_la-xfce-arrow-button.lo \
-@ENABLE_GTK2_LIBRARY_TRUE@	libxfce4panel_1_0_la-xfce-hvbox.lo \
-@ENABLE_GTK2_LIBRARY_TRUE@	libxfce4panel_1_0_la-xfce-panel-convenience.lo \
-@ENABLE_GTK2_LIBRARY_TRUE@	libxfce4panel_1_0_la-xfce-panel-plugin.lo \
-@ENABLE_GTK2_LIBRARY_TRUE@	libxfce4panel_1_0_la-xfce-panel-plugin-provider.lo \
-@ENABLE_GTK2_LIBRARY_TRUE@	libxfce4panel_1_0_la-xfce-panel-image.lo
-libxfce4panel_1_0_la_OBJECTS = $(am_libxfce4panel_1_0_la_OBJECTS)
-AM_V_lt = $(am__v_lt_@AM_V@)
-am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
-am__v_lt_0 = --silent
-am__v_lt_1 = 
-libxfce4panel_1_0_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC \
-	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CCLD) \
-	$(libxfce4panel_1_0_la_CFLAGS) $(CFLAGS) \
-	$(libxfce4panel_1_0_la_LDFLAGS) $(LDFLAGS) -o $@
-@ENABLE_GTK2_LIBRARY_TRUE@am_libxfce4panel_1_0_la_rpath = -rpath \
-@ENABLE_GTK2_LIBRARY_TRUE@	$(libdir)
 libxfce4panel_2_0_la_DEPENDENCIES = $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1)
-am__objects_3 = $(am__objects_1) \
+am__objects_1 =
+am__objects_2 = $(am__objects_1) \
 	libxfce4panel_2_0_la-libxfce4panel-aliasdef.lo \
 	libxfce4panel_2_0_la-libxfce4panel-enum-types.lo \
 	libxfce4panel_2_0_la-libxfce4panel-marshal.lo
-am_libxfce4panel_2_0_la_OBJECTS = $(am__objects_3) $(am__objects_1) \
+am_libxfce4panel_2_0_la_OBJECTS = $(am__objects_2) $(am__objects_1) \
 	libxfce4panel_2_0_la-libxfce4panel-config.lo \
 	libxfce4panel_2_0_la-xfce-arrow-button.lo \
 	libxfce4panel_2_0_la-xfce-panel-convenience.lo \
@@ -201,6 +153,10 @@ am_libxfce4panel_2_0_la_OBJECTS = $(am__objects_3) $(am__objects_1) \
 	libxfce4panel_2_0_la-xfce-panel-plugin-provider.lo \
 	libxfce4panel_2_0_la-xfce-panel-image.lo
 libxfce4panel_2_0_la_OBJECTS = $(am_libxfce4panel_2_0_la_OBJECTS)
+AM_V_lt = $(am__v_lt_@AM_V@)
+am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
+am__v_lt_0 = --silent
+am__v_lt_1 = 
 libxfce4panel_2_0_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC \
 	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CCLD) \
 	$(libxfce4panel_2_0_la_CFLAGS) $(CFLAGS) \
@@ -221,16 +177,6 @@ DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__maybe_remake_depfiles = depfiles
 am__depfiles_remade =  \
-	./$(DEPDIR)/libxfce4panel_1_0_la-libxfce4panel-aliasdef.Plo \
-	./$(DEPDIR)/libxfce4panel_1_0_la-libxfce4panel-config.Plo \
-	./$(DEPDIR)/libxfce4panel_1_0_la-libxfce4panel-enum-types.Plo \
-	./$(DEPDIR)/libxfce4panel_1_0_la-libxfce4panel-marshal.Plo \
-	./$(DEPDIR)/libxfce4panel_1_0_la-xfce-arrow-button.Plo \
-	./$(DEPDIR)/libxfce4panel_1_0_la-xfce-hvbox.Plo \
-	./$(DEPDIR)/libxfce4panel_1_0_la-xfce-panel-convenience.Plo \
-	./$(DEPDIR)/libxfce4panel_1_0_la-xfce-panel-image.Plo \
-	./$(DEPDIR)/libxfce4panel_1_0_la-xfce-panel-plugin-provider.Plo \
-	./$(DEPDIR)/libxfce4panel_1_0_la-xfce-panel-plugin.Plo \
 	./$(DEPDIR)/libxfce4panel_2_0_la-libxfce4panel-aliasdef.Plo \
 	./$(DEPDIR)/libxfce4panel_2_0_la-libxfce4panel-config.Plo \
 	./$(DEPDIR)/libxfce4panel_2_0_la-libxfce4panel-enum-types.Plo \
@@ -259,23 +205,15 @@ AM_V_CCLD = $(am__v_CCLD_@AM_V@)
 am__v_CCLD_ = $(am__v_CCLD_@AM_DEFAULT_V@)
 am__v_CCLD_0 = @echo "  CCLD    " $@;
 am__v_CCLD_1 = 
-SOURCES = $(libxfce4panel_1_0_la_SOURCES) \
-	$(libxfce4panel_2_0_la_SOURCES)
-DIST_SOURCES = $(am__libxfce4panel_1_0_la_SOURCES_DIST) \
-	$(libxfce4panel_2_0_la_SOURCES)
+SOURCES = $(libxfce4panel_2_0_la_SOURCES)
+DIST_SOURCES = $(libxfce4panel_2_0_la_SOURCES)
 am__can_run_installinfo = \
   case $$AM_UPDATE_INFO_DIR in \
     n|no|NO) false;; \
     *) (install-info --version) >/dev/null 2>&1;; \
   esac
 DATA = $(gir_DATA) $(pkgconfig_DATA) $(typelib_DATA) $(vapi_DATA)
-am__libxfce4panel1_include_HEADERS_DIST = libxfce4panel-enum-types.h \
-	libxfce4panel.h libxfce4panel-config.h libxfce4panel-enums.h \
-	xfce-arrow-button.h xfce-panel-convenience.h \
-	xfce-panel-macros.h xfce-panel-macros-46.h xfce-panel-plugin.h \
-	xfce-panel-plugin-provider.h xfce-panel-image.h xfce-hvbox.h
-HEADERS = $(libxfce4panel1_include_HEADERS) \
-	$(libxfce4panel_include_HEADERS)
+HEADERS = $(libxfce4panel_include_HEADERS)
 am__tagged_files = $(HEADERS) $(SOURCES) $(TAGS_FILES) $(LISP)
 # Read a list of newline-separated strings from the standard input,
 # and print each of them once, without duplicates.  Input order is
@@ -473,7 +411,6 @@ TEST_LOG_DRIVER = $(SHELL) $(top_srcdir)/test-driver
 TEST_LOG_COMPILE = $(TEST_LOG_COMPILER) $(AM_TEST_LOG_FLAGS) \
 	$(TEST_LOG_FLAGS)
 am__DIST_COMMON = $(srcdir)/Makefile.in \
-	$(srcdir)/libxfce4panel-1.0.pc.in \
 	$(srcdir)/libxfce4panel-2.0.pc.in \
 	$(srcdir)/libxfce4panel-config.h.in $(top_srcdir)/depcomp \
 	$(top_srcdir)/test-driver
@@ -500,6 +437,10 @@ CPP = @CPP@
 CPPFLAGS = @CPPFLAGS@
 CYGPATH_W = @CYGPATH_W@
 DATADIRNAME = @DATADIRNAME@
+DBUSMENU_CFLAGS = @DBUSMENU_CFLAGS@
+DBUSMENU_LIBS = @DBUSMENU_LIBS@
+DBUSMENU_REQUIRED_VERSION = @DBUSMENU_REQUIRED_VERSION@
+DBUSMENU_VERSION = @DBUSMENU_VERSION@
 DEFS = @DEFS@
 DEPDIR = @DEPDIR@
 DLLTOOL = @DLLTOOL@
@@ -544,10 +485,6 @@ GMODULE_VERSION = @GMODULE_VERSION@
 GMOFILES = @GMOFILES@
 GMSGFMT = @GMSGFMT@
 GREP = @GREP@
-GTK2_CFLAGS = @GTK2_CFLAGS@
-GTK2_LIBS = @GTK2_LIBS@
-GTK2_REQUIRED_VERSION = @GTK2_REQUIRED_VERSION@
-GTK2_VERSION = @GTK2_VERSION@
 GTKDOC_CHECK = @GTKDOC_CHECK@
 GTKDOC_CHECK_PATH = @GTKDOC_CHECK_PATH@
 GTKDOC_DEPS_CFLAGS = @GTKDOC_DEPS_CFLAGS@
@@ -670,6 +607,8 @@ X_CFLAGS = @X_CFLAGS@
 X_EXTRA_LIBS = @X_EXTRA_LIBS@
 X_LIBS = @X_LIBS@
 X_PRE_LIBS = @X_PRE_LIBS@
+_GI_EXP_DATADIR = @_GI_EXP_DATADIR@
+_GI_EXP_LIBDIR = @_GI_EXP_LIBDIR@
 abs_builddir = @abs_builddir@
 abs_srcdir = @abs_srcdir@
 abs_top_builddir = @abs_top_builddir@
@@ -725,7 +664,7 @@ target_alias = @target_alias@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
-DISTCLEANFILES = $(am__append_3) $(am__append_5)
+DISTCLEANFILES = $(am__append_1) $(am__append_3)
 AM_CPPFLAGS = \
 	-I$(top_srcdir) \
 	-DG_LOG_DOMAIN=\"libxfce4panel\" \
@@ -733,7 +672,9 @@ AM_CPPFLAGS = \
 	-DPACKAGE_LOCALE_DIR=\"$(localedir)\" \
 	$(PLATFORM_CPPFLAGS)
 
-lib_LTLIBRARIES = libxfce4panel-2.0.la $(am__append_1)
+lib_LTLIBRARIES = \
+	libxfce4panel-2.0.la
+
 libxfce4panel_public_built_sources = \
 	libxfce4panel-enum-types.h
 
@@ -752,7 +693,6 @@ libxfce4panel_headers = \
 	xfce-arrow-button.h \
 	xfce-panel-convenience.h \
 	xfce-panel-macros.h \
-	xfce-panel-macros-46.h \
 	xfce-panel-plugin.h \
 	xfce-panel-plugin-provider.h \
 	xfce-panel-image.h
@@ -796,44 +736,7 @@ libxfce4panel_2_0_la_LIBADD = \
 # Pkg-config file
 #
 pkgconfigdir = $(libdir)/pkgconfig
-pkgconfig_DATA = libxfce4panel-$(LIBXFCE4PANEL_VERSION_API).pc \
-	$(am__append_2)
-@ENABLE_GTK2_LIBRARY_TRUE@libxfce4panel1_includedir = \
-@ENABLE_GTK2_LIBRARY_TRUE@	$(includedir)/xfce4/libxfce4panel-1.0/libxfce4panel
-
-@ENABLE_GTK2_LIBRARY_TRUE@libxfce4panel1_include_HEADERS = \
-@ENABLE_GTK2_LIBRARY_TRUE@	$(libxfce4panel_public_built_sources) \
-@ENABLE_GTK2_LIBRARY_TRUE@	$(libxfce4panel_headers) \
-@ENABLE_GTK2_LIBRARY_TRUE@	xfce-hvbox.h
-
-@ENABLE_GTK2_LIBRARY_TRUE@libxfce4panel_1_0_la_SOURCES = \
-@ENABLE_GTK2_LIBRARY_TRUE@	$(libxfce4panel_built_sources) \
-@ENABLE_GTK2_LIBRARY_TRUE@	$(libxfce4panel_headers) \
-@ENABLE_GTK2_LIBRARY_TRUE@	libxfce4panel-config.c \
-@ENABLE_GTK2_LIBRARY_TRUE@	xfce-arrow-button.c \
-@ENABLE_GTK2_LIBRARY_TRUE@	xfce-hvbox.c \
-@ENABLE_GTK2_LIBRARY_TRUE@	xfce-panel-convenience.c \
-@ENABLE_GTK2_LIBRARY_TRUE@	xfce-panel-plugin.c \
-@ENABLE_GTK2_LIBRARY_TRUE@	xfce-panel-plugin-provider.c \
-@ENABLE_GTK2_LIBRARY_TRUE@	xfce-panel-image.c
-
-@ENABLE_GTK2_LIBRARY_TRUE@libxfce4panel_1_0_la_CFLAGS = \
-@ENABLE_GTK2_LIBRARY_TRUE@	$(GTK2_CFLAGS) \
-@ENABLE_GTK2_LIBRARY_TRUE@	$(LIBXFCE4UTIL_CFLAGS) \
-@ENABLE_GTK2_LIBRARY_TRUE@	$(PLATFORM_CFLAGS)
-
-@ENABLE_GTK2_LIBRARY_TRUE@libxfce4panel_1_0_la_LDFLAGS = \
-@ENABLE_GTK2_LIBRARY_TRUE@	-no-undefined \
-@ENABLE_GTK2_LIBRARY_TRUE@	-export-dynamic \
-@ENABLE_GTK2_LIBRARY_TRUE@	-version-info $(LIBXFCE4PANEL_VERINFO) \
-@ENABLE_GTK2_LIBRARY_TRUE@	-export-symbols-regex '^[^_].*' \
-@ENABLE_GTK2_LIBRARY_TRUE@	$(PLATFORM_LDFLAGS)
-
-@ENABLE_GTK2_LIBRARY_TRUE@libxfce4panel_1_0_la_LIBADD = \
-@ENABLE_GTK2_LIBRARY_TRUE@	$(GTK2_LIBS) \
-@ENABLE_GTK2_LIBRARY_TRUE@	$(LIBXFCE4UTIL_LIBS) \
-@ENABLE_GTK2_LIBRARY_TRUE@	-lm
-
+pkgconfig_DATA = libxfce4panel-$(LIBXFCE4PANEL_VERSION_API).pc
 @MAINTAINER_MODE_TRUE@BUILT_SOURCES = \
 @MAINTAINER_MODE_TRUE@	$(libxfce4panel_built_sources)
 
@@ -841,7 +744,7 @@ pkgconfig_DATA = libxfce4panel-$(LIBXFCE4PANEL_VERSION_API).pc \
 @MAINTAINER_MODE_TRUE@	actual-abi \
 @MAINTAINER_MODE_TRUE@	expected-abi
 
-INTROSPECTION_GIRS = $(am__append_4)
+INTROSPECTION_GIRS = $(am__append_2)
 INTROSPECTION_SCANNER_ENV = CC="$(CC)"
 INTROSPECTION_SCANNER_ARGS = \
 	--add-include-path=$(srcdir) \
@@ -860,11 +763,11 @@ INTROSPECTION_COMPILER_ARGS = \
 	--includedir=.
 
 @HAVE_INTROSPECTION_TRUE@introspection_sources = $(libxfce4panel_2_0_la_SOURCES)
-@HAVE_INTROSPECTION_TRUE@libxfce4panel_2_0_gir_INCLUDES = GObject-2.0 GLib-2.0 Gtk-3.0 libxfce4util-1.0
-@HAVE_INTROSPECTION_TRUE@libxfce4panel_2_0_gir_CFLAGS = $(AM_CPPFLAGS)
-@HAVE_INTROSPECTION_TRUE@libxfce4panel_2_0_gir_LIBS = libxfce4panel-2.0.la
-@HAVE_INTROSPECTION_TRUE@libxfce4panel_2_0_gir_FILES = $(introspection_sources)
-@HAVE_INTROSPECTION_TRUE@libxfce4panel_2_0_gir_EXPORT_PACKAGES = libxfce4panel-2.0
+@HAVE_INTROSPECTION_TRUE@Libxfce4panel_2_0_gir_INCLUDES = GObject-2.0 GLib-2.0 Gio-2.0 Gtk-3.0 Libxfce4util-1.0
+@HAVE_INTROSPECTION_TRUE@Libxfce4panel_2_0_gir_CFLAGS = $(AM_CPPFLAGS)
+@HAVE_INTROSPECTION_TRUE@Libxfce4panel_2_0_gir_LIBS = libxfce4panel-2.0.la
+@HAVE_INTROSPECTION_TRUE@Libxfce4panel_2_0_gir_FILES = $(introspection_sources)
+@HAVE_INTROSPECTION_TRUE@Libxfce4panel_2_0_gir_EXPORT_PACKAGES = libxfce4panel-2.0
 @HAVE_INTROSPECTION_TRUE@girdir = $(datadir)/gir-1.0
 @HAVE_INTROSPECTION_TRUE@gir_DATA = $(INTROSPECTION_GIRS)
 @HAVE_INTROSPECTION_TRUE@typelibdir = $(libdir)/girepository-1.0
@@ -874,7 +777,7 @@ EXTRA_DIST = \
 	abicheck.sh \
 	libxfce4panel.symbols \
 	libxfce4panel-2.0.deps \
-	libxfce4panel-2.0.metadata \
+	Libxfce4panel-2.0.metadata \
 	libxfce4panel-alias.h \
 	libxfce4panel-aliasdef.c \
 	libxfce4panel-marshal.list \
@@ -883,7 +786,7 @@ EXTRA_DIST = \
 @ENABLE_VAPIGEN_TRUE@VAPIGEN_VAPIS = libxfce4panel-2.0.vapi
 @ENABLE_VAPIGEN_TRUE@VAPIGEN_GIRDIRS = $(prefix)/share/gir-1.0
 @ENABLE_VAPIGEN_TRUE@libxfce4panel_2_0_vapi_METADATADIRS = .
-@ENABLE_VAPIGEN_TRUE@libxfce4panel_2_0_vapi_FILES = libxfce4panel-2.0.gir
+@ENABLE_VAPIGEN_TRUE@libxfce4panel_2_0_vapi_FILES = Libxfce4panel-2.0.gir
 @ENABLE_VAPIGEN_TRUE@vapidir = $(datadir)/vala/vapi
 @ENABLE_VAPIGEN_TRUE@vapi_DATA = $(VAPIGEN_VAPIS) $(VAPIGEN_VAPIS:.vapi=.deps)
 @HAVE_GNUC_VISIBILITY_TRUE@TESTS = abicheck.sh
@@ -901,9 +804,9 @@ $(srcdir)/Makefile.in: @MAINTAINER_MODE_TRUE@ $(srcdir)/Makefile.am  $(am__confi
 	      exit 1;; \
 	  esac; \
 	done; \
-	echo ' cd $(top_srcdir) && $(AUTOMAKE) --gnu libxfce4panel/Makefile'; \
+	echo ' cd $(top_srcdir) && $(AUTOMAKE) --foreign libxfce4panel/Makefile'; \
 	$(am__cd) $(top_srcdir) && \
-	  $(AUTOMAKE) --gnu libxfce4panel/Makefile
+	  $(AUTOMAKE) --foreign libxfce4panel/Makefile
 Makefile: $(srcdir)/Makefile.in $(top_builddir)/config.status
 	@case '$?' in \
 	  *config.status*) \
@@ -921,8 +824,6 @@ $(top_srcdir)/configure: @MAINTAINER_MODE_TRUE@ $(am__configure_deps)
 $(ACLOCAL_M4): @MAINTAINER_MODE_TRUE@ $(am__aclocal_m4_deps)
 	cd $(top_builddir) && $(MAKE) $(AM_MAKEFLAGS) am--refresh
 $(am__aclocal_m4_deps):
-libxfce4panel-1.0.pc: $(top_builddir)/config.status $(srcdir)/libxfce4panel-1.0.pc.in
-	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
 libxfce4panel-2.0.pc: $(top_builddir)/config.status $(srcdir)/libxfce4panel-2.0.pc.in
 	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
 libxfce4panel-config.h: $(top_builddir)/config.status $(srcdir)/libxfce4panel-config.h.in
@@ -963,9 +864,6 @@ clean-libLTLIBRARIES:
 	  rm -f $${locs}; \
 	}
 
-libxfce4panel-1.0.la: $(libxfce4panel_1_0_la_OBJECTS) $(libxfce4panel_1_0_la_DEPENDENCIES) $(EXTRA_libxfce4panel_1_0_la_DEPENDENCIES) 
-	$(AM_V_CCLD)$(libxfce4panel_1_0_la_LINK) $(am_libxfce4panel_1_0_la_rpath) $(libxfce4panel_1_0_la_OBJECTS) $(libxfce4panel_1_0_la_LIBADD) $(LIBS)
-
 libxfce4panel-2.0.la: $(libxfce4panel_2_0_la_OBJECTS) $(libxfce4panel_2_0_la_DEPENDENCIES) $(EXTRA_libxfce4panel_2_0_la_DEPENDENCIES) 
 	$(AM_V_CCLD)$(libxfce4panel_2_0_la_LINK) -rpath $(libdir) $(libxfce4panel_2_0_la_OBJECTS) $(libxfce4panel_2_0_la_LIBADD) $(LIBS)
 
@@ -975,16 +873,6 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libxfce4panel_1_0_la-libxfce4panel-aliasdef.Plo@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libxfce4panel_1_0_la-libxfce4panel-config.Plo@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libxfce4panel_1_0_la-libxfce4panel-enum-types.Plo@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libxfce4panel_1_0_la-libxfce4panel-marshal.Plo@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libxfce4panel_1_0_la-xfce-arrow-button.Plo@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libxfce4panel_1_0_la-xfce-hvbox.Plo@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libxfce4panel_1_0_la-xfce-panel-convenience.Plo@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libxfce4panel_1_0_la-xfce-panel-image.Plo@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libxfce4panel_1_0_la-xfce-panel-plugin-provider.Plo@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libxfce4panel_1_0_la-xfce-panel-plugin.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libxfce4panel_2_0_la-libxfce4panel-aliasdef.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libxfce4panel_2_0_la-libxfce4panel-config.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libxfce4panel_2_0_la-libxfce4panel-enum-types.Plo@am__quote@ # am--include-marker
@@ -1021,76 +909,6 @@ am--depfiles: $(am__depfiles_remade)
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$<' object='$@' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LTCOMPILE) -c -o $@ $<
-
-libxfce4panel_1_0_la-libxfce4panel-aliasdef.lo: libxfce4panel-aliasdef.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libxfce4panel_1_0_la_CFLAGS) $(CFLAGS) -MT libxfce4panel_1_0_la-libxfce4panel-aliasdef.lo -MD -MP -MF $(DEPDIR)/libxfce4panel_1_0_la-libxfce4panel-aliasdef.Tpo -c -o libxfce4panel_1_0_la-libxfce4panel-aliasdef.lo `test -f 'libxfce4panel-aliasdef.c' || echo '$(srcdir)/'`libxfce4panel-aliasdef.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libxfce4panel_1_0_la-libxfce4panel-aliasdef.Tpo $(DEPDIR)/libxfce4panel_1_0_la-libxfce4panel-aliasdef.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='libxfce4panel-aliasdef.c' object='libxfce4panel_1_0_la-libxfce4panel-aliasdef.lo' libtool=yes @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libxfce4panel_1_0_la_CFLAGS) $(CFLAGS) -c -o libxfce4panel_1_0_la-libxfce4panel-aliasdef.lo `test -f 'libxfce4panel-aliasdef.c' || echo '$(srcdir)/'`libxfce4panel-aliasdef.c
-
-libxfce4panel_1_0_la-libxfce4panel-enum-types.lo: libxfce4panel-enum-types.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libxfce4panel_1_0_la_CFLAGS) $(CFLAGS) -MT libxfce4panel_1_0_la-libxfce4panel-enum-types.lo -MD -MP -MF $(DEPDIR)/libxfce4panel_1_0_la-libxfce4panel-enum-types.Tpo -c -o libxfce4panel_1_0_la-libxfce4panel-enum-types.lo `test -f 'libxfce4panel-enum-types.c' || echo '$(srcdir)/'`libxfce4panel-enum-types.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libxfce4panel_1_0_la-libxfce4panel-enum-types.Tpo $(DEPDIR)/libxfce4panel_1_0_la-libxfce4panel-enum-types.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='libxfce4panel-enum-types.c' object='libxfce4panel_1_0_la-libxfce4panel-enum-types.lo' libtool=yes @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libxfce4panel_1_0_la_CFLAGS) $(CFLAGS) -c -o libxfce4panel_1_0_la-libxfce4panel-enum-types.lo `test -f 'libxfce4panel-enum-types.c' || echo '$(srcdir)/'`libxfce4panel-enum-types.c
-
-libxfce4panel_1_0_la-libxfce4panel-marshal.lo: libxfce4panel-marshal.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libxfce4panel_1_0_la_CFLAGS) $(CFLAGS) -MT libxfce4panel_1_0_la-libxfce4panel-marshal.lo -MD -MP -MF $(DEPDIR)/libxfce4panel_1_0_la-libxfce4panel-marshal.Tpo -c -o libxfce4panel_1_0_la-libxfce4panel-marshal.lo `test -f 'libxfce4panel-marshal.c' || echo '$(srcdir)/'`libxfce4panel-marshal.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libxfce4panel_1_0_la-libxfce4panel-marshal.Tpo $(DEPDIR)/libxfce4panel_1_0_la-libxfce4panel-marshal.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='libxfce4panel-marshal.c' object='libxfce4panel_1_0_la-libxfce4panel-marshal.lo' libtool=yes @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libxfce4panel_1_0_la_CFLAGS) $(CFLAGS) -c -o libxfce4panel_1_0_la-libxfce4panel-marshal.lo `test -f 'libxfce4panel-marshal.c' || echo '$(srcdir)/'`libxfce4panel-marshal.c
-
-libxfce4panel_1_0_la-libxfce4panel-config.lo: libxfce4panel-config.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libxfce4panel_1_0_la_CFLAGS) $(CFLAGS) -MT libxfce4panel_1_0_la-libxfce4panel-config.lo -MD -MP -MF $(DEPDIR)/libxfce4panel_1_0_la-libxfce4panel-config.Tpo -c -o libxfce4panel_1_0_la-libxfce4panel-config.lo `test -f 'libxfce4panel-config.c' || echo '$(srcdir)/'`libxfce4panel-config.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libxfce4panel_1_0_la-libxfce4panel-config.Tpo $(DEPDIR)/libxfce4panel_1_0_la-libxfce4panel-config.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='libxfce4panel-config.c' object='libxfce4panel_1_0_la-libxfce4panel-config.lo' libtool=yes @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libxfce4panel_1_0_la_CFLAGS) $(CFLAGS) -c -o libxfce4panel_1_0_la-libxfce4panel-config.lo `test -f 'libxfce4panel-config.c' || echo '$(srcdir)/'`libxfce4panel-config.c
-
-libxfce4panel_1_0_la-xfce-arrow-button.lo: xfce-arrow-button.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libxfce4panel_1_0_la_CFLAGS) $(CFLAGS) -MT libxfce4panel_1_0_la-xfce-arrow-button.lo -MD -MP -MF $(DEPDIR)/libxfce4panel_1_0_la-xfce-arrow-button.Tpo -c -o libxfce4panel_1_0_la-xfce-arrow-button.lo `test -f 'xfce-arrow-button.c' || echo '$(srcdir)/'`xfce-arrow-button.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libxfce4panel_1_0_la-xfce-arrow-button.Tpo $(DEPDIR)/libxfce4panel_1_0_la-xfce-arrow-button.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='xfce-arrow-button.c' object='libxfce4panel_1_0_la-xfce-arrow-button.lo' libtool=yes @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libxfce4panel_1_0_la_CFLAGS) $(CFLAGS) -c -o libxfce4panel_1_0_la-xfce-arrow-button.lo `test -f 'xfce-arrow-button.c' || echo '$(srcdir)/'`xfce-arrow-button.c
-
-libxfce4panel_1_0_la-xfce-hvbox.lo: xfce-hvbox.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libxfce4panel_1_0_la_CFLAGS) $(CFLAGS) -MT libxfce4panel_1_0_la-xfce-hvbox.lo -MD -MP -MF $(DEPDIR)/libxfce4panel_1_0_la-xfce-hvbox.Tpo -c -o libxfce4panel_1_0_la-xfce-hvbox.lo `test -f 'xfce-hvbox.c' || echo '$(srcdir)/'`xfce-hvbox.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libxfce4panel_1_0_la-xfce-hvbox.Tpo $(DEPDIR)/libxfce4panel_1_0_la-xfce-hvbox.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='xfce-hvbox.c' object='libxfce4panel_1_0_la-xfce-hvbox.lo' libtool=yes @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libxfce4panel_1_0_la_CFLAGS) $(CFLAGS) -c -o libxfce4panel_1_0_la-xfce-hvbox.lo `test -f 'xfce-hvbox.c' || echo '$(srcdir)/'`xfce-hvbox.c
-
-libxfce4panel_1_0_la-xfce-panel-convenience.lo: xfce-panel-convenience.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libxfce4panel_1_0_la_CFLAGS) $(CFLAGS) -MT libxfce4panel_1_0_la-xfce-panel-convenience.lo -MD -MP -MF $(DEPDIR)/libxfce4panel_1_0_la-xfce-panel-convenience.Tpo -c -o libxfce4panel_1_0_la-xfce-panel-convenience.lo `test -f 'xfce-panel-convenience.c' || echo '$(srcdir)/'`xfce-panel-convenience.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libxfce4panel_1_0_la-xfce-panel-convenience.Tpo $(DEPDIR)/libxfce4panel_1_0_la-xfce-panel-convenience.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='xfce-panel-convenience.c' object='libxfce4panel_1_0_la-xfce-panel-convenience.lo' libtool=yes @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libxfce4panel_1_0_la_CFLAGS) $(CFLAGS) -c -o libxfce4panel_1_0_la-xfce-panel-convenience.lo `test -f 'xfce-panel-convenience.c' || echo '$(srcdir)/'`xfce-panel-convenience.c
-
-libxfce4panel_1_0_la-xfce-panel-plugin.lo: xfce-panel-plugin.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libxfce4panel_1_0_la_CFLAGS) $(CFLAGS) -MT libxfce4panel_1_0_la-xfce-panel-plugin.lo -MD -MP -MF $(DEPDIR)/libxfce4panel_1_0_la-xfce-panel-plugin.Tpo -c -o libxfce4panel_1_0_la-xfce-panel-plugin.lo `test -f 'xfce-panel-plugin.c' || echo '$(srcdir)/'`xfce-panel-plugin.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libxfce4panel_1_0_la-xfce-panel-plugin.Tpo $(DEPDIR)/libxfce4panel_1_0_la-xfce-panel-plugin.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='xfce-panel-plugin.c' object='libxfce4panel_1_0_la-xfce-panel-plugin.lo' libtool=yes @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libxfce4panel_1_0_la_CFLAGS) $(CFLAGS) -c -o libxfce4panel_1_0_la-xfce-panel-plugin.lo `test -f 'xfce-panel-plugin.c' || echo '$(srcdir)/'`xfce-panel-plugin.c
-
-libxfce4panel_1_0_la-xfce-panel-plugin-provider.lo: xfce-panel-plugin-provider.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libxfce4panel_1_0_la_CFLAGS) $(CFLAGS) -MT libxfce4panel_1_0_la-xfce-panel-plugin-provider.lo -MD -MP -MF $(DEPDIR)/libxfce4panel_1_0_la-xfce-panel-plugin-provider.Tpo -c -o libxfce4panel_1_0_la-xfce-panel-plugin-provider.lo `test -f 'xfce-panel-plugin-provider.c' || echo '$(srcdir)/'`xfce-panel-plugin-provider.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libxfce4panel_1_0_la-xfce-panel-plugin-provider.Tpo $(DEPDIR)/libxfce4panel_1_0_la-xfce-panel-plugin-provider.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='xfce-panel-plugin-provider.c' object='libxfce4panel_1_0_la-xfce-panel-plugin-provider.lo' libtool=yes @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libxfce4panel_1_0_la_CFLAGS) $(CFLAGS) -c -o libxfce4panel_1_0_la-xfce-panel-plugin-provider.lo `test -f 'xfce-panel-plugin-provider.c' || echo '$(srcdir)/'`xfce-panel-plugin-provider.c
-
-libxfce4panel_1_0_la-xfce-panel-image.lo: xfce-panel-image.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libxfce4panel_1_0_la_CFLAGS) $(CFLAGS) -MT libxfce4panel_1_0_la-xfce-panel-image.lo -MD -MP -MF $(DEPDIR)/libxfce4panel_1_0_la-xfce-panel-image.Tpo -c -o libxfce4panel_1_0_la-xfce-panel-image.lo `test -f 'xfce-panel-image.c' || echo '$(srcdir)/'`xfce-panel-image.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libxfce4panel_1_0_la-xfce-panel-image.Tpo $(DEPDIR)/libxfce4panel_1_0_la-xfce-panel-image.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='xfce-panel-image.c' object='libxfce4panel_1_0_la-xfce-panel-image.lo' libtool=yes @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libxfce4panel_1_0_la_CFLAGS) $(CFLAGS) -c -o libxfce4panel_1_0_la-xfce-panel-image.lo `test -f 'xfce-panel-image.c' || echo '$(srcdir)/'`xfce-panel-image.c
 
 libxfce4panel_2_0_la-libxfce4panel-aliasdef.lo: libxfce4panel-aliasdef.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libxfce4panel_2_0_la_CFLAGS) $(CFLAGS) -MT libxfce4panel_2_0_la-libxfce4panel-aliasdef.lo -MD -MP -MF $(DEPDIR)/libxfce4panel_2_0_la-libxfce4panel-aliasdef.Tpo -c -o libxfce4panel_2_0_la-libxfce4panel-aliasdef.lo `test -f 'libxfce4panel-aliasdef.c' || echo '$(srcdir)/'`libxfce4panel-aliasdef.c
@@ -1244,27 +1062,6 @@ uninstall-vapiDATA:
 	@list='$(vapi_DATA)'; test -n "$(vapidir)" || list=; \
 	files=`for p in $$list; do echo $$p; done | sed -e 's|^.*/||'`; \
 	dir='$(DESTDIR)$(vapidir)'; $(am__uninstall_files_from_dir)
-install-libxfce4panel1_includeHEADERS: $(libxfce4panel1_include_HEADERS)
-	@$(NORMAL_INSTALL)
-	@list='$(libxfce4panel1_include_HEADERS)'; test -n "$(libxfce4panel1_includedir)" || list=; \
-	if test -n "$$list"; then \
-	  echo " $(MKDIR_P) '$(DESTDIR)$(libxfce4panel1_includedir)'"; \
-	  $(MKDIR_P) "$(DESTDIR)$(libxfce4panel1_includedir)" || exit 1; \
-	fi; \
-	for p in $$list; do \
-	  if test -f "$$p"; then d=; else d="$(srcdir)/"; fi; \
-	  echo "$$d$$p"; \
-	done | $(am__base_list) | \
-	while read files; do \
-	  echo " $(INSTALL_HEADER) $$files '$(DESTDIR)$(libxfce4panel1_includedir)'"; \
-	  $(INSTALL_HEADER) $$files "$(DESTDIR)$(libxfce4panel1_includedir)" || exit $$?; \
-	done
-
-uninstall-libxfce4panel1_includeHEADERS:
-	@$(NORMAL_UNINSTALL)
-	@list='$(libxfce4panel1_include_HEADERS)'; test -n "$(libxfce4panel1_includedir)" || list=; \
-	files=`for p in $$list; do echo $$p; done | sed -e 's|^.*/||'`; \
-	dir='$(DESTDIR)$(libxfce4panel1_includedir)'; $(am__uninstall_files_from_dir)
 install-libxfce4panel_includeHEADERS: $(libxfce4panel_include_HEADERS)
 	@$(NORMAL_INSTALL)
 	@list='$(libxfce4panel_include_HEADERS)'; test -n "$(libxfce4panel_includedir)" || list=; \
@@ -1544,7 +1341,7 @@ check: $(BUILT_SOURCES)
 	$(MAKE) $(AM_MAKEFLAGS) check-am
 all-am: Makefile $(LTLIBRARIES) $(DATA) $(HEADERS)
 installdirs:
-	for dir in "$(DESTDIR)$(libdir)" "$(DESTDIR)$(girdir)" "$(DESTDIR)$(pkgconfigdir)" "$(DESTDIR)$(typelibdir)" "$(DESTDIR)$(vapidir)" "$(DESTDIR)$(libxfce4panel1_includedir)" "$(DESTDIR)$(libxfce4panel_includedir)"; do \
+	for dir in "$(DESTDIR)$(libdir)" "$(DESTDIR)$(girdir)" "$(DESTDIR)$(pkgconfigdir)" "$(DESTDIR)$(typelibdir)" "$(DESTDIR)$(vapidir)" "$(DESTDIR)$(libxfce4panel_includedir)"; do \
 	  test -z "$$dir" || $(MKDIR_P) "$$dir"; \
 	done
 install: $(BUILT_SOURCES)
@@ -1590,17 +1387,7 @@ clean-am: clean-generic clean-libLTLIBRARIES clean-libtool \
 	mostlyclean-am
 
 distclean: distclean-am
-		-rm -f ./$(DEPDIR)/libxfce4panel_1_0_la-libxfce4panel-aliasdef.Plo
-	-rm -f ./$(DEPDIR)/libxfce4panel_1_0_la-libxfce4panel-config.Plo
-	-rm -f ./$(DEPDIR)/libxfce4panel_1_0_la-libxfce4panel-enum-types.Plo
-	-rm -f ./$(DEPDIR)/libxfce4panel_1_0_la-libxfce4panel-marshal.Plo
-	-rm -f ./$(DEPDIR)/libxfce4panel_1_0_la-xfce-arrow-button.Plo
-	-rm -f ./$(DEPDIR)/libxfce4panel_1_0_la-xfce-hvbox.Plo
-	-rm -f ./$(DEPDIR)/libxfce4panel_1_0_la-xfce-panel-convenience.Plo
-	-rm -f ./$(DEPDIR)/libxfce4panel_1_0_la-xfce-panel-image.Plo
-	-rm -f ./$(DEPDIR)/libxfce4panel_1_0_la-xfce-panel-plugin-provider.Plo
-	-rm -f ./$(DEPDIR)/libxfce4panel_1_0_la-xfce-panel-plugin.Plo
-	-rm -f ./$(DEPDIR)/libxfce4panel_2_0_la-libxfce4panel-aliasdef.Plo
+		-rm -f ./$(DEPDIR)/libxfce4panel_2_0_la-libxfce4panel-aliasdef.Plo
 	-rm -f ./$(DEPDIR)/libxfce4panel_2_0_la-libxfce4panel-config.Plo
 	-rm -f ./$(DEPDIR)/libxfce4panel_2_0_la-libxfce4panel-enum-types.Plo
 	-rm -f ./$(DEPDIR)/libxfce4panel_2_0_la-libxfce4panel-marshal.Plo
@@ -1625,9 +1412,8 @@ info: info-am
 
 info-am:
 
-install-data-am: install-girDATA install-libxfce4panel1_includeHEADERS \
-	install-libxfce4panel_includeHEADERS install-pkgconfigDATA \
-	install-typelibDATA install-vapiDATA
+install-data-am: install-girDATA install-libxfce4panel_includeHEADERS \
+	install-pkgconfigDATA install-typelibDATA install-vapiDATA
 
 install-dvi: install-dvi-am
 
@@ -1656,17 +1442,7 @@ install-ps-am:
 installcheck-am:
 
 maintainer-clean: maintainer-clean-am
-		-rm -f ./$(DEPDIR)/libxfce4panel_1_0_la-libxfce4panel-aliasdef.Plo
-	-rm -f ./$(DEPDIR)/libxfce4panel_1_0_la-libxfce4panel-config.Plo
-	-rm -f ./$(DEPDIR)/libxfce4panel_1_0_la-libxfce4panel-enum-types.Plo
-	-rm -f ./$(DEPDIR)/libxfce4panel_1_0_la-libxfce4panel-marshal.Plo
-	-rm -f ./$(DEPDIR)/libxfce4panel_1_0_la-xfce-arrow-button.Plo
-	-rm -f ./$(DEPDIR)/libxfce4panel_1_0_la-xfce-hvbox.Plo
-	-rm -f ./$(DEPDIR)/libxfce4panel_1_0_la-xfce-panel-convenience.Plo
-	-rm -f ./$(DEPDIR)/libxfce4panel_1_0_la-xfce-panel-image.Plo
-	-rm -f ./$(DEPDIR)/libxfce4panel_1_0_la-xfce-panel-plugin-provider.Plo
-	-rm -f ./$(DEPDIR)/libxfce4panel_1_0_la-xfce-panel-plugin.Plo
-	-rm -f ./$(DEPDIR)/libxfce4panel_2_0_la-libxfce4panel-aliasdef.Plo
+		-rm -f ./$(DEPDIR)/libxfce4panel_2_0_la-libxfce4panel-aliasdef.Plo
 	-rm -f ./$(DEPDIR)/libxfce4panel_2_0_la-libxfce4panel-config.Plo
 	-rm -f ./$(DEPDIR)/libxfce4panel_2_0_la-libxfce4panel-enum-types.Plo
 	-rm -f ./$(DEPDIR)/libxfce4panel_2_0_la-libxfce4panel-marshal.Plo
@@ -1692,7 +1468,6 @@ ps: ps-am
 ps-am:
 
 uninstall-am: uninstall-girDATA uninstall-libLTLIBRARIES \
-	uninstall-libxfce4panel1_includeHEADERS \
 	uninstall-libxfce4panel_includeHEADERS uninstall-pkgconfigDATA \
 	uninstall-typelibDATA uninstall-vapiDATA
 
@@ -1706,16 +1481,14 @@ uninstall-am: uninstall-girDATA uninstall-libLTLIBRARIES \
 	install install-am install-data install-data-am install-dvi \
 	install-dvi-am install-exec install-exec-am install-girDATA \
 	install-html install-html-am install-info install-info-am \
-	install-libLTLIBRARIES install-libxfce4panel1_includeHEADERS \
-	install-libxfce4panel_includeHEADERS install-man install-pdf \
-	install-pdf-am install-pkgconfigDATA install-ps install-ps-am \
-	install-strip install-typelibDATA install-vapiDATA \
-	installcheck installcheck-am installdirs maintainer-clean \
-	maintainer-clean-generic mostlyclean mostlyclean-compile \
-	mostlyclean-generic mostlyclean-libtool pdf pdf-am ps ps-am \
-	recheck tags tags-am uninstall uninstall-am uninstall-girDATA \
-	uninstall-libLTLIBRARIES \
-	uninstall-libxfce4panel1_includeHEADERS \
+	install-libLTLIBRARIES install-libxfce4panel_includeHEADERS \
+	install-man install-pdf install-pdf-am install-pkgconfigDATA \
+	install-ps install-ps-am install-strip install-typelibDATA \
+	install-vapiDATA installcheck installcheck-am installdirs \
+	maintainer-clean maintainer-clean-generic mostlyclean \
+	mostlyclean-compile mostlyclean-generic mostlyclean-libtool \
+	pdf pdf-am ps ps-am recheck tags tags-am uninstall \
+	uninstall-am uninstall-girDATA uninstall-libLTLIBRARIES \
 	uninstall-libxfce4panel_includeHEADERS uninstall-pkgconfigDATA \
 	uninstall-typelibDATA uninstall-vapiDATA
 
@@ -1760,13 +1533,13 @@ uninstall-am: uninstall-girDATA uninstall-libLTLIBRARIES \
 # endif MAINTAINER_MODE
 
 # GObject Introspection
-include $(INTROSPECTION_MAKEFILE)
+-include $(INTROSPECTION_MAKEFILE)
 
-@HAVE_INTROSPECTION_TRUE@libxfce4panel-2.0.gir: libxfce4panel-2.0.la Makefile
+@HAVE_INTROSPECTION_TRUE@Libxfce4panel-2.0.gir: libxfce4panel-2.0.la Makefile
 
 @ENABLE_VAPIGEN_TRUE@-include $(VAPIGEN_MAKEFILE)
 
-@ENABLE_VAPIGEN_TRUE@libxfce4panel-2.0.vapi: libxfce4panel-2.0.gir libxfce4panel-2.0.deps
+@ENABLE_VAPIGEN_TRUE@libxfce4panel-2.0.vapi: Libxfce4panel-2.0.gir libxfce4panel-2.0.deps
 
 # required for gtk-doc
 dist-hook: all

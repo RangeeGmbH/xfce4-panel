@@ -181,6 +181,7 @@ static const gchar *digital_formats[] =
   "%T",
   "%r",
   "%I:%M %p",
+  "%_H:%M",
   NULL
 };
 
@@ -456,9 +457,9 @@ clock_plugin_button_press_event (GtkWidget      *widget,
                && !panel_str_is_empty (plugin->command))
         {
           /* launch command */
-          if (!xfce_spawn_command_line_on_screen (gtk_widget_get_screen (widget),
-                                                  plugin->command, FALSE,
-                                                  FALSE, &error))
+          if (!xfce_spawn_command_line (gtk_widget_get_screen (widget),
+                                        plugin->command, FALSE,
+                                        FALSE, TRUE, &error))
             {
               xfce_dialog_show_error (NULL, error,
                                       _("Failed to execute clock command"));
@@ -766,7 +767,9 @@ clock_plugin_configure_plugin_chooser_separator (GtkTreeModel *model,
 
 
 static void
-clock_plugin_validate_format_specifier (GtkEntry *entry, const gchar *format, ClockPlugin *plugin)
+clock_plugin_validate_format_specifier (GtkEntry    *entry,
+                                        const gchar *format,
+                                        ClockPlugin *plugin)
 {
   GtkStyleContext *context;
 
@@ -782,13 +785,53 @@ clock_plugin_validate_format_specifier (GtkEntry *entry, const gchar *format, Cl
 
 static void
 clock_plugin_validate_entry_text (GtkEditable *entry,
-                                  gpointer user_data)
+                                  gpointer     user_data)
 {
   ClockPlugin *plugin = user_data;
 
   clock_plugin_validate_format_specifier (GTK_ENTRY (entry),
                                           gtk_entry_get_text (GTK_ENTRY (entry)),
                                           plugin);
+}
+
+
+
+static void
+clock_plugin_validate_timezone (GtkEntry    *entry,
+                                const gchar *format,
+                                ClockPlugin *plugin)
+{
+  GtkStyleContext *context;
+  gchar           *filename;
+
+  context = gtk_widget_get_style_context (GTK_WIDGET (entry));
+
+  if (strcmp (format, "") != 0)
+    {
+      filename = g_build_filename (ZONEINFO_DIR, format, NULL);
+
+      if (!g_file_test (filename, G_FILE_TEST_IS_REGULAR))
+        gtk_style_context_add_class (context, "error");
+      else
+        gtk_style_context_remove_class (context, "error");
+    }
+  else
+    {
+      gtk_style_context_remove_class (context, "error");
+    }
+}
+
+
+
+static void
+clock_plugin_validate_entry_tz (GtkEditable *entry,
+                                gpointer     user_data)
+{
+  ClockPlugin *plugin = user_data;
+
+  clock_plugin_validate_timezone (GTK_ENTRY (entry),
+                                  gtk_entry_get_text (GTK_ENTRY (entry)),
+                                  plugin);
 }
 
 
@@ -905,9 +948,9 @@ clock_plugin_configure_run_config_tool (GtkWidget   *button,
 
   panel_return_if_fail (XFCE_IS_CLOCK_PLUGIN (plugin));
 
-  if (!xfce_spawn_command_line_on_screen (gtk_widget_get_screen (button),
-                                          plugin->time_config_tool,
-                                          FALSE, FALSE, &error))
+  if (!xfce_spawn_command_line (gtk_widget_get_screen (button),
+                                plugin->time_config_tool,
+                                FALSE, FALSE, TRUE, &error))
     {
       xfce_dialog_show_error (NULL, error, _("Failed to execute command \"%s\"."), plugin->time_config_tool);
       g_error_free (error);
@@ -1026,6 +1069,8 @@ clock_plugin_configure_plugin (XfcePanelPlugin *panel_plugin)
 
   object = gtk_builder_get_object (builder, "timezone-name");
   panel_return_if_fail (GTK_IS_ENTRY (object));
+  g_signal_connect (G_OBJECT (object), "changed",
+                    G_CALLBACK (clock_plugin_validate_entry_tz), plugin);
   g_object_bind_property (G_OBJECT (plugin->time), "timezone",
                           G_OBJECT (object), "text",
                           G_BINDING_BIDIRECTIONAL | G_BINDING_SYNC_CREATE);

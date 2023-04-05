@@ -79,6 +79,10 @@ wrapper_gproxy_set (XfcePanelPluginProvider *provider,
           xfce_panel_plugin_provider_set_icon_size (provider, g_variant_get_int32 (variant));
           break;
 
+        case PROVIDER_PROP_TYPE_SET_DARK_MODE:
+          xfce_panel_plugin_provider_set_dark_mode (provider, g_variant_get_boolean (variant));
+          break;
+
         case PROVIDER_PROP_TYPE_SET_MODE:
           xfce_panel_plugin_provider_set_mode (provider, g_variant_get_int32 (variant));
           break;
@@ -100,10 +104,8 @@ wrapper_gproxy_set (XfcePanelPluginProvider *provider,
           break;
 
         case PROVIDER_PROP_TYPE_SET_OPACITY:
-#if GTK_CHECK_VERSION (3, 0, 0)
           plug = g_object_get_qdata (G_OBJECT (provider), plug_quark);
           wrapper_plug_set_opacity (plug, g_variant_get_double (variant));
-#endif
           break;
 
         case PROVIDER_PROP_TYPE_SET_BACKGROUND_COLOR:
@@ -307,18 +309,14 @@ main (gint argc, gchar **argv)
   GDBusProxy              *dbus_gproxy = NULL;
   WrapperModule           *module = NULL;
   WrapperPlug             *plug;
-  GtkWidget               *provider;
+  GtkWidget               *provider = NULL;
   gchar                   *path;
   guint                    gproxy_destroy_id = 0;
   guint                    gproxy_signal_id = 0;
   GError                  *error = NULL;
   const gchar             *filename;
   gint                     unique_id;
-#if GTK_CHECK_VERSION (3, 0, 0)
   Window                   socket_id;
-#else
-  GdkNativeWindow          socket_id;
-#endif
   const gchar             *name;
   const gchar             *display_name;
   const gchar             *comment;

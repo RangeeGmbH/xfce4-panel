@@ -53,22 +53,6 @@ extern __typeof (xfce_arrow_button_set_blinking) xfce_arrow_button_set_blinking 
 #endif
 #endif
 #if 1
-#ifdef __XFCE_HVBOX_C__
-#undef xfce_hvbox_get_orientation 
-extern __typeof (xfce_hvbox_get_orientation) xfce_hvbox_get_orientation __attribute((alias("IA__xfce_hvbox_get_orientation"), visibility("default")));
-
-#undef xfce_hvbox_get_type 
-extern __typeof (xfce_hvbox_get_type) xfce_hvbox_get_type __attribute((alias("IA__xfce_hvbox_get_type"), visibility("default")));
-
-#undef xfce_hvbox_new 
-extern __typeof (xfce_hvbox_new) xfce_hvbox_new __attribute((alias("IA__xfce_hvbox_new"), visibility("default")));
-
-#undef xfce_hvbox_set_orientation 
-extern __typeof (xfce_hvbox_set_orientation) xfce_hvbox_set_orientation __attribute((alias("IA__xfce_hvbox_set_orientation"), visibility("default")));
-
-#endif
-#endif
-#if 1
 #ifdef __XFCE_PANEL_CONVENIENCE_C__
 #undef xfce_panel_create_button 
 extern __typeof (xfce_panel_create_button) xfce_panel_create_button __attribute((alias("IA__xfce_panel_create_button"), visibility("default")));
@@ -195,6 +179,9 @@ extern __typeof (xfce_panel_plugin_menu_show_configure) xfce_panel_plugin_menu_s
 #undef xfce_panel_plugin_menu_show_about 
 extern __typeof (xfce_panel_plugin_menu_show_about) xfce_panel_plugin_menu_show_about __attribute((alias("IA__xfce_panel_plugin_menu_show_about"), visibility("default")));
 
+#undef xfce_panel_plugin_menu_destroy 
+extern __typeof (xfce_panel_plugin_menu_destroy) xfce_panel_plugin_menu_destroy __attribute((alias("IA__xfce_panel_plugin_menu_destroy"), visibility("default")));
+
 #undef xfce_panel_plugin_block_menu 
 extern __typeof (xfce_panel_plugin_block_menu) xfce_panel_plugin_block_menu __attribute((alias("IA__xfce_panel_plugin_block_menu"), visibility("default")));
 
@@ -249,6 +236,9 @@ extern __typeof (xfce_panel_plugin_provider_set_size) xfce_panel_plugin_provider
 
 #undef xfce_panel_plugin_provider_set_icon_size 
 extern __typeof (xfce_panel_plugin_provider_set_icon_size) xfce_panel_plugin_provider_set_icon_size __attribute((alias("IA__xfce_panel_plugin_provider_set_icon_size"), visibility("default")));
+
+#undef xfce_panel_plugin_provider_set_dark_mode 
+extern __typeof (xfce_panel_plugin_provider_set_dark_mode) xfce_panel_plugin_provider_set_dark_mode __attribute((alias("IA__xfce_panel_plugin_provider_set_dark_mode"), visibility("default")));
 
 #undef xfce_panel_plugin_provider_set_mode 
 extern __typeof (xfce_panel_plugin_provider_set_mode) xfce_panel_plugin_provider_set_mode __attribute((alias("IA__xfce_panel_plugin_provider_set_mode"), visibility("default")));
