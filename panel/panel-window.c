@@ -202,6 +202,7 @@ enum
   PROP_POSITION,
   PROP_ENABLE_STRUTS,
   PROP_DARK_MODE,
+  PROP_ALWAYS_ABOVE,
   PROP_ALWAYS_BELOW
 };
 
@@ -330,6 +331,7 @@ struct _PanelWindow
   gboolean             floating;
   guint                span_monitors : 1;
   gchar               *output_name;
+  guint                always_above : 1;
   guint                always_below : 1;
 
   /* allocated position of the panel */
@@ -501,6 +503,12 @@ panel_window_class_init (PanelWindowClass *klass)
                                                         G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
 
   g_object_class_install_property (gobject_class,
+                                   PROP_ALWAYS_ABOVE,
+                                   g_param_spec_boolean ("always-above", NULL, NULL,
+                                                         FALSE,
+                                                         G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
+
+  g_object_class_install_property (gobject_class,
                                    PROP_ALWAYS_BELOW,
                                    g_param_spec_boolean ("always-below", NULL, NULL,
                                                          FALSE,
@@ -589,6 +597,7 @@ panel_window_init (PanelWindow *window)
   window->snap_position = SNAP_POSITION_NONE;
   window->floating = TRUE;
   window->span_monitors = FALSE;
+  window->always_above = FALSE;
   window->always_below = FALSE;
   window->position_locked = FALSE;
   window->autohide_behavior = AUTOHIDE_BEHAVIOR_NEVER;
@@ -687,6 +696,10 @@ panel_window_get_property (GObject    *object,
 
     case PROP_SPAN_MONITORS:
       g_value_set_boolean (value, window->span_monitors);
+      break;
+
+    case PROP_ALWAYS_ABOVE:
+      g_value_set_boolean (value, window->always_above);
       break;
 
     case PROP_ALWAYS_BELOW:
@@ -860,6 +873,15 @@ panel_window_set_property (GObject      *object,
         {
           window->span_monitors = !!val_bool;
           panel_window_screen_layout_changed (window->screen, window);
+        }
+      break;
+
+    case PROP_ALWAYS_ABOVE:
+      val_bool = g_value_get_boolean (value);
+      if (window->always_above != val_bool)
+        {
+          window->always_above = !!val_bool;
+          gtk_window_set_keep_above(GTK_WINDOW (window), window->always_above);
         }
       break;
 
