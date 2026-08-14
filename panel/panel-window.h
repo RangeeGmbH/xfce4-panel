@@ -19,53 +19,71 @@
 #ifndef __PANEL_WINDOW_H__
 #define __PANEL_WINDOW_H__
 
+#include "panel-base-window.h"
+
+#include "common/panel-xfconf.h"
+
 #include <gtk/gtk.h>
 #include <xfconf/xfconf.h>
 
-#include <common/panel-xfconf.h>
+#define DEFAULT_MODE XFCE_PANEL_PLUGIN_MODE_HORIZONTAL
+#define MIN_SIZE 16
+#define MAX_SIZE 128
+#define DEFAULT_SIZE 48
+#define MIN_ICON_SIZE 0
+#define MAX_ICON_SIZE 256
+#define DEFAULT_ICON_SIZE 0
+#define DEFAULT_DARK_MODE FALSE
+#define MIN_NROWS 1
+#define MAX_NROWS 6
+#define DEFAULT_NROWS 1
 
 G_BEGIN_DECLS
 
-typedef struct _PanelWindowClass PanelWindowClass;
-typedef struct _PanelWindow      PanelWindow;
+#define PANEL_TYPE_WINDOW (panel_window_get_type ())
+G_DECLARE_FINAL_TYPE (PanelWindow, panel_window, PANEL, WINDOW, PanelBaseWindow)
 
-#define PANEL_TYPE_WINDOW            (panel_window_get_type ())
-#define PANEL_WINDOW(obj)            (G_TYPE_CHECK_INSTANCE_CAST ((obj), PANEL_TYPE_WINDOW, PanelWindow))
-#define PANEL_WINDOW_CLASS(klass)    (G_TYPE_CHECK_CLASS_CAST ((klass), PANEL_TYPE_WINDOW, PanelWindowClass))
-#define PANEL_IS_WINDOW(obj)         (G_TYPE_CHECK_INSTANCE_TYPE ((obj), PANEL_TYPE_WINDOW))
-#define PANEL_IS_WINDOW_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE ((klass), PANEL_TYPE_WINDOW))
-#define PANEL_WINDOW_GET_CLASS(obj)  (G_TYPE_INSTANCE_GET_CLASS ((obj), PANEL_TYPE_WINDOW, PanelWindowClass))
+GtkWidget *
+panel_window_new (GdkScreen *screen,
+                  gint id,
+                  gint autohide_block) G_GNUC_MALLOC;
 
-GType          panel_window_get_type                  (void) G_GNUC_CONST;
+gint
+panel_window_get_id (PanelWindow *window);
 
-GtkWidget     *panel_window_new                       (GdkScreen              *screen,
-                                                       gint                    id,
-                                                       gint                    autohide_block) G_GNUC_MALLOC;
+gboolean
+panel_window_has_position (PanelWindow *window);
 
-gint           panel_window_get_id                    (PanelWindow            *window);
+void
+panel_window_set_provider_info (PanelWindow *window,
+                                GtkWidget *provider,
+                                gboolean moving_to_other_panel);
 
-gboolean       panel_window_has_position              (PanelWindow            *window);
+void
+panel_window_freeze_autohide (PanelWindow *window);
 
-void           panel_window_set_provider_info         (PanelWindow            *window,
-                                                       GtkWidget              *provider,
-                                                       gboolean                moving_to_other_panel);
+void
+panel_window_thaw_autohide (PanelWindow *window);
 
-void           panel_window_freeze_autohide           (PanelWindow            *window);
+void
+panel_window_set_locked (PanelWindow *window,
+                         gboolean locked);
 
-void           panel_window_thaw_autohide             (PanelWindow            *window);
+gboolean
+panel_window_get_locked (PanelWindow *window);
 
-void           panel_window_set_locked                (PanelWindow            *window,
-                                                       gboolean                locked);
+void
+panel_window_focus (PanelWindow *window);
 
-gboolean       panel_window_get_locked                (PanelWindow            *window);
+void
+panel_window_migrate_old_properties (PanelWindow *window,
+                                     XfconfChannel *xfconf,
+                                     const gchar *property_base,
+                                     const PanelProperty *old_properties,
+                                     const PanelProperty *new_properties);
 
-void           panel_window_focus                     (PanelWindow            *window);
-
-void           panel_window_migrate_old_properties    (PanelWindow            *window,
-                                                       XfconfChannel          *xfconf,
-                                                       const gchar            *property_base,
-                                                       const PanelProperty    *old_properties,
-                                                       const PanelProperty    *new_properties);
+gboolean
+panel_window_pointer_is_outside (PanelWindow *window);
 
 G_END_DECLS
 

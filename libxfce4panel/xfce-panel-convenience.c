@@ -18,19 +18,18 @@
  */
 
 #ifdef HAVE_CONFIG_H
-#include <config.h>
+#include "config.h"
 #endif
+
+#include "xfce-panel-convenience.h"
+#include "xfce-panel-macros.h"
+#include "libxfce4panel-visibility.h"
+
+#include <libxfce4util/libxfce4util.h>
 
 #ifdef HAVE_MATH_H
 #include <math.h>
 #endif
-
-#include <libxfce4util/libxfce4util.h>
-#include <gtk/gtk.h>
-
-#include <libxfce4panel/xfce-panel-macros.h>
-#include <libxfce4panel/xfce-panel-convenience.h>
-#include <libxfce4panel/libxfce4panel-alias.h>
 
 
 
@@ -55,9 +54,9 @@
 GtkWidget *
 xfce_panel_create_button (void)
 {
-  GtkWidget       *button = gtk_button_new ();
+  GtkWidget *button = gtk_button_new ();
   GtkStyleContext *context;
-  GtkCssProvider  *provider;
+  GtkCssProvider *provider;
 
   gtk_widget_set_can_default (GTK_WIDGET (button), FALSE);
   gtk_widget_set_can_focus (GTK_WIDGET (button), FALSE);
@@ -69,10 +68,11 @@ xfce_panel_create_button (void)
      launcher buttons to overlap when panels have a fairly normal size */
   context = gtk_widget_get_style_context (GTK_WIDGET (button));
   provider = gtk_css_provider_new ();
-  gtk_css_provider_load_from_data (provider, ".xfce4-panel button { padding: 1px; }", -1, NULL);
+  gtk_css_provider_load_from_data (provider, ".xfce4-panel button { padding: 1px; min-height: 16px; min-width: 16px; }", -1, NULL);
   gtk_style_context_add_provider (context,
                                   GTK_STYLE_PROVIDER (provider),
                                   GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
+  g_object_unref (provider);
 
   return button;
 }
@@ -91,7 +91,7 @@ GtkWidget *
 xfce_panel_create_toggle_button (void)
 {
   GtkStyleContext *context;
-  GtkCssProvider  *provider;
+  GtkCssProvider *provider;
 
   GtkWidget *button = gtk_toggle_button_new ();
 
@@ -105,10 +105,11 @@ xfce_panel_create_toggle_button (void)
      launcher buttons to overlap when panels have a fairly normal size */
   context = gtk_widget_get_style_context (GTK_WIDGET (button));
   provider = gtk_css_provider_new ();
-  gtk_css_provider_load_from_data (provider, ".xfce4-panel button { padding: 1px; }", -1, NULL);
+  gtk_css_provider_load_from_data (provider, ".xfce4-panel button { padding: 1px; min-height: 16px; min-width: 16px; }", -1, NULL);
   gtk_style_context_add_provider (context,
                                   GTK_STYLE_PROVIDER (provider),
                                   GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
+  g_object_unref (provider);
 
   return button;
 }
@@ -147,6 +148,114 @@ xfce_panel_get_channel_name (void)
 
 
 
+static GdkPixbuf *
+xfce_panel_pixbuf_from_source_at_size_and_scale (const gchar *source,
+                                                 GtkIconTheme *icon_theme,
+                                                 gint dest_width,
+                                                 gint dest_height,
+                                                 gint scale)
+{
+  GdkPixbuf *pixbuf = NULL;
+  gchar *p;
+  gchar *name;
+  gchar *filename;
+  gint src_w, src_h;
+  gdouble ratio;
+  GdkPixbuf *dest;
+  GError *error = NULL;
+  gint size = MIN (dest_width, dest_height);
+
+  g_return_val_if_fail (source != NULL, NULL);
+  g_return_val_if_fail (icon_theme == NULL || GTK_IS_ICON_THEME (icon_theme), NULL);
+  g_return_val_if_fail (dest_width > 0, NULL);
+  g_return_val_if_fail (dest_height > 0, NULL);
+
+  if (G_UNLIKELY (g_path_is_absolute (source)))
+    {
+      pixbuf = gdk_pixbuf_new_from_file (source, &error);
+      if (G_UNLIKELY (pixbuf == NULL))
+        {
+          g_warning ("Failed to load image \"%s\": %s",
+                     source, error->message);
+          g_error_free (error);
+        }
+    }
+  else
+    {
+      if (G_UNLIKELY (icon_theme == NULL))
+        icon_theme = gtk_icon_theme_get_default ();
+
+      /* try to load from the icon theme */
+      pixbuf = gtk_icon_theme_load_icon_for_scale (icon_theme, source, size, scale, 0, NULL);
+      if (G_UNLIKELY (pixbuf == NULL))
+        {
+          /* try to lookup names like application.png in the theme */
+          p = strrchr (source, '.');
+          if (p != NULL)
+            {
+              name = g_strndup (source, p - source);
+              pixbuf = gtk_icon_theme_load_icon_for_scale (icon_theme, name, size, scale, 0, NULL);
+              g_free (name);
+            }
+
+          /* maybe they point to a file in the pixbufs folder */
+          if (G_UNLIKELY (pixbuf == NULL))
+            {
+              filename = g_build_filename ("pixmaps", source, NULL);
+              name = xfce_resource_lookup (XFCE_RESOURCE_DATA, filename);
+              g_free (filename);
+
+              if (name != NULL)
+                {
+                  pixbuf = gdk_pixbuf_new_from_file (name, NULL);
+                  g_free (name);
+                }
+            }
+        }
+    }
+
+  if (G_UNLIKELY (pixbuf == NULL))
+    {
+      if (G_UNLIKELY (icon_theme == NULL))
+        icon_theme = gtk_icon_theme_get_default ();
+
+      /* bit ugly as a fallback, but in most cases better then no icon */
+      pixbuf = gtk_icon_theme_load_icon_for_scale (icon_theme, "image-missing",
+                                                   size, scale, GTK_ICON_LOOKUP_USE_BUILTIN, NULL);
+    }
+
+  /* scale the pixbug if required */
+  if (G_LIKELY (pixbuf != NULL))
+    {
+      src_w = gdk_pixbuf_get_width (pixbuf);
+      src_h = gdk_pixbuf_get_height (pixbuf);
+      dest_width *= scale;
+      dest_height *= scale;
+
+      if (src_w > dest_width || src_h > dest_height)
+        {
+          /* calculate the new dimensions */
+          ratio = MIN ((gdouble) dest_width / (gdouble) src_w,
+                       (gdouble) dest_height / (gdouble) src_h);
+
+          dest_width = rint (src_w * ratio);
+          dest_height = rint (src_h * ratio);
+
+          dest = gdk_pixbuf_scale_simple (pixbuf,
+                                          MAX (dest_width, 1),
+                                          MAX (dest_height, 1),
+                                          GDK_INTERP_BILINEAR);
+
+          g_object_unref (G_OBJECT (pixbuf));
+          pixbuf = dest;
+        }
+    }
+
+  return pixbuf;
+}
+
+
+
 /**
  * xfce_panel_pixbuf_from_source_at_size:
  * @source: string that contains the location of an icon
@@ -173,106 +282,12 @@ xfce_panel_get_channel_name (void)
  * Since: 4.10
  **/
 GdkPixbuf *
-xfce_panel_pixbuf_from_source_at_size (const gchar  *source,
+xfce_panel_pixbuf_from_source_at_size (const gchar *source,
                                        GtkIconTheme *icon_theme,
-                                       gint          dest_width,
-                                       gint          dest_height)
+                                       gint dest_width,
+                                       gint dest_height)
 {
-  GdkPixbuf *pixbuf = NULL;
-  gchar     *p;
-  gchar     *name;
-  gchar     *filename;
-  gint       src_w, src_h;
-  gdouble    ratio;
-  GdkPixbuf *dest;
-  GError    *error = NULL;
-  gint       size = MIN (dest_width, dest_height);
-
-  g_return_val_if_fail (source != NULL, NULL);
-  g_return_val_if_fail (icon_theme == NULL || GTK_IS_ICON_THEME (icon_theme), NULL);
-  g_return_val_if_fail (dest_width > 0, NULL);
-  g_return_val_if_fail (dest_height > 0, NULL);
-
-  if (G_UNLIKELY (g_path_is_absolute (source)))
-    {
-      pixbuf = gdk_pixbuf_new_from_file (source, &error);
-      if (G_UNLIKELY (pixbuf == NULL))
-        {
-          g_message ("Failed to load image \"%s\": %s",
-                     source, error->message);
-          g_error_free (error);
-        }
-    }
-  else
-    {
-      if (G_UNLIKELY (icon_theme == NULL))
-        icon_theme = gtk_icon_theme_get_default ();
-
-      /* try to load from the icon theme */
-      pixbuf = gtk_icon_theme_load_icon (icon_theme, source, size, 0, NULL);
-      if (G_UNLIKELY (pixbuf == NULL))
-        {
-          /* try to lookup names like application.png in the theme */
-          p = strrchr (source, '.');
-          if (p != NULL)
-            {
-              name = g_strndup (source, p - source);
-              pixbuf = gtk_icon_theme_load_icon (icon_theme, name, size, 0, NULL);
-              g_free (name);
-            }
-
-          /* maybe they point to a file in the pixbufs folder */
-          if (G_UNLIKELY (pixbuf == NULL))
-            {
-              filename = g_build_filename ("pixmaps", source, NULL);
-              name = xfce_resource_lookup (XFCE_RESOURCE_DATA, filename);
-              g_free (filename);
-
-              if (name != NULL)
-                {
-                  pixbuf = gdk_pixbuf_new_from_file (name, NULL);
-                  g_free (name);
-                }
-            }
-        }
-    }
-
-  if (G_UNLIKELY (pixbuf == NULL))
-    {
-      if (G_UNLIKELY (icon_theme == NULL))
-        icon_theme = gtk_icon_theme_get_default ();
-
-      /* bit ugly as a fallback, but in most cases better then no icon */
-      pixbuf = gtk_icon_theme_load_icon (icon_theme, "image-missing",
-                                         size, GTK_ICON_LOOKUP_USE_BUILTIN, NULL);
-    }
-
-  /* scale the pixbug if required */
-  if (G_LIKELY (pixbuf != NULL))
-    {
-      src_w = gdk_pixbuf_get_width (pixbuf);
-      src_h = gdk_pixbuf_get_height (pixbuf);
-
-      if (src_w > dest_width || src_h > dest_height)
-        {
-          /* calculate the new dimensions */
-          ratio = MIN ((gdouble) dest_width / (gdouble) src_w,
-                       (gdouble) dest_height / (gdouble) src_h);
-
-          dest_width  = rint (src_w * ratio);
-          dest_height = rint (src_h * ratio);
-
-          dest = gdk_pixbuf_scale_simple (pixbuf,
-                                          MAX (dest_width, 1),
-                                          MAX (dest_height, 1),
-                                          GDK_INTERP_BILINEAR);
-
-          g_object_unref (G_OBJECT (pixbuf));
-          pixbuf = dest;
-        }
-    }
-
-  return pixbuf;
+  return xfce_panel_pixbuf_from_source_at_size_and_scale (source, icon_theme, dest_width, dest_height, 1);
 }
 
 
@@ -293,9 +308,9 @@ xfce_panel_pixbuf_from_source_at_size (const gchar  *source,
  * Since: 4.8
  **/
 GdkPixbuf *
-xfce_panel_pixbuf_from_source (const gchar  *source,
+xfce_panel_pixbuf_from_source (const gchar *source,
                                GtkIconTheme *icon_theme,
-                               gint          size)
+                               gint size)
 {
   return xfce_panel_pixbuf_from_source_at_size (source, icon_theme, size, size);
 }
@@ -317,17 +332,17 @@ xfce_panel_pixbuf_from_source (const gchar  *source,
  * Since: 4.17.4
  **/
 void
-xfce_panel_set_image_from_source (GtkImage     *image,
-                                  const gchar  *source,
+xfce_panel_set_image_from_source (GtkImage *image,
+                                  const gchar *source,
                                   GtkIconTheme *icon_theme,
-                                  gint          size,
-                                  gint          scale)
+                                  gint size,
+                                  gint scale)
 {
   GdkPixbuf *pixbuf;
 
   g_return_if_fail (GTK_IS_IMAGE (image));
 
-  pixbuf = xfce_panel_pixbuf_from_source (source, icon_theme, size * scale);
+  pixbuf = xfce_panel_pixbuf_from_source_at_size_and_scale (source, icon_theme, size, size, scale);
   if (G_LIKELY (pixbuf != NULL))
     {
       cairo_surface_t *surface = gdk_cairo_surface_create_from_pixbuf (pixbuf, scale, NULL);
@@ -340,4 +355,4 @@ xfce_panel_set_image_from_source (GtkImage     *image,
 
 
 #define __XFCE_PANEL_CONVENIENCE_C__
-#include <libxfce4panel/libxfce4panel-aliasdef.c>
+#include "libxfce4panel-visibility.c"

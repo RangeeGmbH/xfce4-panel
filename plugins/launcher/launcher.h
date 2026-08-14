@@ -19,23 +19,16 @@
 #ifndef __LAUNCHER_H__
 #define __LAUNCHER_H__
 
-#include <gtk/gtk.h>
-#include <libxfce4panel/libxfce4panel.h>
+#include "libxfce4panel/libxfce4panel.h"
+
+#include <garcon/garcon.h>
 
 G_BEGIN_DECLS
 
-typedef struct _LauncherPluginClass LauncherPluginClass;
-typedef struct _LauncherPlugin      LauncherPlugin;
-typedef enum   _LauncherArrowType   LauncherArrowType;
+#define LAUNCHER_TYPE_PLUGIN (launcher_plugin_get_type ())
+G_DECLARE_FINAL_TYPE (LauncherPlugin, launcher_plugin, LAUNCHER, PLUGIN, XfcePanelPlugin)
 
-#define XFCE_TYPE_LAUNCHER_PLUGIN            (launcher_plugin_get_type ())
-#define XFCE_LAUNCHER_PLUGIN(obj)            (G_TYPE_CHECK_INSTANCE_CAST ((obj), XFCE_TYPE_LAUNCHER_PLUGIN, LauncherPlugin))
-#define XFCE_LAUNCHER_PLUGIN_CLASS(klass)    (G_TYPE_CHECK_CLASS_CAST ((klass), XFCE_TYPE_LAUNCHER_PLUGIN, LauncherPluginClass))
-#define XFCE_IS_LAUNCHER_PLUGIN(obj)         (G_TYPE_CHECK_INSTANCE_TYPE ((obj), XFCE_TYPE_LAUNCHER_PLUGIN))
-#define XFCE_IS_LAUNCHER_PLUGIN_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE ((klass), XFCE_TYPE_LAUNCHER_PLUGIN))
-#define XFCE_LAUNCHER_PLUGIN_GET_CLASS(obj)  (G_TYPE_INSTANCE_GET_CLASS ((obj), XFCE_TYPE_LAUNCHER_PLUGIN, LauncherPluginClass))
-
-enum _LauncherArrowType
+typedef enum _LauncherArrowType
 {
   LAUNCHER_ARROW_DEFAULT = 0,
   LAUNCHER_ARROW_NORTH,
@@ -43,23 +36,27 @@ enum _LauncherArrowType
   LAUNCHER_ARROW_EAST,
   LAUNCHER_ARROW_SOUTH,
   LAUNCHER_ARROW_INTERNAL
-};
+} LauncherArrowType;
 
-GType       launcher_plugin_get_type         (void) G_GNUC_CONST;
+void
+launcher_plugin_register_type (XfcePanelTypeModule *type_module);
 
-void        launcher_plugin_register_type    (XfcePanelTypeModule *type_module);
+GSList *
+launcher_plugin_get_items (LauncherPlugin *plugin);
 
-GSList     *launcher_plugin_get_items        (LauncherPlugin      *plugin);
+gchar *
+launcher_plugin_unique_filename (LauncherPlugin *plugin);
 
-gchar      *launcher_plugin_unique_filename  (LauncherPlugin      *plugin);
+GHashTable *
+launcher_plugin_garcon_menu_pool (void);
 
-GHashTable *launcher_plugin_garcon_menu_pool (void);
+gboolean
+launcher_plugin_item_is_editable (LauncherPlugin *plugin,
+                                  GarconMenuItem *item,
+                                  gboolean *can_delete);
 
-gboolean    launcher_plugin_item_is_editable (LauncherPlugin      *plugin,
-                                              GarconMenuItem      *item,
-                                              gboolean            *can_delete);
-
-GIcon      *launcher_plugin_tooltip_icon     (const gchar         *icon_name);
+GIcon *
+launcher_plugin_tooltip_icon (const gchar *icon_name);
 
 G_END_DECLS
 

@@ -22,7 +22,9 @@ desktop_in_files = \
 	panel-desktop-handler.desktop.in \
 	panel-preferences.desktop.in
 desktop_DATA = $(desktop_in_files:.desktop.in=.desktop)
-@INTLTOOL_DESKTOP_RULE@
+
+%.desktop: %.desktop.in
+	$(AM_V_GEN) $(MSGFMT) --desktop --template $< -d $(top_srcdir)/po -o $@
 
 .PHONY: ChangeLog
 
@@ -35,22 +37,19 @@ dist-hook: ChangeLog
 
 EXTRA_DIST = \
 	$(desktop_in_files) \
-	intltool-extract.in \
-	intltool-merge.in \
-	intltool-update.in \
 	m4/introspection.m4 \
 	m4/vapigen.m4 \
-	README.md
+	meson.build \
+	meson_options.txt \
+	po/meson.build \
+	xfce-revision.h.in \
+	$(XDT_GEN_VISIBILITY_DIST) \
+	$(NULL)
 
 DISTCLEANFILES = \
-	$(desktop_DATA) \
-	intltool-extract \
-	intltool-merge \
-	intltool-update \
-	intltool-update-tmp \
-	po/.intltool-merge-cache.lock
+	$(desktop_DATA)
 
-DISTCHECK_CONFIGURE_FLAGS = \
+AM_DISTCHECK_CONFIGURE_FLAGS = \
 	--enable-gtk-doc \
 	--enable-introspection \
 	--enable-vala=no

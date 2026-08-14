@@ -9,11 +9,8 @@ plugindir = $(libdir)/xfce4/panel/plugins
 plugin_LTLIBRARIES = \
 	libseparator.la
 
-libseparator_built_sources = \
-	separator-dialog_ui.h
-
 libseparator_la_SOURCES = \
-	$(libseparator_built_sources) \
+	$(top_srcdir)/common/xfce4-panel-resources.c \
 	separator.c \
 	separator.h
 
@@ -23,6 +20,7 @@ libseparator_la_CFLAGS = \
 	$(LIBXFCE4UTIL_CFLAGS) \
 	$(CAIRO_CFLAGS) \
 	$(LIBXFCE4UI_CFLAGS) \
+	$(LIBXFCE4WINDOWING_CFLAGS) \
 	$(PLATFORM_CFLAGS)
 
 libseparator_la_LDFLAGS = \
@@ -39,6 +37,7 @@ libseparator_la_LIBADD = \
 	$(CAIRO_LIBS) \
 	$(LIBXFCE4UTIL_LIBS) \
 	$(LIBXFCE4UI_LIBS) \
+	$(LIBXFCE4WINDOWING_LIBS) \
 	$(XFCONF_LIBS)
 
 libseparator_la_DEPENDENCIES = \
@@ -51,24 +50,16 @@ libseparator_la_DEPENDENCIES = \
 desktopdir = $(datadir)/xfce4/panel/plugins
 desktop_in_files = separator.desktop.in.in
 desktop_DATA = $(desktop_in_files:.desktop.in.in=.desktop)
-@INTLTOOL_DESKTOP_RULE@
+
+%.desktop: %.desktop.in
+	$(AM_V_GEN) $(MSGFMT) --desktop --template $< -d $(top_srcdir)/po -o $@
 
 EXTRA_DIST = \
-	separator-dialog.glade \
-	$(desktop_in_files)
+	$(desktop_in_files) \
+	meson.build \
+	$(NULL)
 
 DISTCLEANFILES = \
 	$(desktop_DATA)
-
-if MAINTAINER_MODE
-BUILT_SOURCES = \
-	$(libseparator_built_sources)
-
-DISTCLEANFILES += \
-	$(libseparator_built_sources)
-
-separator-dialog_ui.h: separator-dialog.glade
-	$(AM_V_GEN) xdt-csource --static --strip-comments --strip-content --name=separator_dialog_ui $< >$@
-endif
 
 # vi:set ts=8 sw=8 noet ai nocindent syntax=automake:

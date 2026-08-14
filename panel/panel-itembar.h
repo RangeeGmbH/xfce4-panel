@@ -23,39 +23,37 @@
 
 G_BEGIN_DECLS
 
-typedef struct _PanelItembarClass PanelItembarClass;
-typedef struct _PanelItembar      PanelItembar;
+#define PANEL_TYPE_ITEMBAR (panel_itembar_get_type ())
+G_DECLARE_FINAL_TYPE (PanelItembar, panel_itembar, PANEL, ITEMBAR, GtkContainer)
 
-#define PANEL_TYPE_ITEMBAR            (panel_itembar_get_type ())
-#define PANEL_ITEMBAR(obj)            (G_TYPE_CHECK_INSTANCE_CAST ((obj), PANEL_TYPE_ITEMBAR, PanelItembar))
-#define PANEL_ITEMBAR_CLASS(klass)    (G_TYPE_CHECK_CLASS_CAST ((klass), PANEL_TYPE_ITEMBAR, PanelItembarClass))
-#define PANEL_IS_ITEMBAR(obj)         (G_TYPE_CHECK_INSTANCE_TYPE ((obj), PANEL_TYPE_ITEMBAR))
-#define PANEL_IS_ITEMBAR_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE ((klass), PANEL_TYPE_ITEMBAR))
-#define PANEL_ITEMBAR_GET_CLASS(obj)  (G_TYPE_INSTANCE_GET_CLASS ((obj), PANEL_TYPE_ITEMBAR, PanelItembarClass))
+GtkWidget *
+panel_itembar_new (void) G_GNUC_MALLOC;
 
-GType           panel_itembar_get_type                (void) G_GNUC_CONST;
+void
+panel_itembar_insert (PanelItembar *itembar,
+                      GtkWidget *widget,
+                      gint position);
 
-GtkWidget      *panel_itembar_new                     (void) G_GNUC_MALLOC;
+void
+panel_itembar_reorder_child (PanelItembar *itembar,
+                             GtkWidget *widget,
+                             gint position);
 
-void            panel_itembar_insert                  (PanelItembar *itembar,
-                                                       GtkWidget    *widget,
-                                                       gint          position);
+gint
+panel_itembar_get_child_index (PanelItembar *itembar,
+                               GtkWidget *widget);
 
-void            panel_itembar_reorder_child           (PanelItembar *itembar,
-                                                       GtkWidget    *widget,
-                                                       gint          position);
+guint
+panel_itembar_get_n_children (PanelItembar *itembar);
 
-gint            panel_itembar_get_child_index         (PanelItembar *itembar,
-                                                       GtkWidget    *widget);
+guint
+panel_itembar_get_drop_index (PanelItembar *itembar,
+                              gint x,
+                              gint y);
 
-guint           panel_itembar_get_n_children          (PanelItembar *itembar);
-
-guint           panel_itembar_get_drop_index          (PanelItembar *itembar,
-                                                       gint          x,
-                                                       gint          y);
-
-void            panel_itembar_set_drop_highlight_item (PanelItembar *itembar,
-                                                       gint          idx);
+void
+panel_itembar_set_drop_highlight_item (PanelItembar *itembar,
+                                       gint idx);
 
 G_END_DECLS
 

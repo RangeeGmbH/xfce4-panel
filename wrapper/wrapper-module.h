@@ -19,32 +19,26 @@
 #ifndef __WRAPPER_MODULE_H__
 #define __WRAPPER_MODULE_H__
 
+#include "libxfce4panel/xfce-panel-plugin-provider.h"
+
 #include <gtk/gtk.h>
-#include <libxfce4panel/xfce-panel-plugin-provider.h>
 
 G_BEGIN_DECLS
 
-typedef struct _WrapperModuleClass WrapperModuleClass;
-typedef struct _WrapperModule      WrapperModule;
+#define WRAPPER_TYPE_MODULE (wrapper_module_get_type ())
+G_DECLARE_FINAL_TYPE (WrapperModule, wrapper_module, WRAPPER, MODULE, GTypeModule)
 
-#define WRAPPER_TYPE_MODULE            (wrapper_module_get_type ())
-#define WRAPPER_MODULE(obj)            (G_TYPE_CHECK_INSTANCE_CAST ((obj), WRAPPER_TYPE_MODULE, WrapperModule))
-#define WRAPPER_MODULE_CLASS(klass)    (G_TYPE_CHECK_CLASS_CAST ((klass), WRAPPER_TYPE_MODULE, WrapperModuleClass))
-#define WRAPPER_IS_MODULE(obj)         (G_TYPE_CHECK_INSTANCE_TYPE ((obj), WRAPPER_TYPE_MODULE))
-#define WRAPPER_IS_MODULE_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE ((klass), WRAPPER_TYPE_MODULE))
-#define WRAPPER_MODULE_GET_CLASS(obj)  (G_TYPE_INSTANCE_GET_CLASS ((obj), WRAPPER_TYPE_MODULE, WrapperModuleClass))
+WrapperModule *
+wrapper_module_new (GModule *library) G_GNUC_MALLOC;
 
-GType          wrapper_module_get_type     (void) G_GNUC_CONST;
-
-WrapperModule *wrapper_module_new          (GModule        *library) G_GNUC_MALLOC;
-
-GtkWidget     *wrapper_module_new_provider (WrapperModule  *module,
-                                            GdkScreen      *screen,
-                                            const gchar    *name,
-                                            gint            unique_id,
-                                            const gchar    *display_name,
-                                            const gchar    *comment,
-                                            gchar         **arguments) G_GNUC_MALLOC;
+GtkWidget *
+wrapper_module_new_provider (WrapperModule *module,
+                             GdkScreen *screen,
+                             const gchar *name,
+                             gint unique_id,
+                             const gchar *display_name,
+                             const gchar *comment,
+                             gchar **arguments) G_GNUC_MALLOC;
 
 G_END_DECLS
 

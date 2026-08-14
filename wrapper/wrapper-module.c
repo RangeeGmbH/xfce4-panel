@@ -17,41 +17,35 @@
  */
 
 #ifdef HAVE_CONFIG_H
-#include <config.h>
+#include "config.h"
 #endif
 
-#ifdef HAVE_STRING_H
-#include <string.h>
-#endif
+#include "wrapper-module.h"
 
-#include <common/panel-private.h>
-#include <wrapper/wrapper-module.h>
+#include "common/panel-private.h"
 
 
 
-static void     wrapper_module_dispose (GObject     *object);
-static gboolean wrapper_module_load    (GTypeModule *type_module);
-static void     wrapper_module_unload  (GTypeModule *type_module);
+static void
+wrapper_module_dispose (GObject *object);
+static gboolean
+wrapper_module_load (GTypeModule *type_module);
+static void
+wrapper_module_unload (GTypeModule *type_module);
 
 
-
-
-struct _WrapperModuleClass
-{
-  GTypeModuleClass __parent__;
-};
 
 struct _WrapperModule
 {
   GTypeModule __parent__;
 
-  /* module library */
   GModule *library;
+  GType plugin_type;
 };
 
 
 
-G_DEFINE_TYPE (WrapperModule, wrapper_module, G_TYPE_TYPE_MODULE)
+G_DEFINE_FINAL_TYPE (WrapperModule, wrapper_module, G_TYPE_TYPE_MODULE)
 
 
 
@@ -74,7 +68,7 @@ wrapper_module_class_init (WrapperModuleClass *klass)
 static void
 wrapper_module_init (WrapperModule *module)
 {
-  /* foo */
+  module->plugin_type = G_TYPE_NONE;
 }
 
 
@@ -82,7 +76,16 @@ wrapper_module_init (WrapperModule *module)
 static void
 wrapper_module_dispose (GObject *object)
 {
-  /* do nothing */
+  WrapperModule *module = WRAPPER_MODULE (object);
+
+  if (module->plugin_type != G_TYPE_NONE)
+    {
+      /* a module containing type implementations must exist forever */
+      g_object_ref (module);
+      return;
+    }
+
+  G_OBJECT_CLASS (wrapper_module_parent_class)->dispose (object);
 }
 
 
@@ -117,18 +120,17 @@ wrapper_module_new (GModule *library)
 
 
 GtkWidget *
-wrapper_module_new_provider (WrapperModule  *module,
-                             GdkScreen      *screen,
-                             const gchar    *name,
-                             gint            unique_id,
-                             const gchar    *display_name,
-                             const gchar    *comment,
-                             gchar         **arguments)
+wrapper_module_new_provider (WrapperModule *module,
+                             GdkScreen *screen,
+                             const gchar *name,
+                             gint unique_id,
+                             const gchar *display_name,
+                             const gchar *comment,
+                             gchar **arguments)
 {
-  GtkWidget           *plugin = NULL;
-  PluginConstructFunc  construct_func;
-  PluginInitFunc       init_func;
-  GType                type;
+  GtkWidget *plugin = NULL;
+  PluginConstructFunc construct_func;
+  PluginInitFunc init_func;
 
   panel_return_val_if_fail (WRAPPER_IS_MODULE (module), NULL);
   panel_return_val_if_fail (module->library != NULL, NULL);
@@ -136,22 +138,22 @@ wrapper_module_new_provider (WrapperModule  *module,
   g_type_module_use (G_TYPE_MODULE (module));
 
   /* try to link the contruct or init function */
-  if (g_module_symbol (module->library, "xfce_panel_module_init",
-      (gpointer) &init_func) && init_func != NULL)
+  if (g_module_symbol (module->library, "xfce_panel_module_init", (gpointer) &init_func)
+      && init_func != NULL)
     {
       /* initialize the plugin */
-      type = (init_func) (G_TYPE_MODULE (module), NULL);
+      module->plugin_type = (init_func) (G_TYPE_MODULE (module), NULL);
 
       /* create the object */
-      plugin = g_object_new (type,
+      plugin = g_object_new (module->plugin_type,
                              "name", name,
                              "unique-id", unique_id,
                              "display-name", display_name,
                              "comment", comment,
                              "arguments", arguments, NULL);
     }
-  else if (g_module_symbol (module->library, "xfce_panel_module_construct",
-           (gpointer) &construct_func) && construct_func != NULL)
+  else if (g_module_symbol (module->library, "xfce_panel_module_construct", (gpointer) &construct_func)
+           && construct_func != NULL)
     {
       /* create a new panel plugin */
       plugin = (*construct_func) (name, unique_id,

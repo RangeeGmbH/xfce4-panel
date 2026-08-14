@@ -19,67 +19,66 @@
 
 
 #ifdef HAVE_CONFIG_H
-#include <config.h>
+#include "config.h"
 #endif
-#ifdef HAVE_STRING_H
-#include <string.h>
-#endif
-
-#include <libxfce4panel/libxfce4panel.h>
 
 #include "sn-icon-box.h"
 #include "sn-util.h"
 
+#include "libxfce4panel/libxfce4panel.h"
 
 
-static void                  sn_icon_box_icon_changed                (GtkWidget               *widget);
 
-static void                  sn_icon_box_get_preferred_width         (GtkWidget               *widget,
-                                                                      gint                    *minimum_width,
-                                                                      gint                    *natural_width);
+static void
+sn_icon_box_icon_changed (GtkWidget *widget);
 
-static void                  sn_icon_box_get_preferred_height        (GtkWidget               *widget,
-                                                                      gint                    *minimum_height,
-                                                                      gint                    *natural_height);
+static void
+sn_icon_box_get_preferred_width (GtkWidget *widget,
+                                 gint *minimum_width,
+                                 gint *natural_width);
 
-static void                  sn_icon_box_size_allocate               (GtkWidget               *widget,
-                                                                      GtkAllocation           *allocation);
+static void
+sn_icon_box_get_preferred_height (GtkWidget *widget,
+                                  gint *minimum_height,
+                                  gint *natural_height);
 
-static void                  sn_icon_box_remove                      (GtkContainer            *container,
-                                                                      GtkWidget               *child);
+static void
+sn_icon_box_size_allocate (GtkWidget *widget,
+                           GtkAllocation *allocation);
 
-static GType                 sn_icon_box_child_type                  (GtkContainer            *container);
+static void
+sn_icon_box_remove (GtkContainer *container,
+                    GtkWidget *child);
 
-static void                  sn_icon_box_forall                      (GtkContainer            *container,
-                                                                      gboolean                 include_internals,
-                                                                      GtkCallback              callback,
-                                                                      gpointer                 callback_data);
+static GType
+sn_icon_box_child_type (GtkContainer *container);
 
+static void
+sn_icon_box_forall (GtkContainer *container,
+                    gboolean include_internals,
+                    GtkCallback callback,
+                    gpointer callback_data);
 
-struct _SnIconBoxClass
-{
-  GtkContainerClass    __parent__;
-};
 
 struct _SnIconBox
 {
-  GtkContainer         __parent__;
+  GtkContainer __parent__;
 
-  SnItem              *item;
-  SnConfig            *config;
+  SnItem *item;
+  SnConfig *config;
 
-  GtkWidget           *icon;
-  GtkWidget           *overlay;
+  GtkWidget *icon;
+  GtkWidget *overlay;
 };
 
-G_DEFINE_TYPE (SnIconBox, sn_icon_box, GTK_TYPE_CONTAINER)
+G_DEFINE_FINAL_TYPE (SnIconBox, sn_icon_box, GTK_TYPE_CONTAINER)
 
 
 
 static void
 sn_icon_box_class_init (SnIconBoxClass *klass)
 {
-  GtkWidgetClass    *widget_class;
+  GtkWidgetClass *widget_class;
   GtkContainerClass *container_class;
 
   widget_class = GTK_WIDGET_CLASS (klass);
@@ -123,9 +122,9 @@ sn_icon_box_child_type (GtkContainer *container)
 
 static void
 sn_icon_box_forall (GtkContainer *container,
-                    gboolean      include_internals,
-                    GtkCallback   callback,
-                    gpointer      callback_data)
+                    gboolean include_internals,
+                    GtkCallback callback,
+                    gpointer callback_data)
 {
   SnIconBox *box = XFCE_SN_ICON_BOX (container);
 
@@ -142,7 +141,7 @@ sn_icon_box_forall (GtkContainer *container,
 
 static void
 sn_icon_box_remove (GtkContainer *container,
-                    GtkWidget    *child)
+                    GtkWidget *child)
 {
   SnIconBox *box;
 
@@ -167,13 +166,13 @@ sn_icon_box_remove (GtkContainer *container,
 
 
 GtkWidget *
-sn_icon_box_new (SnItem   *item,
+sn_icon_box_new (SnItem *item,
                  SnConfig *config)
 {
-  SnIconBox   *box = g_object_new (XFCE_TYPE_SN_ICON_BOX, NULL);
+  SnIconBox *box = g_object_new (XFCE_TYPE_SN_ICON_BOX, NULL);
   GtkSettings *settings;
 
-  g_return_val_if_fail (XFCE_IS_SN_CONFIG (config), NULL);
+  g_return_val_if_fail (SN_IS_CONFIG (config), NULL);
 
   box->item = item;
   box->config = config;
@@ -210,17 +209,21 @@ sn_icon_box_new (SnItem   *item,
 
 
 static GdkPixbuf *
-sn_icon_box_load_icon (GtkWidget    *image,
+sn_icon_box_load_icon (GtkWidget *image,
                        GtkIconTheme *icon_theme,
-                       const gchar  *icon_name,
-                       gint          icon_size,
-                       gboolean      prefer_symbolic)
+                       const gchar *icon_name,
+                       gint icon_size,
+                       gboolean prefer_symbolic)
 {
   GtkIconInfo *info;
-  GdkPixbuf   *pixbuf = NULL;
+  GdkPixbuf *pixbuf = NULL;
+  GtkIconLookupFlags flags = GTK_ICON_LOOKUP_FORCE_SIZE;
+  if (prefer_symbolic)
+    flags |= GTK_ICON_LOOKUP_FORCE_SYMBOLIC;
 
-  info = gtk_icon_theme_lookup_icon (icon_theme, icon_name, icon_size,
-                                     prefer_symbolic ? GTK_ICON_LOOKUP_FORCE_SYMBOLIC : 0);
+  info = gtk_icon_theme_lookup_icon_for_scale (icon_theme, icon_name, icon_size,
+                                               gtk_widget_get_scale_factor (image),
+                                               flags);
   if (info != NULL)
     {
       pixbuf = gtk_icon_info_load_symbolic_for_context (info,
@@ -235,22 +238,20 @@ sn_icon_box_load_icon (GtkWidget    *image,
 
 
 static void
-sn_icon_box_apply_icon (GtkWidget    *image,
+sn_icon_box_apply_icon (GtkWidget *image,
                         GtkIconTheme *icon_theme,
                         GtkIconTheme *icon_theme_from_path,
-                        const gchar  *icon_name,
-                        GdkPixbuf    *icon_pixbuf,
-                        gint          icon_size,
-                        gboolean      prefer_symbolic)
+                        const gchar *icon_name,
+                        GdkPixbuf *icon_pixbuf,
+                        gint icon_size,
+                        gboolean prefer_symbolic)
 {
   GdkPixbuf *work_pixbuf = NULL;
-  gchar     *work_icon_name = NULL;
-  gint       width, height, scale_factor;
-  gchar     *s1, *s2;
+  gchar *work_icon_name = NULL;
+  gint width, height, scale_factor;
+  gchar *s1, *s2;
 
   gtk_image_clear (GTK_IMAGE (image));
-  scale_factor = gtk_widget_get_scale_factor (image);
-  icon_size *= scale_factor;
 
   if (icon_name != NULL)
     {
@@ -295,8 +296,10 @@ sn_icon_box_apply_icon (GtkWidget    *image,
 
       width = gdk_pixbuf_get_width (work_pixbuf);
       height = gdk_pixbuf_get_height (work_pixbuf);
+      scale_factor = gtk_widget_get_scale_factor (image);
+      icon_size *= scale_factor;
 
-      if (width > icon_size || height > icon_size)
+      if (width > icon_size || height > icon_size || (width < icon_size && height < icon_size))
         {
           /* scale pixbuf */
           if (height < width)
@@ -327,16 +330,16 @@ sn_icon_box_apply_icon (GtkWidget    *image,
 static void
 sn_icon_box_icon_changed (GtkWidget *widget)
 {
-  SnIconBox    *box;
-  const gchar  *icon_name;
-  GdkPixbuf    *icon_pixbuf;
-  const gchar  *overlay_icon_name;
-  GdkPixbuf    *overlay_icon_pixbuf;
-  const gchar  *theme_path;
+  SnIconBox *box;
+  const gchar *icon_name;
+  GdkPixbuf *icon_pixbuf;
+  const gchar *overlay_icon_name;
+  GdkPixbuf *overlay_icon_pixbuf;
+  const gchar *theme_path;
   GtkIconTheme *icon_theme;
   GtkIconTheme *icon_theme_from_path = NULL;
-  gint          icon_size;
-  gboolean      symbolic_icons;
+  gint icon_size;
+  gboolean symbolic_icons;
 
   box = XFCE_SN_ICON_BOX (widget);
   icon_theme = gtk_icon_theme_get_for_screen (gtk_widget_get_screen (GTK_WIDGET (widget)));
@@ -371,22 +374,23 @@ sn_icon_box_icon_changed (GtkWidget *widget)
 
 static void
 sn_icon_box_get_preferred_size (GtkWidget *widget,
-                                gint      *minimum_size,
-                                gint      *natural_size,
-                                gboolean   horizontal)
+                                gint *minimum_size,
+                                gint *natural_size,
+                                gboolean horizontal)
 {
-  SnIconBox      *box = XFCE_SN_ICON_BOX (widget);
-  gint            icon_size;
-  GtkRequisition  child_req;
-  GdkPixbuf      *pixbuf1, *pixbuf2;
+  SnIconBox *box = XFCE_SN_ICON_BOX (widget);
+  gint icon_size;
+  GtkRequisition child_req;
+  GdkPixbuf *pixbuf1, *pixbuf2;
 
   icon_size = sn_config_get_icon_size (box->config);
 
   pixbuf1 = gtk_image_get_pixbuf (GTK_IMAGE (box->icon));
   pixbuf2 = gtk_image_get_pixbuf (GTK_IMAGE (box->overlay));
-  if (pixbuf2 != NULL && (pixbuf1 == NULL ||
-      gdk_pixbuf_get_width (pixbuf2) > gdk_pixbuf_get_width (pixbuf1) ||
-      gdk_pixbuf_get_height (pixbuf2) > gdk_pixbuf_get_height (pixbuf1)))
+  if (pixbuf2 != NULL
+      && (pixbuf1 == NULL
+          || gdk_pixbuf_get_width (pixbuf2) > gdk_pixbuf_get_width (pixbuf1)
+          || gdk_pixbuf_get_height (pixbuf2) > gdk_pixbuf_get_height (pixbuf1)))
     {
       pixbuf1 = pixbuf2;
     }
@@ -418,8 +422,8 @@ sn_icon_box_get_preferred_size (GtkWidget *widget,
 
 static void
 sn_icon_box_get_preferred_width (GtkWidget *widget,
-                                 gint      *minimum_width,
-                                 gint      *natural_width)
+                                 gint *minimum_width,
+                                 gint *natural_width)
 {
   sn_icon_box_get_preferred_size (widget, minimum_width, natural_width, TRUE);
 }
@@ -428,8 +432,8 @@ sn_icon_box_get_preferred_width (GtkWidget *widget,
 
 static void
 sn_icon_box_get_preferred_height (GtkWidget *widget,
-                                  gint      *minimum_height,
-                                  gint      *natural_height)
+                                  gint *minimum_height,
+                                  gint *natural_height)
 {
   sn_icon_box_get_preferred_size (widget, minimum_height, natural_height, FALSE);
 }
@@ -437,7 +441,7 @@ sn_icon_box_get_preferred_height (GtkWidget *widget,
 
 
 static void
-sn_icon_box_size_allocate (GtkWidget     *widget,
+sn_icon_box_size_allocate (GtkWidget *widget,
                            GtkAllocation *allocation)
 {
   SnIconBox *box = XFCE_SN_ICON_BOX (widget);

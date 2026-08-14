@@ -9,11 +9,8 @@ plugindir = $(libdir)/xfce4/panel/plugins
 plugin_LTLIBRARIES = \
 	libactions.la
 
-libactions_built_sources = \
-	actions-dialog_ui.h
-
 libactions_la_SOURCES = \
-	$(libactions_built_sources) \
+	$(top_srcdir)/common/xfce4-panel-resources.c \
 	actions.c \
 	actions.h
 
@@ -21,6 +18,7 @@ libactions_la_CFLAGS = \
 	$(GTK_CFLAGS) \
 	$(LIBXFCE4UTIL_CFLAGS) \
 	$(LIBXFCE4UI_CFLAGS) \
+	$(LIBXFCE4WINDOWING_CFLAGS) \
 	$(XFCONF_CFLAGS) \
 	$(GIO_CFLAGS) \
 	$(PLATFORM_CFLAGS)
@@ -38,6 +36,7 @@ libactions_la_LIBADD = \
 	$(GTK_LIBS) \
 	$(LIBXFCE4UTIL_LIBS) \
 	$(LIBXFCE4UI_LIBS) \
+	$(LIBXFCE4WINDOWING_LIBS) \
 	$(GIO_LIBS) \
 	$(XFCONF_LIBS)
 
@@ -51,24 +50,16 @@ libactions_la_DEPENDENCIES = \
 desktopdir = $(datadir)/xfce4/panel/plugins
 desktop_in_files = actions.desktop.in.in
 desktop_DATA = $(desktop_in_files:.desktop.in.in=.desktop)
-@INTLTOOL_DESKTOP_RULE@
+
+%.desktop: %.desktop.in
+	$(AM_V_GEN) $(MSGFMT) --desktop --template $< -d $(top_srcdir)/po -o $@
 
 EXTRA_DIST = \
-	actions-dialog.glade \
-	$(desktop_in_files)
+	$(desktop_in_files) \
+	meson.build \
+	$(NULL)
 
 DISTCLEANFILES = \
 	$(desktop_DATA)
-
-if MAINTAINER_MODE
-BUILT_SOURCES = \
-	$(libactions_built_sources)
-
-DISTCLEANFILES += \
-	$(libactions_built_sources)
-
-actions-dialog_ui.h: actions-dialog.glade
-	$(AM_V_GEN) xdt-csource --static --strip-comments --strip-content --name=actions_dialog_ui $< >$@
-endif
 
 # vi:set ts=8 sw=8 noet ai nocindent syntax=automake:

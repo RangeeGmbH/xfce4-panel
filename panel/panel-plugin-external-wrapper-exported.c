@@ -17,6 +17,52 @@
 #  include <gio/gunixfdlist.h>
 #endif
 
+#ifdef G_ENABLE_DEBUG
+#define g_marshal_value_peek_boolean(v)  g_value_get_boolean (v)
+#define g_marshal_value_peek_char(v)     g_value_get_schar (v)
+#define g_marshal_value_peek_uchar(v)    g_value_get_uchar (v)
+#define g_marshal_value_peek_int(v)      g_value_get_int (v)
+#define g_marshal_value_peek_uint(v)     g_value_get_uint (v)
+#define g_marshal_value_peek_long(v)     g_value_get_long (v)
+#define g_marshal_value_peek_ulong(v)    g_value_get_ulong (v)
+#define g_marshal_value_peek_int64(v)    g_value_get_int64 (v)
+#define g_marshal_value_peek_uint64(v)   g_value_get_uint64 (v)
+#define g_marshal_value_peek_enum(v)     g_value_get_enum (v)
+#define g_marshal_value_peek_flags(v)    g_value_get_flags (v)
+#define g_marshal_value_peek_float(v)    g_value_get_float (v)
+#define g_marshal_value_peek_double(v)   g_value_get_double (v)
+#define g_marshal_value_peek_string(v)   (char*) g_value_get_string (v)
+#define g_marshal_value_peek_param(v)    g_value_get_param (v)
+#define g_marshal_value_peek_boxed(v)    g_value_get_boxed (v)
+#define g_marshal_value_peek_pointer(v)  g_value_get_pointer (v)
+#define g_marshal_value_peek_object(v)   g_value_get_object (v)
+#define g_marshal_value_peek_variant(v)  g_value_get_variant (v)
+#else /* !G_ENABLE_DEBUG */
+/* WARNING: This code accesses GValues directly, which is UNSUPPORTED API.
+ *          Do not access GValues directly in your code. Instead, use the
+ *          g_value_get_*() functions
+ */
+#define g_marshal_value_peek_boolean(v)  (v)->data[0].v_int
+#define g_marshal_value_peek_char(v)     (v)->data[0].v_int
+#define g_marshal_value_peek_uchar(v)    (v)->data[0].v_uint
+#define g_marshal_value_peek_int(v)      (v)->data[0].v_int
+#define g_marshal_value_peek_uint(v)     (v)->data[0].v_uint
+#define g_marshal_value_peek_long(v)     (v)->data[0].v_long
+#define g_marshal_value_peek_ulong(v)    (v)->data[0].v_ulong
+#define g_marshal_value_peek_int64(v)    (v)->data[0].v_int64
+#define g_marshal_value_peek_uint64(v)   (v)->data[0].v_uint64
+#define g_marshal_value_peek_enum(v)     (v)->data[0].v_long
+#define g_marshal_value_peek_flags(v)    (v)->data[0].v_ulong
+#define g_marshal_value_peek_float(v)    (v)->data[0].v_float
+#define g_marshal_value_peek_double(v)   (v)->data[0].v_double
+#define g_marshal_value_peek_string(v)   (v)->data[0].v_pointer
+#define g_marshal_value_peek_param(v)    (v)->data[0].v_pointer
+#define g_marshal_value_peek_boxed(v)    (v)->data[0].v_pointer
+#define g_marshal_value_peek_pointer(v)  (v)->data[0].v_pointer
+#define g_marshal_value_peek_object(v)   (v)->data[0].v_pointer
+#define g_marshal_value_peek_variant(v)  (v)->data[0].v_pointer
+#endif /* !G_ENABLE_DEBUG */
+
 typedef struct
 {
   GDBusArgInfo parent_struct;
@@ -151,6 +197,140 @@ _g_value_equal (const GValue *a, const GValue *b)
   return ret;
 }
 
+static void
+_g_dbus_codegen_marshal_VOID__STRING_VARIANT_UINT (
+    GClosure     *closure,
+    GValue       *return_value G_GNUC_UNUSED,
+    unsigned int  n_param_values,
+    const GValue *param_values,
+    void         *invocation_hint G_GNUC_UNUSED,
+    void         *marshal_data)
+{
+  typedef void (*_GDbusCodegenMarshalVoid_StringVariantUintFunc)
+       (void *data1,
+        const gchar *arg_name,
+        GVariant *arg_value,
+        guint arg_handle,
+        void *data2);
+  _GDbusCodegenMarshalVoid_StringVariantUintFunc callback;
+  GCClosure *cc = (GCClosure*) closure;
+  void *data1, *data2;
+
+  g_return_if_fail (n_param_values == 4);
+
+  if (G_CCLOSURE_SWAP_DATA (closure))
+    {
+      data1 = closure->data;
+      data2 = g_value_peek_pointer (param_values + 0);
+    }
+  else
+    {
+      data1 = g_value_peek_pointer (param_values + 0);
+      data2 = closure->data;
+    }
+
+  callback = (_GDbusCodegenMarshalVoid_StringVariantUintFunc)
+    (marshal_data ? marshal_data : cc->callback);
+
+  callback (data1,
+            g_marshal_value_peek_string (param_values + 1),
+            g_marshal_value_peek_variant (param_values + 2),
+            g_marshal_value_peek_uint (param_values + 3),
+            data2);
+}
+
+static void
+_g_dbus_codegen_marshal_BOOLEAN__OBJECT_UINT (
+    GClosure     *closure,
+    GValue       *return_value,
+    unsigned int  n_param_values,
+    const GValue *param_values,
+    void         *invocation_hint G_GNUC_UNUSED,
+    void         *marshal_data)
+{
+  typedef gboolean (*_GDbusCodegenMarshalBoolean_ObjectUintFunc)
+       (void *data1,
+        GDBusMethodInvocation *arg_method_invocation,
+        guint arg_signal,
+        void *data2);
+  _GDbusCodegenMarshalBoolean_ObjectUintFunc callback;
+  GCClosure *cc = (GCClosure*) closure;
+  void *data1, *data2;
+  gboolean v_return;
+
+  g_return_if_fail (return_value != NULL);
+  g_return_if_fail (n_param_values == 3);
+
+  if (G_CCLOSURE_SWAP_DATA (closure))
+    {
+      data1 = closure->data;
+      data2 = g_value_peek_pointer (param_values + 0);
+    }
+  else
+    {
+      data1 = g_value_peek_pointer (param_values + 0);
+      data2 = closure->data;
+    }
+
+  callback = (_GDbusCodegenMarshalBoolean_ObjectUintFunc)
+    (marshal_data ? marshal_data : cc->callback);
+
+  v_return =
+    callback (data1,
+              g_marshal_value_peek_object (param_values + 1),
+              g_marshal_value_peek_uint (param_values + 2),
+              data2);
+
+  g_value_set_boolean (return_value, v_return);
+}
+
+static void
+_g_dbus_codegen_marshal_BOOLEAN__OBJECT_UINT_BOOLEAN (
+    GClosure     *closure,
+    GValue       *return_value,
+    unsigned int  n_param_values,
+    const GValue *param_values,
+    void         *invocation_hint G_GNUC_UNUSED,
+    void         *marshal_data)
+{
+  typedef gboolean (*_GDbusCodegenMarshalBoolean_ObjectUintBooleanFunc)
+       (void *data1,
+        GDBusMethodInvocation *arg_method_invocation,
+        guint arg_handle,
+        gboolean arg_result,
+        void *data2);
+  _GDbusCodegenMarshalBoolean_ObjectUintBooleanFunc callback;
+  GCClosure *cc = (GCClosure*) closure;
+  void *data1, *data2;
+  gboolean v_return;
+
+  g_return_if_fail (return_value != NULL);
+  g_return_if_fail (n_param_values == 4);
+
+  if (G_CCLOSURE_SWAP_DATA (closure))
+    {
+      data1 = closure->data;
+      data2 = g_value_peek_pointer (param_values + 0);
+    }
+  else
+    {
+      data1 = g_value_peek_pointer (param_values + 0);
+      data2 = closure->data;
+    }
+
+  callback = (_GDbusCodegenMarshalBoolean_ObjectUintBooleanFunc)
+    (marshal_data ? marshal_data : cc->callback);
+
+  v_return =
+    callback (data1,
+              g_marshal_value_peek_object (param_values + 1),
+              g_marshal_value_peek_uint (param_values + 2),
+              g_marshal_value_peek_boolean (param_values + 3),
+              data2);
+
+  g_value_set_boolean (return_value, v_return);
+}
+
 /* ------------------------------------------------------------------------
  * Code for interface org.xfce.Panel.Wrapper
  * ------------------------------------------------------------------------
@@ -163,6 +343,14 @@ _g_value_equal (const GValue *a, const GValue *b)
  *
  * This section contains code for working with the <link linkend="gdbus-interface-org-xfce-Panel-Wrapper.top_of_page">org.xfce.Panel.Wrapper</link> D-Bus interface in C.
  */
+
+enum
+{
+  XFCE_PANEL_PLUGIN_WRAPPER__EXPORTED_SET,
+  XFCE_PANEL_PLUGIN_WRAPPER__EXPORTED_REMOTE_EVENT,
+};
+
+static unsigned XFCE_PANEL_PLUGIN_WRAPPER__EXPORTED_SIGNALS[2] = { 0 };
 
 /* ---- Introspection data for org.xfce.Panel.Wrapper ---- */
 
@@ -404,6 +592,58 @@ xfce_panel_plugin_wrapper_exported_override_properties (GObjectClass *klass G_GN
 }
 
 
+inline static void
+xfce_panel_plugin_wrapper_exported_signal_marshal_set (
+    GClosure     *closure,
+    GValue       *return_value,
+    unsigned int  n_param_values,
+    const GValue *param_values,
+    void         *invocation_hint,
+    void         *marshal_data)
+{
+  g_cclosure_marshal_VOID__VARIANT (closure,
+    return_value, n_param_values, param_values, invocation_hint, marshal_data);
+}
+
+inline static void
+xfce_panel_plugin_wrapper_exported_signal_marshal_remote_event (
+    GClosure     *closure,
+    GValue       *return_value,
+    unsigned int  n_param_values,
+    const GValue *param_values,
+    void         *invocation_hint,
+    void         *marshal_data)
+{
+  _g_dbus_codegen_marshal_VOID__STRING_VARIANT_UINT (closure,
+    return_value, n_param_values, param_values, invocation_hint, marshal_data);
+}
+
+inline static void
+xfce_panel_plugin_wrapper_exported_method_marshal_provider_signal (
+    GClosure     *closure,
+    GValue       *return_value,
+    unsigned int  n_param_values,
+    const GValue *param_values,
+    void         *invocation_hint,
+    void         *marshal_data)
+{
+  _g_dbus_codegen_marshal_BOOLEAN__OBJECT_UINT (closure,
+    return_value, n_param_values, param_values, invocation_hint, marshal_data);
+}
+
+inline static void
+xfce_panel_plugin_wrapper_exported_method_marshal_remote_event_result (
+    GClosure     *closure,
+    GValue       *return_value,
+    unsigned int  n_param_values,
+    const GValue *param_values,
+    void         *invocation_hint,
+    void         *marshal_data)
+{
+  _g_dbus_codegen_marshal_BOOLEAN__OBJECT_UINT_BOOLEAN (closure,
+    return_value, n_param_values, param_values, invocation_hint, marshal_data);
+}
+
 
 /**
  * XfcePanelPluginWrapperExported:
@@ -447,7 +687,7 @@ xfce_panel_plugin_wrapper_exported_default_init (XfcePanelPluginWrapperExportedI
     G_STRUCT_OFFSET (XfcePanelPluginWrapperExportedIface, handle_provider_signal),
     g_signal_accumulator_true_handled,
     NULL,
-    g_cclosure_marshal_generic,
+      xfce_panel_plugin_wrapper_exported_method_marshal_provider_signal,
     G_TYPE_BOOLEAN,
     2,
     G_TYPE_DBUS_METHOD_INVOCATION, G_TYPE_UINT);
@@ -471,7 +711,7 @@ xfce_panel_plugin_wrapper_exported_default_init (XfcePanelPluginWrapperExportedI
     G_STRUCT_OFFSET (XfcePanelPluginWrapperExportedIface, handle_remote_event_result),
     g_signal_accumulator_true_handled,
     NULL,
-    g_cclosure_marshal_generic,
+      xfce_panel_plugin_wrapper_exported_method_marshal_remote_event_result,
     G_TYPE_BOOLEAN,
     3,
     G_TYPE_DBUS_METHOD_INVOCATION, G_TYPE_UINT, G_TYPE_BOOLEAN);
@@ -486,15 +726,16 @@ xfce_panel_plugin_wrapper_exported_default_init (XfcePanelPluginWrapperExportedI
    *
    * On the service-side, this signal can be used with e.g. g_signal_emit_by_name() to make the object emit the D-Bus signal.
    */
-  g_signal_new ("set",
-    G_TYPE_FROM_INTERFACE (iface),
-    G_SIGNAL_RUN_LAST,
-    G_STRUCT_OFFSET (XfcePanelPluginWrapperExportedIface, set),
-    NULL,
-    NULL,
-    g_cclosure_marshal_generic,
-    G_TYPE_NONE,
-    1, G_TYPE_VARIANT);
+  XFCE_PANEL_PLUGIN_WRAPPER__EXPORTED_SIGNALS[XFCE_PANEL_PLUGIN_WRAPPER__EXPORTED_SET] =
+    g_signal_new ("set",
+      G_TYPE_FROM_INTERFACE (iface),
+      G_SIGNAL_RUN_LAST,
+      G_STRUCT_OFFSET (XfcePanelPluginWrapperExportedIface, set),
+      NULL,
+      NULL,
+      xfce_panel_plugin_wrapper_exported_signal_marshal_set,
+      G_TYPE_NONE,
+      1, G_TYPE_VARIANT);
 
   /**
    * XfcePanelPluginWrapperExported::remote-event:
@@ -507,15 +748,16 @@ xfce_panel_plugin_wrapper_exported_default_init (XfcePanelPluginWrapperExportedI
    *
    * On the service-side, this signal can be used with e.g. g_signal_emit_by_name() to make the object emit the D-Bus signal.
    */
-  g_signal_new ("remote-event",
-    G_TYPE_FROM_INTERFACE (iface),
-    G_SIGNAL_RUN_LAST,
-    G_STRUCT_OFFSET (XfcePanelPluginWrapperExportedIface, remote_event),
-    NULL,
-    NULL,
-    g_cclosure_marshal_generic,
-    G_TYPE_NONE,
-    3, G_TYPE_STRING, G_TYPE_VARIANT, G_TYPE_UINT);
+  XFCE_PANEL_PLUGIN_WRAPPER__EXPORTED_SIGNALS[XFCE_PANEL_PLUGIN_WRAPPER__EXPORTED_REMOTE_EVENT] =
+    g_signal_new ("remote-event",
+      G_TYPE_FROM_INTERFACE (iface),
+      G_SIGNAL_RUN_LAST,
+      G_STRUCT_OFFSET (XfcePanelPluginWrapperExportedIface, remote_event),
+      NULL,
+      NULL,
+      xfce_panel_plugin_wrapper_exported_signal_marshal_remote_event,
+      G_TYPE_NONE,
+      3, G_TYPE_STRING, G_TYPE_VARIANT, G_TYPE_UINT);
 
 }
 
@@ -531,7 +773,7 @@ xfce_panel_plugin_wrapper_exported_emit_set (
     XfcePanelPluginWrapperExported *object,
     GVariant *arg_values)
 {
-  g_signal_emit_by_name (object, "set", arg_values);
+  g_signal_emit (object, XFCE_PANEL_PLUGIN_WRAPPER__EXPORTED_SIGNALS[XFCE_PANEL_PLUGIN_WRAPPER__EXPORTED_SET], 0, arg_values);
 }
 
 /**
@@ -550,7 +792,7 @@ xfce_panel_plugin_wrapper_exported_emit_remote_event (
     GVariant *arg_value,
     guint arg_handle)
 {
-  g_signal_emit_by_name (object, "remote-event", arg_name, arg_value, arg_handle);
+  g_signal_emit (object, XFCE_PANEL_PLUGIN_WRAPPER__EXPORTED_SIGNALS[XFCE_PANEL_PLUGIN_WRAPPER__EXPORTED_REMOTE_EVENT], 0, arg_name, arg_value, arg_handle);
 }
 
 /**
@@ -1319,7 +1561,11 @@ xfce_panel_plugin_wrapper_exported_skeleton_dbus_interface_get_properties (GDBus
 
   GVariantBuilder builder;
   guint n;
-  g_variant_builder_init (&builder, G_VARIANT_TYPE ("a{sv}"));
+#if GLIB_VERSION_MAX_ALLOWED >= GLIB_VERSION_2_84
+  g_variant_builder_init_static (&builder, G_VARIANT_TYPE ("a{sv}"));
+#else
+  g_variant_builder_init(&builder, G_VARIANT_TYPE ("a{sv}"));
+#endif
   if (_xfce_panel_plugin_wrapper_exported_interface_info.parent_struct.properties == NULL)
     goto out;
   for (n = 0; _xfce_panel_plugin_wrapper_exported_interface_info.parent_struct.properties[n] != NULL; n++)
@@ -1414,8 +1660,14 @@ xfce_panel_plugin_wrapper_exported_skeleton_finalize (GObject *object)
 {
   XfcePanelPluginWrapperExportedSkeleton *skeleton = XFCE_PANEL_PLUGIN_WRAPPER_EXPORTED_SKELETON (object);
   g_list_free_full (skeleton->priv->changed_properties, (GDestroyNotify) _changed_property_free);
+#if GLIB_VERSION_MAX_ALLOWED >= GLIB_VERSION_2_38
+  /* coverity[missing_lock : SUPPRESS] */
+  g_clear_pointer (&skeleton->priv->changed_properties_idle_source, g_source_destroy);
+#else
   if (skeleton->priv->changed_properties_idle_source != NULL)
     g_source_destroy (skeleton->priv->changed_properties_idle_source);
+skeleton->priv->changed_properties_idle_source = NULL;
+#endif
   g_main_context_unref (skeleton->priv->context);
   g_mutex_clear (&skeleton->priv->lock);
   G_OBJECT_CLASS (xfce_panel_plugin_wrapper_exported_skeleton_parent_class)->finalize (object);

@@ -17,23 +17,27 @@
  */
 
 #ifdef HAVE_CONFIG_H
-#include <config.h>
+#include "config.h"
 #endif
 
-#ifdef HAVE_LOCALE_H
-#include <locale.h>
-#endif
+#include "panel-private.h"
+#include "panel-utils.h"
 
 #include <libxfce4ui/libxfce4ui.h>
 
-#include <common/panel-private.h>
-#include <common/panel-utils.h>
+
+
+typedef struct _PanelUtilsGtkLabelData
+{
+  const gchar *label_text;
+  GtkLabel *label;
+} PanelUtilsGtkLabelData;
 
 
 
 void
-_panel_utils_weak_notify (gpointer  data,
-                          GObject  *where_the_object_was)
+_panel_utils_weak_notify (gpointer data,
+                          GObject *where_the_object_was)
 {
   if (XFCE_IS_PANEL_PLUGIN (data))
     xfce_panel_plugin_unblock_menu (data);
@@ -44,7 +48,7 @@ _panel_utils_weak_notify (gpointer  data,
 
 
 static void
-panel_utils_help_button_clicked (GtkWidget       *button,
+panel_utils_help_button_clicked (GtkWidget *button,
                                  XfcePanelPlugin *panel_plugin)
 {
   GtkWidget *toplevel;
@@ -54,8 +58,8 @@ panel_utils_help_button_clicked (GtkWidget       *button,
 
   toplevel = gtk_widget_get_toplevel (button);
   panel_utils_show_help (GTK_WINDOW (toplevel),
-      xfce_panel_plugin_get_name (panel_plugin),
-      NULL);
+                         xfce_panel_plugin_get_name (panel_plugin),
+                         NULL);
 }
 
 
@@ -81,19 +85,19 @@ panel_utils_unblock_autohide (XfcePanelPlugin *panel_plugin)
 
 
 GtkBuilder *
-panel_utils_builder_new (XfcePanelPlugin  *panel_plugin,
-                         const gchar      *buffer,
-                         gsize             length,
-                         GObject         **dialog_return)
+panel_utils_builder_new (XfcePanelPlugin *panel_plugin,
+                         const gchar *resource,
+                         GObject **dialog_return)
 {
-  GError     *error = NULL;
+  GError *error = NULL;
   GtkBuilder *builder;
-  GObject    *dialog, *button;
+  GObject *dialog, *button;
 
   panel_return_val_if_fail (XFCE_IS_PANEL_PLUGIN (panel_plugin), NULL);
 
   builder = gtk_builder_new ();
-  if (gtk_builder_add_from_string (builder, buffer, length, &error))
+  gtk_builder_set_translation_domain (builder, GETTEXT_PACKAGE);
+  if (gtk_builder_add_from_resource (builder, resource, &error))
     {
       dialog = gtk_builder_get_object (builder, "dialog");
       if (G_LIKELY (dialog != NULL))
@@ -105,19 +109,19 @@ panel_utils_builder_new (XfcePanelPlugin  *panel_plugin,
           g_object_weak_ref (G_OBJECT (dialog), _panel_utils_weak_notify, panel_plugin);
 
           g_signal_connect_swapped (dialog, "show",
-              G_CALLBACK (panel_utils_block_autohide), panel_plugin);
+                                    G_CALLBACK (panel_utils_block_autohide), panel_plugin);
           g_signal_connect_swapped (dialog, "hide",
-              G_CALLBACK (panel_utils_unblock_autohide), panel_plugin);
+                                    G_CALLBACK (panel_utils_unblock_autohide), panel_plugin);
 
           button = gtk_builder_get_object (builder, "close-button");
           if (G_LIKELY (button != NULL))
             g_signal_connect_swapped (G_OBJECT (button), "clicked",
-                G_CALLBACK (gtk_widget_destroy), dialog);
+                                      G_CALLBACK (gtk_widget_destroy), dialog);
 
           button = gtk_builder_get_object (builder, "help-button");
           if (G_LIKELY (button != NULL))
             g_signal_connect (G_OBJECT (button), "clicked",
-                G_CALLBACK (panel_utils_help_button_clicked), panel_plugin);
+                              G_CALLBACK (panel_utils_help_button_clicked), panel_plugin);
 
           if (G_LIKELY (dialog_return != NULL))
             *dialog_return = dialog;
@@ -143,7 +147,7 @@ panel_utils_builder_new (XfcePanelPlugin  *panel_plugin,
 
 
 void
-panel_utils_show_help (GtkWindow   *parent,
+panel_utils_show_help (GtkWindow *parent,
                        const gchar *page,
                        const gchar *offset)
 {
@@ -155,10 +159,10 @@ panel_utils_show_help (GtkWindow   *parent,
 gboolean
 panel_utils_device_grab (GtkWidget *widget)
 {
-  GdkScreen  *screen = gtk_widget_get_screen (widget);
+  GdkScreen *screen = gtk_widget_get_screen (widget);
   GdkDisplay *display = gdk_screen_get_display (screen);
-  GdkSeat    *seat = gdk_display_get_default_seat (display);
-  GdkWindow  *window = gdk_window_get_effective_toplevel (gtk_widget_get_window (widget));
+  GdkSeat *seat = gdk_display_get_default_seat (display);
+  GdkWindow *window = gdk_window_get_effective_toplevel (gtk_widget_get_window (widget));
 
   return xfce_gdk_device_grab (seat, window, GDK_SEAT_CAPABILITY_ALL, NULL);
 }
@@ -166,13 +170,13 @@ panel_utils_device_grab (GtkWidget *widget)
 
 
 void
-panel_utils_set_atk_info (GtkWidget   *widget,
+panel_utils_set_atk_info (GtkWidget *widget,
                           const gchar *name,
                           const gchar *description)
 {
-  static gboolean  initialized = FALSE;
-  static gboolean  atk_enabled = TRUE;
-  AtkObject       *object;
+  static gboolean initialized = FALSE;
+  static gboolean atk_enabled = TRUE;
+  AtkObject *object;
 
   panel_return_if_fail (GTK_IS_WIDGET (widget));
 
@@ -216,4 +220,196 @@ panel_utils_destroy_later (GtkWidget *widget)
 
   g_idle_add_full (G_PRIORITY_HIGH, destroy_later, widget, NULL);
   g_object_ref_sink (G_OBJECT (widget));
+}
+
+
+
+/*
+ * We need to do this when GTK refuses to do it itself, for example to bring back a window
+ * that has been moved off-screen, see https://github.com/wmww/gtk-layer-shell/issues/143.
+ * This manual intervention should only be done if necessary though, as it can have side
+ * effects. It is not performed systematically in Gtk Layer Shell for this reason, and, for
+ * example, it causes the pointer to re-enter the autohide window when moved off screen,
+ * which, coupled with widget_remap() below, can cause the panel to flicker.
+ */
+void
+panel_utils_wl_surface_commit (GtkWidget *widget)
+{
+#ifdef ENABLE_WAYLAND
+  GdkWindow *window = gtk_widget_get_window (widget);
+  if (window != NULL)
+    {
+      /* yes, it can be null when the window is not */
+      struct wl_surface *wl_surface = gdk_wayland_window_get_wl_surface (window);
+      if (wl_surface != NULL)
+        wl_surface_commit (wl_surface);
+    }
+#endif
+}
+
+
+
+/*
+ * Like wl_surface_commit() above: use sparingly. It is about forcing GTK and/or the
+ * compositor to take into account a request (resizing, layer change), but this can
+ * have side effects.
+ */
+void
+panel_utils_widget_remap (GtkWidget *widget)
+{
+  if (gtk_widget_get_visible (widget))
+    {
+      gtk_widget_hide (GTK_WIDGET (widget));
+      gtk_widget_show (GTK_WIDGET (widget));
+    }
+}
+
+
+
+static void
+panel_utils_gtk_dialog_find_label_by_text_cb (GtkWidget *widget,
+                                              gpointer data)
+{
+  PanelUtilsGtkLabelData *label_data = data;
+
+  panel_return_if_fail (widget);
+  panel_return_if_fail (label_data && label_data->label_text);
+
+  if (GTK_IS_LABEL (widget) && g_strcmp0 (label_data->label_text, gtk_label_get_text (GTK_LABEL (widget))) == 0)
+    {
+      if (label_data->label)
+        g_warning ("%s: Found multiple labels with text value '%s'", G_STRFUNC, label_data->label_text);
+      else
+        label_data->label = GTK_LABEL (widget);
+    }
+  else if (GTK_IS_BOX (widget))
+    gtk_container_foreach (GTK_CONTAINER (widget), panel_utils_gtk_dialog_find_label_by_text_cb, data);
+}
+
+
+
+/*
+ * Recursively searches the given GtkDialog and obtains a GtkLabel that has the given text.
+ */
+GtkLabel *
+panel_utils_gtk_dialog_find_label_by_text (GtkDialog *dialog,
+                                           const gchar *label_text)
+{
+  PanelUtilsGtkLabelData *label_data;
+  GtkLabel *label;
+
+  panel_return_val_if_fail (GTK_IS_DIALOG (dialog), NULL);
+
+  label_data = g_new0 (PanelUtilsGtkLabelData, 1);
+  label_data->label_text = label_text;
+  label_data->label = NULL;
+
+  gtk_container_foreach (GTK_CONTAINER (dialog), panel_utils_gtk_dialog_find_label_by_text_cb, label_data);
+  if (label_data->label == NULL)
+    g_warning ("%s: Could not find a label with the given text '%s'", G_STRFUNC, label_text);
+
+  label = label_data->label;
+  g_free (label_data);
+  return label;
+}
+
+
+
+gint
+panel_utils_compare_xfw_gdk_monitors (gconstpointer a,
+                                      gconstpointer b)
+{
+  return xfw_monitor_get_gdk_monitor ((XfwMonitor *) a) == b ? 0 : 1;
+}
+
+
+
+GdkMonitor *
+panel_utils_get_monitor_at_widget (GtkWidget *widget)
+{
+  GdkDisplay *display = gdk_display_get_default ();
+  GdkWindow *window = gtk_widget_get_window (widget);
+  if (window != NULL)
+    return gdk_display_get_monitor_at_window (display, window);
+
+  return gdk_display_get_monitor (display, 0);
+}
+
+
+
+GList *
+panel_utils_list_workspace_groups_for_monitor (XfwScreen *xfw_screen,
+                                               GdkMonitor *monitor)
+{
+  XfwWorkspaceManager *manager = xfw_screen_get_workspace_manager (xfw_screen);
+  GList *groups = NULL;
+  for (GList *lp = xfw_workspace_manager_list_workspace_groups (manager); lp != NULL; lp = lp->next)
+    if (g_list_find_custom (xfw_workspace_group_get_monitors (lp->data), monitor, panel_utils_compare_xfw_gdk_monitors))
+      groups = g_list_prepend (groups, lp->data);
+
+  return g_list_reverse (groups);
+}
+
+
+
+GList *
+panel_utils_list_workspaces_for_monitor (XfwScreen *xfw_screen,
+                                         GdkMonitor *monitor)
+{
+  GList *groups = panel_utils_list_workspace_groups_for_monitor (xfw_screen, monitor);
+  GList *workspaces = NULL;
+  for (GList *lp = groups; lp != NULL; lp = lp->next)
+    for (GList *lq = xfw_workspace_group_list_workspaces (lp->data); lq != NULL; lq = lq->next)
+      workspaces = g_list_prepend (workspaces, lq->data);
+
+  g_list_free (groups);
+  return g_list_reverse (workspaces);
+}
+
+
+
+XfwWorkspace *
+panel_utils_get_active_workspace_for_monitor (XfwScreen *xfw_screen,
+                                              GdkMonitor *monitor)
+{
+  GList *groups = panel_utils_list_workspace_groups_for_monitor (xfw_screen, monitor);
+  XfwWorkspace *workspace = NULL;
+  for (GList *lp = groups; lp != NULL; lp = lp->next)
+    {
+      workspace = xfw_workspace_group_get_active_workspace (lp->data);
+      if (workspace != NULL)
+        break;
+    }
+
+  g_list_free (groups);
+  return workspace;
+}
+
+
+
+guint
+panel_utils_get_workspace_count_for_monitor (XfwScreen *xfw_screen,
+                                             GdkMonitor *monitor)
+{
+  GList *groups = panel_utils_list_workspace_groups_for_monitor (xfw_screen, monitor);
+  guint count = 0;
+  for (GList *lp = groups; lp != NULL; lp = lp->next)
+    count += xfw_workspace_group_get_workspace_count (lp->data);
+
+  g_list_free (groups);
+  return count;
+}
+
+
+
+gint
+panel_utils_get_workspace_number_for_monitor (XfwScreen *xfw_screen,
+                                              GdkMonitor *monitor,
+                                              XfwWorkspace *workspace)
+{
+  GList *workspaces = panel_utils_list_workspaces_for_monitor (xfw_screen, monitor);
+  gint number = g_list_index (workspaces, workspace);
+
+  g_list_free (workspaces);
+  return number;
 }

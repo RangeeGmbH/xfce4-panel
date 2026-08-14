@@ -17,43 +17,28 @@
  */
 
 #ifdef HAVE_CONFIG_H
-#include <config.h>
+#include "config.h"
 #endif
 
-#include <common/panel-private.h>
-#include <common/panel-xfconf.h>
-#include <libxfce4panel/xfce-panel-macros.h>
+#include "panel-private.h"
+#include "panel-xfconf.h"
+
+#include "libxfce4panel/xfce-panel-macros.h"
 
 
 
 static void
 panel_properties_store_value (XfconfChannel *channel,
-                              const gchar   *xfconf_property,
-                              GType          xfconf_property_type,
-                              GObject       *object,
-                              const gchar   *object_property)
+                              const gchar *xfconf_property,
+                              GType xfconf_property_type,
+                              GObject *object,
+                              const gchar *object_property)
 {
-  GValue       value = { 0, };
-  GdkRGBA     *rgba;
-#ifndef NDEBUG
-  GParamSpec *pspec;
-#endif
+  GValue value = G_VALUE_INIT;
+  GdkRGBA *rgba;
 
   panel_return_if_fail (G_IS_OBJECT (object));
   panel_return_if_fail (XFCONF_IS_CHANNEL (channel));
-
-#ifndef NDEBUG
-  /* check if the types match */
-  pspec = g_object_class_find_property (G_OBJECT_GET_CLASS (object), object_property);
-  panel_assert (pspec != NULL);
-  if (G_PARAM_SPEC_VALUE_TYPE (pspec) != xfconf_property_type)
-    {
-      g_critical ("Object and Xfconf properties don't match! %s::%s. %s != %s",
-                  G_OBJECT_TYPE_NAME (object), xfconf_property,
-                  g_type_name (xfconf_property_type),
-                  g_type_name (G_PARAM_SPEC_VALUE_TYPE (pspec)));
-    }
-#endif
 
   /* write the property to the xfconf channel */
   g_value_init (&value, xfconf_property_type);
@@ -61,7 +46,7 @@ panel_properties_store_value (XfconfChannel *channel,
 
   if (G_LIKELY (xfconf_property_type != GDK_TYPE_RGBA))
     {
-        xfconf_channel_set_property (channel, xfconf_property, &value);
+      xfconf_channel_set_property (channel, xfconf_property, &value);
     }
   else
     {
@@ -84,7 +69,7 @@ panel_properties_store_value (XfconfChannel *channel,
 XfconfChannel *
 panel_properties_get_channel (GObject *object_for_weak_ref)
 {
-  GError        *error = NULL;
+  GError *error = NULL;
   XfconfChannel *channel;
 
   panel_return_val_if_fail (G_IS_OBJECT (object_for_weak_ref), NULL);
@@ -105,14 +90,14 @@ panel_properties_get_channel (GObject *object_for_weak_ref)
 
 
 void
-panel_properties_bind (XfconfChannel       *channel,
-                       GObject             *object,
-                       const gchar         *property_base,
+panel_properties_bind (XfconfChannel *channel,
+                       GObject *object,
+                       const gchar *property_base,
                        const PanelProperty *properties,
-                       gboolean             save_properties)
+                       gboolean save_properties)
 {
   const PanelProperty *prop;
-  gchar               *property;
+  gchar *property;
 
   panel_return_if_fail (channel == NULL || XFCONF_IS_CHANNEL (channel));
   panel_return_if_fail (G_IS_OBJECT (object));
@@ -121,7 +106,7 @@ panel_properties_bind (XfconfChannel       *channel,
 
   if (G_LIKELY (channel == NULL))
     channel = panel_properties_get_channel (object);
-  panel_return_if_fail (XFCONF_IS_CHANNEL (channel));
+  panel_return_if_fail (channel != NULL);
 
   /* walk the properties array */
   for (prop = properties; prop->property != NULL; prop++)

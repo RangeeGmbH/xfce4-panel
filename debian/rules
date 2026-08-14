@@ -1,0 +1,13 @@
+#!/usr/bin/make -f
+
+export DEB_LDFLAGS_MAINT_APPEND=-Wl,-O1
+export DEB_BUILD_MAINT_OPTIONS=hardening=+all
+
+%:
+	dh $@ --buildsystem=meson --without autoreconf --with gir
+
+override_dh_auto_configure:
+	dh_auto_configure -- -Dgtk-doc=true -Dintrospection=true -Dvala=disabled
+
+override_dh_installchangelogs:
+	DEB_BUILD_OPTIONS=notrimdch dh_installchangelogs NEWS

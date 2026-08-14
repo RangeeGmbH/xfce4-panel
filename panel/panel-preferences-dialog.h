@@ -19,31 +19,29 @@
 #ifndef __PANEL_PREFERENCES_DIALOG_H__
 #define __PANEL_PREFERENCES_DIALOG_H__
 
+#include "panel-window.h"
+
 #include <gtk/gtk.h>
+#ifdef ENABLE_X11
 #include <gtk/gtkx.h>
-#include <panel/panel-application.h>
-#include <panel/panel-window.h>
+#else
+typedef gulong Window;
+#endif
 
 G_BEGIN_DECLS
 
-typedef struct _PanelPreferencesDialogClass PanelPreferencesDialogClass;
-typedef struct _PanelPreferencesDialog      PanelPreferencesDialog;
+#define PANEL_TYPE_PREFERENCES_DIALOG (panel_preferences_dialog_get_type ())
+G_DECLARE_FINAL_TYPE (PanelPreferencesDialog, panel_preferences_dialog, PANEL, PREFERENCES_DIALOG, GtkBuilder)
 
-#define PANEL_TYPE_PREFERENCES_DIALOG            (panel_preferences_dialog_get_type ())
-#define PANEL_PREFERENCES_DIALOG(obj)            (G_TYPE_CHECK_INSTANCE_CAST ((obj), PANEL_TYPE_PREFERENCES_DIALOG, PanelPreferencesDialog))
-#define PANEL_PREFERENCES_DIALOG_CLASS(klass)    (G_TYPE_CHECK_CLASS_CAST ((klass), PANEL_TYPE_PREFERENCES_DIALOG, PanelPreferencesDialogClass))
-#define PANEL_IS_PREFERENCES_DIALOG(obj)         (G_TYPE_CHECK_INSTANCE_TYPE ((obj), PANEL_TYPE_PREFERENCES_DIALOG))
-#define PANEL_IS_PREFERENCES_DIALOG_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE ((klass), PANEL_TYPE_PREFERENCES_DIALOG))
-#define PANEL_PREFERENCES_DIALOG_GET_CLASS(obj)  (G_TYPE_INSTANCE_GET_CLASS ((obj), PANEL_TYPE_PREFERENCES_DIALOG, PanelPreferencesDialogClass))
+void
+panel_preferences_dialog_show (PanelWindow *active);
 
-GType      panel_preferences_dialog_get_type     (void) G_GNUC_CONST;
+void
+panel_preferences_dialog_show_from_id (gint panel_id,
+                                       Window socket_window);
 
-void       panel_preferences_dialog_show         (PanelWindow *active);
-
-void       panel_preferences_dialog_show_from_id (gint         panel_id,
-                                                  Window       socket_window);
-
-gboolean   panel_preferences_dialog_visible      (void);
+gboolean
+panel_preferences_dialog_visible (void);
 
 G_END_DECLS
 

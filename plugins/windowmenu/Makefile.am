@@ -2,7 +2,6 @@
 AM_CPPFLAGS = \
 	-I$(top_srcdir) \
 	-DG_LOG_DOMAIN=\"libwindowmenu\" \
-	-DWNCK_I_KNOW_THIS_IS_UNSTABLE \
 	$(PLATFORM_CPPFLAGS)
 
 plugindir = $(libdir)/xfce4/panel/plugins
@@ -10,11 +9,8 @@ plugindir = $(libdir)/xfce4/panel/plugins
 plugin_LTLIBRARIES = \
 	libwindowmenu.la
 
-libwindowmenu_built_sources = \
-	windowmenu-dialog_ui.h
-
 libwindowmenu_la_SOURCES = \
-	$(libwindowmenu_built_sources) \
+	$(top_srcdir)/common/xfce4-panel-resources.c \
 	windowmenu.c \
 	windowmenu.h
 
@@ -24,7 +20,8 @@ libwindowmenu_la_CFLAGS = \
 	$(XFCONF_CFLAGS) \
 	$(LIBXFCE4UTIL_CFLAGS) \
 	$(LIBXFCE4UI_CFLAGS) \
-	$(LIBWNCK_CFLAGS) \
+	$(LIBXFCE4WINDOWING_CFLAGS) \
+	$(LIBXFCE4WINDOWINGUI_CFLAGS) \
 	$(PLATFORM_CFLAGS)
 
 libwindowmenu_la_LDFLAGS = \
@@ -41,7 +38,8 @@ libwindowmenu_la_LIBADD = \
 	$(EXO_LIBS) \
 	$(LIBXFCE4UTIL_LIBS) \
 	$(LIBXFCE4UI_LIBS) \
-	$(LIBWNCK_LIBS) \
+	$(LIBXFCE4WINDOWING_LIBS) \
+	$(LIBXFCE4WINDOWINGUI_LIBS) \
 	$(XFCONF_LIBS)
 
 libwindowmenu_la_DEPENDENCIES = \
@@ -64,26 +62,18 @@ xfce4-popup-windowmenu: xfce4-popup-windowmenu.sh Makefile
 desktopdir = $(datadir)/xfce4/panel/plugins
 desktop_in_files = windowmenu.desktop.in.in
 desktop_DATA = $(desktop_in_files:.desktop.in.in=.desktop)
-@INTLTOOL_DESKTOP_RULE@
+
+%.desktop: %.desktop.in
+	$(AM_V_GEN) $(MSGFMT) --desktop --template $< -d $(top_srcdir)/po -o $@
 
 EXTRA_DIST = \
-	windowmenu-dialog.glade \
 	xfce4-popup-windowmenu.sh \
-	$(desktop_in_files)
+	$(desktop_in_files) \
+	meson.build \
+	$(NULL)
 
 DISTCLEANFILES = \
 	$(desktop_DATA) \
 	xfce4-popup-windowmenu
-
-if MAINTAINER_MODE
-BUILT_SOURCES = \
-	$(libwindowmenu_built_sources)
-
-DISTCLEANFILES += \
-	$(libwindowmenu_built_sources)
-
-windowmenu-dialog_ui.h: windowmenu-dialog.glade
-	$(AM_V_GEN) xdt-csource --static --strip-comments --strip-content --name=windowmenu_dialog_ui $< >$@
-endif
 
 # vi:set ts=8 sw=8 noet ai nocindent syntax=automake:

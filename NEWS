@@ -1,70 +1,212 @@
-4.18.4 (2023-05-22)
+4.20.7 (2026-03-02)
 ======
-- icons: Scale at size 16x16 to 128x128 (Fixes #385)
-- icons: Fix centering of org.xfce.panel
-- icons: Rename org.xfce.panel.statustray to org.xfce.panel.systray
-- Fix memory leaks around gtk_get_current_event()
-- tasklist: Fix use-after-free on tasklist child
-- systray: Update icon also on status change
-- Translation Updates:
-  Catalan, Estonian, French, Greek, Italian, Korean, Occitan (post
-  1500), Russian, Slovenian, Turkish, Ukrainian
+- tasklist: Destroy group menu item if window is closed
+- panel: Make non-GObject internal plugins resident
+- Revert "plugins: Do not use g_intern_static_string"
+- panel: Do not fall through when internal plugin failed to load
+- wayland: panel: Track set_anchor_default source id
+- plugins: Do not use g_intern_static_string
+- panel: Fix wrong memory management
+- panel: Be sure to set plugin properties when appropriate
+- Set application name so internal plugins can't override it
+- plugins: Reset workspace group when needed
+- wayland: Guard layer-shell related code also at runtime
+- wayland: Review screen layout change management
+- common: Only remap widget if visible
+- wayland: autohide: Fix autohide of floating panel
+- wayland: Handle null workspace group list when a group is destroyed
+- wayland: panel: Delay hiding panel window when screen layout changes
 
-4.18.3 (2023-03-28)
+4.20.6 (2025-12-29)
 ======
-- launcher: Show action menu also when there are several items
-- Fix memory management of vala generated plugins
-- panel: Rephrase "Don't reserve space on borders" (V2)
-- panel: Make property migration generic
-- launcher: Avoid "no trigger event" warning when showing the menu
-- launcher: Guard access to the plugin menu GdkWindow
-- libxfce4panel: Unregister menu also on GtkWidget::hide
-- panel: Do not reset output name if a monitor does not have a model 
-name
-- libxfce4panel: Fix memory management of source for menu positioning
-- panel: Delay removal of ExternalPlugin to prevent use-after-free
-- systray: Cancel any async D-Bus operation in finalize()
-- tasklist: Do not try to resolve /proc/pid/exe to launch new instance
+- arrow-fix: Restoring the button size after the arrow disappears
+- build: Fix typo in optimization level
+- wayland: Set plugins internal unless forced external
+- prefs-dialog: Reset add/remove buttons sensitivity when needed
+- wayland: Minimalist management of workspace group change when unused
+- pager: Add missing signal handler disconnections
+- I18n: Update po/LINGUAS list
+- libxfce4panel: Clarify doc
+- Translation Updates:
+  Catalan, French, Korean, Slovenian, Tatar, Thai, Vietnamese
+
+4.20.5 (2025-08-14)
+======
+- wayland: panel: Ensure panel window is shown at least once
+- panel: Don't show panel window too early
+- panel: Restrict X-XFCE-Unique=SCREEN to X11
+- Fix string comparison when searching for plugin dirs
+- wayland: Support multiple workspace groups where it makes sense
+- tasklist: Deactivate context menu when its button is destroyed
+- x11: Let GtkSocket expand if possible
+- libxfce4panel: Restore possibility to oversize icons
+- wayland: autohide: Try to trigger size_allocate() more reliably
+- panel: Show window when new output is connected
+- Translation Updates:
+  Arabic, Georgian, Greek, Polish, Swedish
+
+4.20.4 (2025-03-23)
+======
+- meson-build: Revert glib version change
+- build: Define xfce4 min version >= 4.18
+- build: Search for xdt-gen-visibility also in the working tree
+- build: Replace xdt-csource with glib-compile-resources
+- build: Fix wrong macro for min version
+- panel: Show window in panel_application_new_window()
+- wayland: autohide: Mitigate lack of size_allocate()
+- systray: Use correct gtk functions to show/hide items
+- wayland: Set exclusive zone for autohide window
+- build: Remove libxfce4panel-config.h from GI
+- meson-build: Add missing check for sys/prctl.h
+- tasklist: Support window app changes
+- build: Automate copyright year management
+- item-dialog: Also search for plugins by their module name
+- I18n: Update po/LINGUAS list
+- wayland: wrapper: Set GtkProgressBar style properties to min values
+- systray: Fix legacy icons being drawn with offset
+- meson-build: Use SPDX license expression
+- autotools-build: Check for xfce4-dev-tools in configure.ac
+- Translation Updates:
+  Albanian, Amharic, Arabic, Armenian (Armenia), Asturian, Basque,
+  Belarusian, Bengali, Bulgarian, Catalan, Chinese (China), Chinese
+  (Hong Kong), Chinese (Taiwan), Croatian, Czech, Danish, Dutch,
+  Eastern Armenian, English (Australia), English (United Kingdom),
+  Estonian, Finnish, French, Galician, Georgian, German, Greek, Hebrew,
+  Hungarian, Icelandic, Indonesian, Interlingue, Italian, Japanese,
+  Kazakh, Korean, Lithuanian, Malay, Norwegian Bokmål, Norwegian
+  Nynorsk, Occitan (post 1500), Panjabi (Punjabi), Polish, Portuguese,
+  Portuguese (Brazil), Romanian, Russian, Serbian, Sinhala, Slovak,
+  Slovenian, Spanish, Swedish, Thai, Turkish, Ukrainian, Venetian,
+  Vietnamese
+
+4.20.3 (2025-02-04)
+======
+- libxfce4panel: Fix ABI break
+- meson-build: Update debug/optimization flag management
+
+4.20.2 (2025-02-02)
+======
+- autotools-build: Get rid of maintainer mode where gdbus-codegen is 
+used
+
+4.20.1 (2025-02-02)
+======
+- build: Bump libxfce4windowing required version to 4.20.1
+- Update copyright year
+- meson-build: Don't add 'lib' prefix in static lib name
+- meson-build: Simplify feature opt dep management
+- meson-build: Ensure xfce-revision.h was generated when using it
+- build: Use VERSION_FULL intead of VERSION or PACKAGE_VERSION
+- autotools-build: Fix EXTRA_DIST redefinition
+- meson-build: Remove unneeded conditional
+- actions: Restore dialog accept on Enter behavior
+- Add meson build
+- Turn some messages into warnings
+- build: Migrate to xdt-gen-visibility and xdt-check-abi
+- wayland: windowmenu: Hide irrelevant workspace options
+- wayland: pager: Hide workspace settings
+- docs: Add missing parameter to XfcePanelPlugin::hidden-event
+- wayland: libxfce4panel: Set kbd interact to on-demand for popup 
+windows
+- tasklist: Add missing workspace property initialization on Wayland
+- panel: Deal with duplicated monitor models
+- tasklist: Disable workspace related properties on Wayland
+- prefs-dialog: Don't trust xfconf_channel_get_string_list() return 
+value
+- libxfce4panel: Fix XfcePanelPlugin size
+- Add an hidden-event signal for plugins
+- Translation Updates:
+  Albanian, Catalan, Chinese (China), Danish, Hungarian, Russian,
+  Slovak, Vietnamese
+
+4.20.0 (2024-12-15)
+======
+
+- Translation Updates:
+  Finnish, Hebrew, Polish, Romanian
+
+4.19.7 (2024-12-01)
+======
+- I18n: Update po/LINGUAS list
+- I18n: Update po/LINGUAS list
+- migrate: Update default config
+- tasklist: Ensure group buttons have non empty label
+- Translation Updates:
+  Basque, Czech, Kazakh, Polish, Portuguese (Brazil), Spanish, Telugu,
+  Turkish
+
+4.19.6 (2024-11-01)
+======
+- systray: Handle general container orientation on Wayland too
+- systray: Fix GSList element leak
+- migrate/default.xml.in: Remove unused plugin id
+- Added "show inactive" prop to lcd clock (repurposed from binary clock)
+- Reworked sizing mechanism in clock plugin and its widgets
+- Reduce minimum button size to improve layout at very small panel 
+sizes.
+- Use width_for_height when plugin requests it
+- LCD and digital clock layout fixes
+- systray: Fix leak in sn_plugin_init
+- Added a missing property bind for 24hr analogue clock
+- Added XFCE_PANEL_PLUGIN_ICON_PADDING (API change)
+- tasklist: Keep icon sizes as specified by the user
+- Revert "wayland: tasklist: Fix icon size in multirow mode"
+- systray: Add missing translation
+- clock: Added 24h clock mode to the analog clock
 - Translation Updates:
   Albanian, Arabic, Armenian (Armenia), Asturian, Basque, Belarusian,
-  Bulgarian, Catalan, Chinese (China), Chinese (Hong Kong), Chinese
-  (Taiwan), Croatian, Czech, Danish, Dutch, Eastern Armenian, English
-  (Australia), English (United Kingdom), Estonian, Finnish, French,
-  Galician, German, Greek, Hebrew, Hungarian, Icelandic, Indonesian,
-  Italian, Japanese, Kazakh, Korean, Lithuanian, Malay, Norwegian
-  Bokmål, Norwegian Nynorsk, Occitan (post 1500), Polish, Portuguese,
-  Portuguese (Brazil), Romanian, Russian, Serbian, Slovak, Slovenian,
-  Spanish, Swedish, Thai, Turkish, Ukrainian, Uyghur, Vietnamese
+  Bengali, Bulgarian, Catalan, Chinese (China), Chinese (Hong Kong),
+  Chinese (Taiwan), Croatian, Czech, Danish, Dutch, Eastern Armenian,
+  English (Australia), English (United Kingdom), Estonian, Finnish,
+  French, Galician, German, Greek, Hebrew, Hungarian, Icelandic,
+  Indonesian, Interlingue, Italian, Japanese, Kazakh, Korean,
+  Lithuanian, Malay, Norwegian Bokmål, Norwegian Nynorsk, Occitan
+  (post 1500), Panjabi (Punjabi), Polish, Portuguese, Portuguese
+  (Brazil), Romanian, Russian, Serbian, Sinhala, Slovak, Slovenian,
+  Spanish, Swedish, Thai, Turkish, Ukrainian, Uyghur
 
-4.18.2 (2023-02-09)
+4.19.5 (2024-10-07)
 ======
-- directorymenu: Add missing sanity check
-- panel: Properly handle null string as property default value
-- Revert "Use RGBA visual only if compositing is enabled (Fixes #251)" (#672)
-- Revert "systray: Do not require compositing to be enabled to use RGBA visual"
-- systray: Fix blurry icons in prefs dialog when UI scale > 1
-- launcher: Fix blurry icons in prefs and add dialogs when UI scale > 1
-- launcher: Use GIcon for the tooltip icon (#674)
-- pager: Use WnckHandle if available (#695)
-- Translation Updates:
-  Albanian, Finnish, Greek, Italian, Portuguese, Slovenian
-
-4.18.1 (2023-01-10)
-======
-- Update copyright year
-- tasklist: Fix scrolling through window buttons (Fixes #692)
-- tasklist: Fix group button visibility
-- libxfce4panel: Deprecate XfcePanelImage
-- tasklist: Do not duplicate menu item activation
-- clock: Fix sync timeout
-- docs: Fix version for xfce_panel_set_image_from_source()
-- clock: Add missing sanity check
-- windowmenu: Adapt wnck default icon size when UI scale > 1 (Fixes 
-#682)
-- tasklist: Adapt wnck default icon size when UI scale > 1 (Fixes #681)
-- tasklist: Fix window count positioning when UI scale > 1
-- tasklist: Keep icon pixbuf around and use surface also for menu items
-- clock: Do not override custom font formats
+- Use new xfw_window_activate() signature in libwindowing 4.19.6
+- build: Adjust Wayland requirements for Xfce 4.20
+- build: Bump requirements for Xfce 4.20
+- wayland: tasklist: Fix monitor detection when panel is remapped
+- x11: tasklist: Properly check for libxext
+- wayland: autohide: Do not block when panel has input focus
+- Revert "panel: Fix panel flickering during autohide on Wayland"
+- wayland: autohide: Show/hide panel instead of moving it offscreen
+- autohide: Show/hide autohide window instead of moving it offscreen
+- wayland: Avoid allocation loop when the panel is anchored to an edge
+- Revert "wayland: Avoid allocation loop when the panel is anchored to
+  an edge"
+- wayland: Avoid allocation loop when the panel is anchored to an edge
+- Fix gtk-layer-shell includes
+- Switch to XfwMonitor
+- wayland: wrapper: Prevent plugin allocation blocking
+- tasklist: Connect to XfwWindow::notify::monitors
+- panel: Fix panel flickering during autohide on Wayland
+- Always set gtk_layer_shell monitor on change
+- Add debug key for PANEL_DEBUG_ACTIONS
+- tasklist: Fix Wayland window drag and drop
+- panel: Do not remove plugin when disregarding restart dialog
+- panel: Replace remaining gtk_message_dialog_new with
+  xfce_message_dialog_new
+- common: Introduce panel_utils_gtk_dialog_find_label_by_text
+- tasklist: Use xfce_dialog_show_error when starting new instance fails
+- actions: Use xfce_message_dialog_new in confirmation dialogs
+- panel, libxfce4panel: Use xfce_dialog_confirm in plugin removal
+  confirmation
+- gcc-analyzer: Add false positive file
+- scan-build: Add false positive file
+- scan-build: tasklist: Fix core.NullDereference
+- Revert "Add new CI builds to build without X11 and Wayland"
+- Apply .clang-format file
+- Remove unnecessary dirname in local includes
+- clang-format: Use IncludeBlocks::Regroup
+- build: Add missing CFLAGS and LIBS from gio-unix-2.0
+- build: Add missing math.h includes
+- build: Silence -Wstring-plus-int from clang
+- fix build on OpenBSD after 0c56766b
 - Translation Updates:
   Albanian, Amharic, Arabic, Armenian (Armenia), Asturian, Basque,
   Belarusian, Bengali, Bulgarian, Catalan, Chinese (China), Chinese
@@ -77,6 +219,294 @@ name
   Portuguese (Brazil), Romanian, Russian, Serbian, Sinhala, Slovak,
   Slovenian, Spanish, Swedish, Thai, Turkish, Ukrainian, Uyghur,
   Vietnamese
+
+4.19.4 (2024-05-16)
+======
+- clang-format: Break after assignment operator
+- Add missing glade file to POTFILES.in
+- showdesktop: Add the ability to show the desktop on mouse hover
+- prefs-dialog: Improve launcher display in item list
+- systray: Avoid GTK warning about pixbuf not loadable
+- panel: Leave a harmless xfconf warning
+- clang-format: Insert a newline at end of file if missing
+- libxfce4panel: Add line break in generate code for clang-format
+- prefs-dialog: Bind Del key to remove button
+- prefs-dialog: Scroll to selection when item view is reloaded
+- prefs-dialog: Allow several items to be removed at once
+- prefs-dialog: Update widgets on GdkDisplay::monitor-(added|removed)
+- systray: Always scale icons
+- systray: Reduce icon size in prefs dialog
+- systray: Improve app data search in prefs dialog
+- systray: Avoid duplicate code around legacy items
+- systray: Use panel_properties_bind()
+- panel: Save settings in finalize()
+- tasklist: Fix min button length before overflow menu
+- tasklist: Fix default button length
+- build: Add missing math.h include
+- Apply .clang-format file
+- Clean up and sort includes
+- Various preliminary cleanup
+- clang-format: Add file
+- windowmenu: Remove a duplicate check
+- Remove dead code
+- tasklist: Sanitize XfwApplication management
+- Minor spelling/grammar corrections in comments
+- POTFILES.in: Remove untranslated file
+- panel: Define constants common to window and itembar
+- windowmenu: Clamp style properties
+- tasklist: Allow -1 for menu-max-width-chars
+- panel: Restrict admissible values of style properties
+- tasklist: Fix use of min-button-length
+- tasklist: Fix use of max-button-length
+- tasklist: Clamp style properties
+- actions: Add some fallback methods if there is no session proxy
+- actions: Ask xfce4-session to switch user if possible
+- actions: Fix wrong parameter allow_save for Shutdown and Restart
+- actions: Let xfce4-session manage its settings internally
+- actions: Rework D-Bus proxy management
+- Reintroduce panel_properties_get_channel()
+- Ask user what to do in case of plugin loading failure
+- Check for xfconf init in main.c and exit on failure
+- Fix wrong string comparison
+- prefs-dialog: Do not close when opening panel-profiles
+- Revert "prefs-dialog: Launch xfce4-panel-profiles with '--from-panel'"
+- Try to derive plugin dirs from XDG_DATA_DIRS
+- Remove NDEBUG compiler switchs
+- launcher: Delete unprotected X11 code at runtime
+- actions: Populate plugin earlier
+- systray: Avoid floating point exception
+- panel: Use gdk_cursor_new_from_name() to be more cross-platform
+- wayland: pager: Add missing runtime check
+- panel: Implement per window CSS customization
+- panel: Add border width option
+- itembar: Let GtkContainer handle border width
+- panel: Fix -Wmaybe-uninitialized warning
+- panel: Return silently when n_monitors == 0
+- tasklist: Do not call xfw_window_x11_get_xid() on Wayland
+- Translation Updates:
+  Albanian, Amharic, Arabic, Armenian (Armenia), Asturian, Basque,
+  Belarusian, Bengali, Bulgarian, Catalan, Chinese (China), Chinese
+  (Hong Kong), Chinese (Taiwan), Croatian, Czech, Danish, Dutch,
+  Eastern Armenian, English (Australia), English (United Kingdom),
+  Estonian, Finnish, French, Galician, Georgian, German, Greek, Hebrew,
+  Hungarian, Icelandic, Indonesian, Interlingue, Italian, Japanese,
+  Kazakh, Korean, Lithuanian, Malay, Norwegian Bokmål, Norwegian
+  Nynorsk, Occitan (post 1500), Panjabi (Punjabi), Polish, Portuguese,
+  Portuguese (Brazil), Romanian, Russian, Serbian, Sinhala, Slovak,
+  Slovenian, Spanish, Swedish, Thai, Turkish, Ukrainian, Uyghur,
+  Vietnamese
+
+4.19.3 (2024-02-29)
+======
+- Update copyright year
+- tasklist: Fix include-all-monitors on Wayland
+- Adapt to libxfce4windowing 4.19.3 API update
+- Do not use g_log_set_always_fatal()
+- launcher: Ensure default icon in empty launchers
+- tasklist: Add missing runtime checks to enable show-wireframes
+- Add new CI builds to build without X11 and Wayland
+- build: Search for bind_textdomain_codeset in libintl too
+- Fix memory management of GTypeModules
+- pager: Do not query workspace count if screen is not initialized
+- panel: Call gtk_init() early enough
+- wayland: libxfce4panel: Fix broken autohide when showing context menu
+- libxfce4panel: Fix custom menu items management
+- panel: Fix previous commit
+- build: Restrict XfceSMClient to X11
+- panel: Fix xfce_titled_dialog_create_action_area() deprecation
+- clock: Create monitor proxy asynchronously
+- build: Define our own windowing macro instead of extending GDK's
+- build: Simplify and clarify X11/Wayland distinction
+- build: Use AM_DISTCHECK_CONFIGURE_FLAGS
+- Add missing G_BEGIN_DECLS
+- wayland: panel: Add missing sanity check
+- Translation Updates:
+  Czech, Finnish, Hebrew, Hungarian, Icelandic, Interlingue, Italian,
+  Occitan (post 1500), Swedish, Turkish
+
+4.19.2 (2023-09-27)
+======
+- pager: Do not adapt upper value of spin button in viewport mode
+- pager: Update workspace layout also on viewports change
+- pager: Get scale factor from widget
+- pager: Update workspace layout also on window manager change
+- pager: Fix aspect ratio for viewport (V2)
+- actions: Fix memory leak
+- wayland: wrapper: Set widget name for theming
+- panel: Spawn wrapper process according to windowing environment
+- pager: Delay GdkScreen signal handlers
+- x11: Remove useless sanity check
+- panel: Change panel border only if opposite border is set
+- x11: Adjust background image of external plugins to that of the panel
+- panel: Do not scale background image when UI scale > 1
+- wayland: Reset socket geometry when child is respawned
+- popup-command: Do not block autohide when popped up at pointer
+- Fix memory leaks when using gtk_css_provider_new()
+- panel: Clear item list before repopulating item dialog
+- panel: Remove autosave timer for plugins
+- Add option to toggle week numbers (fixes #686)
+- wrapper: Really ensure we don't call gtk_main_quit() twice
+- panel: Block autohide when the panel has input focus
+- clock: Fix sync timeout for seconds display
+- clock: Implement ConsoleKit sleep monitor
+- Add/Sharpen icons at 48-128px
+- Adjust 32px icon margins, new separator icon
+- Sharpen icons at 16px and 32px
+- Increase margins for 24px icons
+- Make 24px icons sharper
+- icons: Fix wrong exported sizes
+- icons: Scale at size 16x16 to 128x128 (Fixes #385)
+- icons: Fix centering of org.xfce.panel
+- icons: Rename org.xfce.panel.statustray to org.xfce.panel.systray
+- I18n: Update po/LINGUAS list
+- I18n: Update po/LINGUAS list
+- I18n: Update po/LINGUAS list
+- Fix memory leaks around gtk_get_current_event()
+- Revert "cleanup: panel: Keep consistent type names in G_DEFINE_TYPE"
+- tasklist: Fix use-after-free on tasklist child
+- build: Fix for Wayland backend disabled (Fixes #729)
+- systray: Update icon also on status change
+- Translation Updates:
+  Albanian, Basque, Bulgarian, Catalan, Chinese (China), Chinese
+  (Taiwan), Croatian, Danish, Dutch, English (United Kingdom),
+  Estonian, French, German, Greek, Hebrew, Indonesian, Italian,
+  Japanese, Kazakh, Korean, Lithuanian, Norwegian Bokmål, Occitan
+  (post 1500), Polish, Portuguese, Portuguese (Brazil), Russian,
+  Serbian, Slovenian, Spanish, Swedish, Turkish, Ukrainian
+
+4.19.1 (2023-03-28)
+======
+- launcher: Show action menu also when there are several items
+- Fix memory management of vala generated plugins
+- panel: Rephrase "Don't reserve space on borders" (V2)
+- panel: Make property migration generic
+- Remove POTFILES.skip
+- Put glade files back in POTFILES.in
+- autogen.sh: Properly quote arguments
+- panel: Properly set ExternalPlugin orientation
+- build: Use m4_defined min versions and cleanup
+- build: Use XDT_CHECK_PACKAGE_BINARY and replace XDT_CHECK_LIBX11
+- build: Use XDT_VERSION_INIT and get rid of configure.ac.in
+- build: Switch from intltool to gettext
+- wayland: Add panel_utils_widget_remap()
+- wayland: Commit wl_surface manually only if necessary
+- wayland: panel: Wait for all plugins to be embedded before hiding 
+panel
+- wayland: panel: Remap panel window when shown without autohide delay
+- wayland: panel: Send request only to embedded external plugins
+- launcher: Avoid "no trigger event" warning when showing the menu
+- launcher: Guard access to the plugin menu GdkWindow
+- libxfce4panel: Unregister menu also on GtkWidget::hide
+- panel: Do not reset output name if a monitor does not have a model 
+name
+- libxfce4panel: Fix memory management of sources for window positioning
+- libxfce4panel: Fix memory management of source for menu positioning
+- prefs-dialog: Launch xfce4-panel-profiles with '--from-panel'
+- panel: Delay removal of ExternalPlugin to prevent use-after-free
+- systray: Cancel any async D-Bus operation in finalize()
+- tasklist: Do not try to resolve /proc/pid/exe to launch new instance
+- directorymenu: Add missing sanity check
+- wayland: panel: Add missing sanity check
+- cleanup: panel: Use G_DECLARE_DERIVABLE_TYPE for BaseWindow
+- cleanup: panel: Make public members of BaseWindow private
+- cleanup: panel: Use G_DECLARE_DERIVABLE_TYPE for PluginExternal
+- cleanup: panel: Make public members of PluginExternal private
+- cleanup: wrapper: Use G_DEFINE_FINAL_TYPE
+- cleanup: clock: Use G_DECLARE_DERIVABLE_TYPE for SleepMonitor
+- cleanup: plugins: Use G_DEFINE_FINAL_TYPE
+- cleanup: panel: Use G_DEFINE_FINAL_TYPE
+- cleanup: panel: Keep consistent type names in G_DEFINE_TYPE
+- cleanup: Revert use of G_DECLARE_FINAL_TYPE for PanelBaseWindow
+- cleanup: Update glade files in Glade 3.40.0
+- cleanup: wrapper: Use G_DECLARE_FINAL_TYPE
+- cleanup: plugins: Do not define internal plugin types as dynamic
+- cleanup: plugins: Use consistent naming for structures and macros
+- cleanup: plugins: Use G_DECLARE_FINAL_TYPE
+- cleanup: panel: Use G_DECLARE_FINAL_TYPE
+- cleanup: libxfce4panel: Use GLib macros for type definition
+- cleanup: Remove PANEL_UTILS_LINK_4UI macro
+- wayland: panel: Properly release interface skeleton
+- panel: Properly handle null string as property default value
+- Revert "Use RGBA visual only if compositing is enabled (Fixes #251)"
+- Revert "systray: Do not require compositing to be enabled to use RGBA 
+visual"
+- systray: Fix blurry icons in prefs dialog when UI scale > 1
+- launcher: Fix blurry icons in prefs and add dialogs when UI scale > 1
+- launcher: Use GIcon for the tooltip icon
+- pager: Use WnckHandle if available
+- Translation Updates:
+  Albanian, Amharic, Arabic, Armenian (Armenia), Asturian, Basque,
+  Belarusian, Bengali, Bulgarian, Catalan, Chinese (China), Chinese
+  (Hong Kong), Chinese (Taiwan), Croatian, Czech, Danish, Dutch,
+  Eastern Armenian, English (Australia), English (United Kingdom),
+  Estonian, Finnish, French, Galician, Georgian, German, Greek, Hebrew,
+  Hungarian, Icelandic, Indonesian, Interlingue, Italian, Japanese,
+  Kazakh, Korean, Lithuanian, Malay, Norwegian Bokmål, Norwegian
+  Nynorsk, Occitan (post 1500), Panjabi (Punjabi), Polish, Portuguese,
+  Portuguese (Brazil), Romanian, Russian, Serbian, Sinhala, Slovak,
+  Slovenian, Spanish, Swedish, Thai, Turkish, Ukrainian, Uyghur,
+  Vietnamese
+
+4.19.0 (2023-01-10)
+======
+- Dependency Changes:
+  - GLib >= 2.72.0
+  - Libxfce4windowing >= 4.19.1
+  - build: Make all X11/Wayland-specific dependencies optional
+
+- New APIs:
+  - libxfce4panel: Add xfce_panel_plugin_popup_window()
+
+- Deprecated APIs:
+  - libxfce4panel: Deprecate XfcePanelImage
+
+- New Features:
+  - panel: Allow to force running plugins as internal
+  - Port to Wayland (!103)
+
+- Code Refactoring:
+  - cleanup: Remove useless function panel_window_update_dark_mode()
+  - cleanup: Replace panel_str_is_empty() with xfce_str_is_empty()
+  - cleanup: Do not use `== (TRUE|FALSE)` for boolean conditions
+  - cleanup: Do not translate warnings
+  - wrapper: Cleanup
+  - panel: ExternalWrapper cleanup
+  - clock: Use xfce_panel_plugin_popup_window()
+  - systray: cleanup: Consolidate `sn_plugin_button_toggled()`
+  - panel: Share code that checks if pointer is outside the panel
+  - panel: Remove useless function
+  - build: Print some more config infos
+  - build: gio-unix requirement cleanup
+  - build: Let xdt-depends.m4 macros set GLib macros
+
+- Bug Fixes:
+  - tasklist: Fix scrolling through window buttons (Fixes #692)
+  - tasklist: Fix group button visibility (#693)
+  - Silence allocation warning for external plugins (V3)
+  - tasklist: Do not duplicate menu item activation
+  - Connect to GtkMenuShell::deactivate instead of selection-done
+  - Set translation domain for GtkBuilders
+  - panel: Always include borders to compute snap position
+  - clock: Fix sync timeout
+  - docs: Fix version for xfce_panel_set_image_from_source()
+  - Load icons using icon theme scaling functions correctly
+  - clock: Add missing sanity check
+  - windowmenu: Adapt wnck default icon size when UI scale > 1 (Fixes #682)
+  - tasklist: Adapt wnck default icon size when UI scale > 1 (Fixes #681)
+  - tasklist: Fix window count positioning when UI scale > 1
+  - tasklist: Keep icon pixbuf around and use surface also for menu items (#676)
+  - clock: Do not override custom font formats (#675)
+
+- Translation Updates:
+  Albanian, Armenian (Armenia), Basque, Belarusian, Bulgarian, Catalan,
+  Chinese (China), Chinese (Hong Kong), Chinese (Taiwan), Croatian,
+  Czech, Danish, Dutch, Eastern Armenian, English (Australia), English
+  (United Kingdom), Estonian, Finnish, French, Galician, German, Greek,
+  Hebrew, Hungarian, Icelandic, Indonesian, Interlingue, Italian,
+  Japanese, Kazakh, Korean, Lithuanian, Malay, Norwegian Bokmål,
+  Occitan (post 1500), Polish, Portuguese, Portuguese (Brazil),
+  Russian, Serbian, Slovak, Slovenian, Spanish, Swedish, Thai, Turkish,
+  Ukrainian
 
 4.18.0 (2022-12-15)
 ======

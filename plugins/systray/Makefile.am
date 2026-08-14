@@ -13,12 +13,12 @@ plugin_LTLIBRARIES = \
 libsystray_built_sources = \
 	sn-watcher.h \
 	sn-watcher.c \
-	sn-dialog-ui.h \
 	systray-marshal.c \
 	systray-marshal.h
 
 libsystray_la_SOURCES = \
 	$(libsystray_built_sources) \
+	$(top_srcdir)/common/xfce4-panel-resources.c \
 	sn-config.c \
 	sn-config.h \
 	sn-backend.c \
@@ -36,7 +36,10 @@ libsystray_la_SOURCES = \
 	sn-plugin.c \
 	sn-plugin.h \
 	sn-util.c \
-	sn-util.h \
+	sn-util.h
+
+if ENABLE_X11
+libsystray_la_SOURCES += \
 	systray.c \
 	systray.h \
 	systray-box.c \
@@ -45,13 +48,16 @@ libsystray_la_SOURCES = \
 	systray-manager.h \
 	systray-socket.c \
 	systray-socket.h
+endif
 
 libsystray_la_CFLAGS = \
 	$(LIBX11_CFLAGS) \
+	$(GIO_UNIX_CFLAGS) \
 	$(GTK_CFLAGS) \
 	$(XFCONF_CFLAGS) \
 	$(LIBXFCE4UTIL_CFLAGS) \
 	$(LIBXFCE4UI_CFLAGS) \
+	$(LIBXFCE4WINDOWING_CFLAGS) \
 	$(PLATFORM_CFLAGS) \
 	$(DBUSMENU_CFLAGS)
 
@@ -66,9 +72,11 @@ libsystray_la_LIBADD = \
 	$(top_builddir)/libxfce4panel/libxfce4panel-$(LIBXFCE4PANEL_VERSION_API).la \
 	$(top_builddir)/common/libpanel-common.la \
 	$(LIBX11_LIBS) \
+	$(GIO_UNIX_LIBS) \
 	$(GTK_LIBS) \
 	$(LIBXFCE4UTIL_LIBS) \
 	$(LIBXFCE4UI_LIBS) \
+	$(LIBXFCE4WINDOWING_LIBS) \
 	$(XFCONF_LIBS) \
 	$(DBUSMENU_LIBS)
 
@@ -82,12 +90,16 @@ libsystray_la_DEPENDENCIES = \
 desktopdir = $(datadir)/xfce4/panel/plugins
 desktop_in_files = systray.desktop.in.in
 desktop_DATA = $(desktop_in_files:.desktop.in.in=.desktop)
-@INTLTOOL_DESKTOP_RULE@
+
+%.desktop: %.desktop.in
+	$(AM_V_GEN) $(MSGFMT) --desktop --template $< -d $(top_srcdir)/po -o $@
 
 EXTRA_DIST = \
 	$(desktop_in_files) \
-	sn-dialog.glade \
-	systray-marshal.list
+	systray-marshal.list \
+	meson.build \
+	sn-watcher.xml \
+	$(NULL)
 
 DISTCLEANFILES = \
 	$(desktop_DATA)
@@ -95,7 +107,6 @@ DISTCLEANFILES = \
 #
 # Rules to auto-generate built sources
 #
-if MAINTAINER_MODE
 BUILT_SOURCES = \
 	$(libsystray_built_sources)
 
@@ -109,15 +120,11 @@ sn-watcher.c: sn-watcher.xml Makefile
 	--generate-c-code sn-watcher \
 	$(srcdir)/sn-watcher.xml
 
-sn-dialog-ui.h: sn-dialog.glade
-	$(AM_V_GEN) xdt-csource --static --strip-comments --strip-content --name=sn_dialog_ui $< >$@
-
 systray-marshal.h: systray-marshal.list Makefile
 	$(AM_V_GEN) glib-genmarshal --header --internal --prefix=_systray_marshal $< > $@
 
 systray-marshal.c: systray-marshal.list Makefile
 	$(AM_V_GEN) echo "#include \"systray-marshal.h\"" > $@ \
 	&& glib-genmarshal --prefix=_systray_marshal --body $< >> $@
-endif
 
 # vi:set ts=8 sw=8 noet ai nocindent syntax=automake:

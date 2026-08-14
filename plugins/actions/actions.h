@@ -19,23 +19,15 @@
 #ifndef __ACTIONS_H__
 #define __ACTIONS_H__
 
-#include <gtk/gtk.h>
+#include "libxfce4panel/libxfce4panel.h"
 
 G_BEGIN_DECLS
 
-typedef struct _ActionsPluginClass ActionsPluginClass;
-typedef struct _ActionsPlugin      ActionsPlugin;
+#define ACTIONS_TYPE_PLUGIN (actions_plugin_get_type ())
+G_DECLARE_FINAL_TYPE (ActionsPlugin, actions_plugin, ACTIONS, PLUGIN, XfcePanelPlugin)
 
-#define XFCE_TYPE_ACTIONS_PLUGIN            (actions_plugin_get_type ())
-#define XFCE_ACTIONS_PLUGIN(obj)            (G_TYPE_CHECK_INSTANCE_CAST ((obj), XFCE_TYPE_ACTIONS_PLUGIN, ActionsPlugin))
-#define XFCE_ACTIONS_PLUGIN_CLASS(klass)    (G_TYPE_CHECK_CLASS_CAST ((klass), XFCE_TYPE_ACTIONS_PLUGIN, ActionsPluginClass))
-#define XFCE_IS_ACTIONS_PLUGIN(obj)         (G_TYPE_CHECK_INSTANCE_TYPE ((obj), XFCE_TYPE_ACTIONS_PLUGIN))
-#define XFCE_IS_ACTIONS_PLUGIN_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE ((klass), XFCE_TYPE_ACTIONS_PLUGIN))
-#define XFCE_ACTIONS_PLUGIN_GET_CLASS(obj)  (G_TYPE_INSTANCE_GET_CLASS ((obj), XFCE_TYPE_ACTIONS_PLUGIN, ActionsPluginClass))
-
-GType actions_plugin_get_type      (void) G_GNUC_CONST;
-
-void  actions_plugin_register_type (XfcePanelTypeModule *type_module);
+void
+actions_plugin_register_type (XfcePanelTypeModule *type_module);
 
 G_END_DECLS
 

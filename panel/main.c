@@ -18,74 +18,62 @@
  */
 
 #ifdef HAVE_CONFIG_H
-#include <config.h>
+#include "config.h"
+#endif
+#ifdef HAVE_XFCE_REVISION_H
+#include "xfce-revision.h"
 #endif
 
-#ifdef HAVE_STDIO_H
-#include <stdio.h>
-#endif
-#ifdef HAVE_STDLIB_H
-#include <stdlib.h>
-#endif
-#ifdef HAVE_UNISTD_H
-#include <unistd.h>
-#endif
-#ifdef HAVE_STRING_H
-#include <string.h>
-#endif
-#ifdef HAVE_SIGNAL_H
-#include <signal.h>
-#endif
+#include "panel-application.h"
+#include "panel-dbus-client.h"
+#include "panel-dbus-service.h"
+#include "panel-preferences-dialog.h"
 
-#include <glib.h>
+#include "common/panel-dbus.h"
+#include "common/panel-debug.h"
+#include "common/panel-private.h"
+#include "libxfce4panel/libxfce4panel.h"
+
 #include <gio/gio.h>
-#include <libxfce4util/libxfce4util.h>
 #include <libxfce4ui/libxfce4ui.h>
-#include <libwnck/libwnck.h>
-
-#include <common/panel-private.h>
-#include <common/panel-debug.h>
-#include <libxfce4panel/libxfce4panel.h>
-#include <panel/panel-application.h>
-#include <panel/panel-dbus-service.h>
-#include <panel/panel-dbus-client.h>
-#include <panel/panel-preferences-dialog.h>
+#include <libxfce4util/libxfce4util.h>
+#include <libxfce4windowing/libxfce4windowing.h>
 
 static PanelApplication *application = NULL;
 
-static gint       opt_preferences = -1;
-static gint       opt_add_items = -1;
-static gboolean   opt_save = FALSE;
-static gchar     *opt_add = NULL;
-static gboolean   opt_restart = FALSE;
-static gboolean   opt_quit = FALSE;
-static gboolean   opt_version = FALSE;
-static gboolean   opt_disable_wm_check = FALSE;
-static gchar     *opt_plugin_event = NULL;
-static gchar    **opt_arguments = NULL;
-static guint      opt_socket_id = 0;
+static gint opt_preferences = -1;
+static gint opt_add_items = -1;
+static gboolean opt_save = FALSE;
+static gchar *opt_add = NULL;
+static gboolean opt_restart = FALSE;
+static gboolean opt_quit = FALSE;
+static gboolean opt_version = FALSE;
+static gboolean opt_disable_wm_check = FALSE;
+static gchar *opt_plugin_event = NULL;
+static gchar **opt_arguments = NULL;
+static guint opt_socket_id = 0;
 
 
 
-static gboolean panel_callback_handler (const gchar  *name,
-                                        const gchar  *value,
-                                        gpointer      user_data,
-                                        GError      **error);
+static gboolean
+panel_callback_handler (const gchar *name,
+                        const gchar *value,
+                        gpointer user_data,
+                        GError **error);
 
 
 
 /* command line options */
 #define PANEL_CALLBACK_OPTION G_OPTION_FLAG_OPTIONAL_ARG, G_OPTION_ARG_CALLBACK, panel_callback_handler
-static GOptionEntry option_entries[] =
-{
-  { "preferences", 'p', PANEL_CALLBACK_OPTION, N_("Show the 'Panel Preferences' dialog"), N_("PANEL-NUMBER") },
-  { "add-items", 'a', PANEL_CALLBACK_OPTION, N_("Show the 'Add New Items' dialog"), N_("PANEL-NUMBER") },
-  { "save", 's', 0, G_OPTION_ARG_NONE, &opt_save, N_("Save the panel configuration"), NULL },
-  { "add", '\0', 0, G_OPTION_ARG_STRING, &opt_add, N_("Add a new plugin to the panel"), N_("PLUGIN-NAME") },
-  { "restart", 'r', 0, G_OPTION_ARG_NONE, &opt_restart, N_("Restart the running panel instance"), NULL },
-  { "quit", 'q', 0, G_OPTION_ARG_NONE, &opt_quit, N_("Quit the running panel instance"), NULL },
-  { "disable-wm-check", 'd', 0, G_OPTION_ARG_NONE, &opt_disable_wm_check, N_("Do not wait for a window manager on startup"), NULL },
-  { "version", 'V', 0, G_OPTION_ARG_NONE, &opt_version, N_("Print version information and exit"), NULL },
+static GOptionEntry option_entries[] = {
+  { "preferences", 'p', PANEL_CALLBACK_OPTION, N_ ("Show the 'Panel Preferences' dialog"), N_ ("PANEL-NUMBER") },
+  { "add-items", 'a', PANEL_CALLBACK_OPTION, N_ ("Show the 'Add New Items' dialog"), N_ ("PANEL-NUMBER") },
+  { "save", 's', 0, G_OPTION_ARG_NONE, &opt_save, N_ ("Save the panel configuration"), NULL },
+  { "add", '\0', 0, G_OPTION_ARG_STRING, &opt_add, N_ ("Add a new plugin to the panel"), N_ ("PLUGIN-NAME") },
+  { "restart", 'r', 0, G_OPTION_ARG_NONE, &opt_restart, N_ ("Restart the running panel instance"), NULL },
+  { "quit", 'q', 0, G_OPTION_ARG_NONE, &opt_quit, N_ ("Quit the running panel instance"), NULL },
+  { "disable-wm-check", 'd', 0, G_OPTION_ARG_NONE, &opt_disable_wm_check, N_ ("Do not wait for a window manager on startup"), NULL },
+  { "version", 'V', 0, G_OPTION_ARG_NONE, &opt_version, N_ ("Print version information and exit"), NULL },
   { "plugin-event", '\0', G_OPTION_FLAG_HIDDEN, G_OPTION_ARG_STRING, &opt_plugin_event, NULL, NULL },
   { "socket-id", '\0', G_OPTION_FLAG_HIDDEN, G_OPTION_ARG_INT, &opt_socket_id, NULL, NULL },
   { G_OPTION_REMAINING, '\0', 0, G_OPTION_ARG_STRING_ARRAY, &opt_arguments, NULL, NULL },
@@ -95,10 +83,10 @@ static GOptionEntry option_entries[] =
 
 
 static gboolean
-panel_callback_handler (const gchar  *name,
-                        const gchar  *value,
-                        gpointer      user_data,
-                        GError      **error)
+panel_callback_handler (const gchar *name,
+                        const gchar *value,
+                        gpointer user_data,
+                        GError **error)
 {
   panel_return_val_if_fail (name != NULL, FALSE);
 
@@ -144,6 +132,7 @@ panel_signal_handler (gint signum)
 
 
 
+#ifdef ENABLE_X11
 static void
 panel_sm_client_quit (XfceSMClient *sm_client)
 {
@@ -155,13 +144,14 @@ panel_sm_client_quit (XfceSMClient *sm_client)
 
   gtk_main_quit ();
 }
+#endif
 
 
 
 static void
 panel_debug_notify_proxy (void)
 {
-  gchar       *path;
+  gchar *path;
   const gchar *proxy_cmd;
 
   if (G_UNLIKELY (panel_debug_has_domain (PANEL_DEBUG_GDB)))
@@ -201,11 +191,11 @@ panel_debug_notify_proxy (void)
 
 static void
 panel_dbus_name_lost (GDBusConnection *connection,
-                      const gchar     *name,
-                      gpointer         user_data)
+                      const gchar *name,
+                      gpointer user_data)
 {
   if (connection == NULL)
-    g_critical (_("Name %s lost on the message dbus, exiting."), name);
+    g_critical ("Name %s lost on the message dbus, exiting.", name);
 
   gtk_main_quit ();
 }
@@ -214,32 +204,35 @@ panel_dbus_name_lost (GDBusConnection *connection,
 
 static void
 panel_dbus_name_acquired (GDBusConnection *connection,
-                          const gchar     *name,
-                          gpointer         user_data)
+                          const gchar *name,
+                          gpointer user_data)
 {
   application = panel_application_get ();
-  if (! panel_application_load (application, opt_disable_wm_check))
+  if (!panel_application_load (application, opt_disable_wm_check))
     gtk_main_quit ();
 }
 
 
 
 gint
-main (gint argc, gchar **argv)
+main (gint argc,
+      gchar **argv)
 {
-  GOptionContext   *context;
-  GError           *error = NULL;
+  GOptionContext *context;
+  GError *error = NULL;
   PanelDBusService *dbus_service;
-  gboolean          succeed = FALSE;
-  gboolean          remote_succeed;
-  guint             i;
-  const gint        signums[] = { SIGINT, SIGQUIT, SIGTERM, SIGABRT, SIGUSR1 };
-  const gchar      *error_msg;
-  XfceSMClient     *sm_client;
+  gboolean succeed = FALSE;
+  gboolean remote_succeed;
+  guint i;
+  const gint signums[] = { SIGINT, SIGQUIT, SIGTERM, SIGABRT, SIGUSR1 };
+  const gchar *error_msg;
+#ifdef ENABLE_X11
+  XfceSMClient *sm_client = NULL;
+#endif
 
   panel_debug (PANEL_DEBUG_MAIN,
                "version %s on gtk+ %d.%d.%d (%d.%d.%d), glib %d.%d.%d (%d.%d.%d)",
-               LIBXFCE4PANEL_VERSION,
+               VERSION_FULL,
                gtk_major_version, gtk_minor_version, gtk_micro_version,
                GTK_MAJOR_VERSION, GTK_MINOR_VERSION, GTK_MICRO_VERSION,
                glib_major_version, glib_minor_version, glib_micro_version,
@@ -251,12 +244,6 @@ main (gint argc, gchar **argv)
   /* set translation domain */
   xfce_textdomain (GETTEXT_PACKAGE, PACKAGE_LOCALE_DIR, "UTF-8");
 
-#ifdef G_ENABLE_DEBUG
-  /* do NOT remove this line for now, If something doesn't work,
-   * fix your code instead! */
-  g_log_set_always_fatal (G_LOG_LEVEL_CRITICAL | G_LOG_LEVEL_WARNING);
-#endif
-
   /* Workaround for xinput2's subpixel handling triggering unwanted enter/leave-notify events:
    * https://bugs.freedesktop.org/show_bug.cgi?id=92681
    * We retain the original env var in our own custom env var which we use to re-set the
@@ -267,11 +254,17 @@ main (gint argc, gchar **argv)
 
   g_setenv ("GDK_CORE_DEVICE_EVENTS", "1", TRUE);
 
+  /* we need to do this right now to be able to determine the windowing system used below */
+  gtk_init (&argc, &argv);
+
   /* parse context options */
   context = g_option_context_new (_("[ARGUMENTS...]"));
   g_option_context_add_main_entries (context, option_entries, GETTEXT_PACKAGE);
   g_option_context_add_group (context, gtk_get_option_group (TRUE));
-  g_option_context_add_group (context, xfce_sm_client_get_option_group (argc, argv));
+#ifdef ENABLE_X11
+  if (WINDOWING_IS_X11 ())
+    g_option_context_add_group (context, xfce_sm_client_get_option_group (argc, argv));
+#endif
   if (!g_option_context_parse (context, &argc, &argv, &error))
     {
       g_print ("%s: %s.\n", PACKAGE_NAME, error->message);
@@ -283,8 +276,6 @@ main (gint argc, gchar **argv)
     }
   g_option_context_free (context);
 
-  gtk_init (&argc, &argv);
-
   if (opt_version)
     {
       /* print version information */
@@ -292,8 +283,8 @@ main (gint argc, gchar **argv)
         g_print ("%s (%s)", *opt_arguments, PACKAGE_NAME);
       else
         g_print ("%s", PACKAGE_NAME);
-      g_print (" %s (Xfce %s)\n\n", PACKAGE_VERSION, xfce_version_string ());
-      g_print ("%s\n", "Copyright (c) 2004-2023");
+      g_print (" %s (Xfce %s)\n\n", VERSION_FULL, xfce_version_string ());
+      g_print ("%s\n", "Copyright (c) 2004-" COPYRIGHT_YEAR);
       g_print ("\t%s\n\n", _("The Xfce development team. All rights reserved."));
       g_print (_("Please report bugs to <%s>."), PACKAGE_BUGREPORT);
       g_print ("\n");
@@ -344,7 +335,14 @@ main (gint argc, gchar **argv)
       goto dbus_return;
     }
 
-  launch_panel:
+launch_panel:
+
+  if (!xfconf_init (&error))
+    {
+      g_critical ("Failed to initialize Xfconf: %s", error->message);
+      g_error_free (error);
+      return EXIT_FAILURE;
+    }
 
   g_bus_own_name (G_BUS_TYPE_SESSION,
                   PANEL_DBUS_NAME,
@@ -357,27 +355,28 @@ main (gint argc, gchar **argv)
   /* start dbus service */
   dbus_service = panel_dbus_service_get ();
 
+#ifdef ENABLE_X11
   /* start session management */
-  sm_client = xfce_sm_client_get ();
-  xfce_sm_client_set_restart_style (sm_client, XFCE_SM_CLIENT_RESTART_IMMEDIATELY);
-  xfce_sm_client_set_priority (sm_client, XFCE_SM_CLIENT_PRIORITY_CORE);
-  g_signal_connect (G_OBJECT (sm_client), "quit",
-      G_CALLBACK (panel_sm_client_quit), NULL);
-  if (!xfce_sm_client_connect (sm_client, &error))
+  if (WINDOWING_IS_X11 ())
     {
-      g_printerr ("%s: Failed to connect to session manager: %s\n",
-                  G_LOG_DOMAIN, error->message);
-      g_clear_error (&error);
+      sm_client = xfce_sm_client_get ();
+      xfce_sm_client_set_restart_style (sm_client, XFCE_SM_CLIENT_RESTART_IMMEDIATELY);
+      xfce_sm_client_set_priority (sm_client, XFCE_SM_CLIENT_PRIORITY_CORE);
+      g_signal_connect (G_OBJECT (sm_client), "quit", G_CALLBACK (panel_sm_client_quit), NULL);
+      if (!xfce_sm_client_connect (sm_client, &error))
+        {
+          g_warning ("Failed to connect to session manager: %s", error->message);
+          g_clear_error (&error);
+        }
     }
+#endif
 
   /* setup signal handlers to properly quit the main loop */
   for (i = 0; i < G_N_ELEMENTS (signums); i++)
     signal (signums[i], panel_signal_handler);
 
   /* set EWMH source indication */
-G_GNUC_BEGIN_IGNORE_DEPRECATIONS
-  wnck_set_client_type (WNCK_CLIENT_TYPE_PAGER);
-G_GNUC_END_IGNORE_DEPRECATIONS
+  xfw_set_client_type (XFW_CLIENT_TYPE_PAGER);
 
   gtk_main ();
 
@@ -398,7 +397,10 @@ G_GNUC_END_IGNORE_DEPRECATIONS
       g_print ("%s: %s\n\n", G_LOG_DOMAIN, _("There is already a running instance"));
     }
 
-  g_object_unref (G_OBJECT (sm_client));
+#ifdef ENABLE_X11
+  if (WINDOWING_IS_X11 ())
+    g_object_unref (G_OBJECT (sm_client));
+#endif
 
   if (panel_dbus_service_get_restart ())
     {
@@ -406,6 +408,8 @@ G_GNUC_END_IGNORE_DEPRECATIONS
       g_print ("%s: %s\n\n", G_LOG_DOMAIN, _("Restarting..."));
       g_spawn_command_line_async (argv[0], NULL);
     }
+
+  xfconf_shutdown ();
 
   return EXIT_SUCCESS;
 
@@ -438,13 +442,13 @@ dbus_return:
           /* normally start the panel */
           if (opt_preferences >= 0 || opt_restart)
             {
+              const gchar *primary = _("No running instance of %s was found");
+              const gchar *secondary = _("Do you want to start the panel? If you do, make sure "
+                                         "you save the session on logout, so the panel is "
+                                         "automatically started the next time you login.");
               g_clear_error (&error);
 
-              if (xfce_dialog_confirm (NULL, "system-run", _("Execute"),
-                                       _("Do you want to start the panel? If you do, make sure "
-                                         "you save the session on logout, so the panel is "
-                                         "automatically started the next time you login."),
-                                       _("No running instance of %s was found"), G_LOG_DOMAIN))
+              if (xfce_dialog_confirm (NULL, "system-run", _("Execute"), secondary, primary, G_LOG_DOMAIN))
                 {
                   panel_debug (PANEL_DEBUG_MAIN, "user confirmed to start the panel");
                   goto launch_panel;

@@ -19,24 +19,23 @@
 #ifndef __CLOCK_FUZZY_H__
 #define __CLOCK_FUZZY_H__
 
+#include "clock-time.h"
+
+#include "libxfce4panel/libxfce4panel.h"
+
+#include <gtk/gtk.h>
+
 G_BEGIN_DECLS
 
-typedef struct _XfceClockFuzzyClass XfceClockFuzzyClass;
-typedef struct _XfceClockFuzzy      XfceClockFuzzy;
+#define XFCE_CLOCK_TYPE_FUZZY (xfce_clock_fuzzy_get_type ())
+G_DECLARE_FINAL_TYPE (XfceClockFuzzy, xfce_clock_fuzzy, XFCE_CLOCK, FUZZY, GtkLabel)
 
-#define XFCE_CLOCK_TYPE_FUZZY            (xfce_clock_fuzzy_get_type ())
-#define XFCE_CLOCK_FUZZY(obj)            (G_TYPE_CHECK_INSTANCE_CAST ((obj), XFCE_CLOCK_TYPE_FUZZY, XfceClockFuzzy))
-#define XFCE_CLOCK_FUZZY_CLASS(klass)    (G_TYPE_CHECK_CLASS_CAST ((klass), XFCE_CLOCK_TYPE_FUZZY, XfceClockFuzzyClass))
-#define XFCE_CLOCK_IS_FUZZY(obj)         (G_TYPE_CHECK_INSTANCE_TYPE ((obj), XFCE_CLOCK_TYPE_FUZZY))
-#define XFCE_CLOCK_IS_FUZZY_CLASS(klass) (G_TYPE_CHECK_CLASS_CAST ((klass), XFCE_CLOCK_TYPE_FUZZY))
-#define XFCE_CLOCK_FUZZY_GET_CLASS(obj)  (G_TYPE_INSTANCE_GET_CLASS ((obj), XFCE_CLOCK_TYPE_FUZZY, XfceClockFuzzyClass))
+void
+xfce_clock_fuzzy_register_type (XfcePanelTypeModule *type_module);
 
-GType      xfce_clock_fuzzy_get_type      (void) G_GNUC_CONST;
-
-void       xfce_clock_fuzzy_register_type (XfcePanelTypeModule *type_module);
-
-GtkWidget *xfce_clock_fuzzy_new           (ClockTime           *time,
-                                           ClockSleepMonitor   *sleep_monitor) G_GNUC_MALLOC;
+GtkWidget *
+xfce_clock_fuzzy_new (ClockTime *time,
+                      ClockSleepMonitor *sleep_monitor) G_GNUC_MALLOC;
 
 G_END_DECLS
 

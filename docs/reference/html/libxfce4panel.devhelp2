@@ -1,31 +1,29 @@
 <?xml version="1.0" encoding="utf-8" standalone="no"?>
-<book xmlns="http://www.devhelp.net/book" title="xfce4-panel Reference Manual" link="index.html" author="" name="libxfce4panel" version="2" language="c" online="https://developer.xfce.org/xfce4-panel/index.html">
+<book xmlns="http://www.devhelp.net/book" title="xfce4-panel Reference Manual" link="index.html" author="" name="libxfce4panel" version="2" language="c" online="http://[SERVER]/xfce4-panel/index.html">
   <chapters>
-    <sub name="Fundamentals" link="libxfce4panel-fundamentals.html">
+    <sub name="[Insert title here]" link="ch01.html">
       <sub name="Version Information" link="libxfce4panel-Version-Information.html"/>
+      <sub name="XfceArrowButton" link="XfceArrowButton.html"/>
+      <sub name="Convenience Functions" link="libxfce4panel-Convenience-Functions.html"/>
+      <sub name="XfcePanelImage" link="XfcePanelImage.html"/>
       <sub name="Standard Enumerations" link="libxfce4panel-Standard-Enumerations.html"/>
-    </sub>
-    <sub name="Panel Plugins" link="libxfce4panel-plugins.html">
-      <sub name="Register plugins with the panel" link="libxfce4panel-plugins.html#libxfce4panel-register"/>
       <sub name="XfcePanelPlugin" link="XfcePanelPlugin.html"/>
+      <sub name="Commonly used plugin macros" link="libxfce4panel-Commonly-used-plugin-macros.html"/>
       <sub name="Panel Plugin Register Macros" link="libxfce4panel-Panel-Plugin-Register-Macros.html"/>
       <sub name="GObject Oriented Panel Plugin Registers Macros" link="libxfce4panel-GObject-Oriented-Panel-Plugin-Registers-Macros.html"/>
     </sub>
-    <sub name="Additional Widgets" link="libxfce4panel-widgets.html">
-      <sub name="XfceArrowButton" link="XfceArrowButton.html"/>
-      <sub name="XfcePanelImage" link="XfcePanelImage.html"/>
-    </sub>
-    <sub name="Miscelleanous" link="libxfce4panel-miscelleanous.html">
-      <sub name="Convenience Functions" link="libxfce4panel-Convenience-Functions.html"/>
-      <sub name="Commonly used plugin macros" link="libxfce4panel-Commonly-used-plugin-macros.html"/>
-    </sub>
-    <sub name="Index of all symbols" link="api-index-full.html"/>
-    <sub name="Index of deprecated symbols" link="api-index-deprecated.html"/>
-    <sub name="Index of new symbols in 4.18" link="api-index-4-18.html"/>
-    <sub name="Index of new symbols in 4.14" link="api-index-4-14.html"/>
-    <sub name="Index of new symbols in 4.10" link="api-index-4-10.html"/>
-    <sub name="Index of new symbols in 4.8" link="api-index-4-8.html"/>
-    <sub name="Index of new symbols in 4.6" link="api-index-4-6.html"/>
+    <sub name="Object Hierarchy" link="object-tree.html"/>
+    <sub name="API Index" link="api-index-full.html"/>
+    <sub name="Index of deprecated API" link="deprecated-api-index.html"/>
+    <sub name="Index of new API in 4.10" link="api-index-4-10.html"/>
+    <sub name="Index of new API in 4.14" link="api-index-4-14.html"/>
+    <sub name="Index of new API in 4.17.2" link="api-index-4-17-2.html"/>
+    <sub name="Index of new API in 4.17.4" link="api-index-4-17-4.html"/>
+    <sub name="Index of new API in 4.19.0" link="api-index-4-19-0.html"/>
+    <sub name="Index of new API in 4.19.6" link="api-index-4-19-6.html"/>
+    <sub name="Index of new API in 4.21.0" link="api-index-4-21-0.html"/>
+    <sub name="Index of new API in 4.6" link="api-index-4-6.html"/>
+    <sub name="Index of new API in 4.8" link="api-index-4-8.html"/>
     <sub name="Annotation Glossary" link="annotation-glossary.html"/>
   </chapters>
   <functions>
@@ -38,6 +36,32 @@
     <keyword type="macro" name="LIBXFCE4PANEL_MAJOR_VERSION" link="libxfce4panel-Version-Information.html#LIBXFCE4PANEL-MAJOR-VERSION:CAPS" since="4.8"/>
     <keyword type="macro" name="LIBXFCE4PANEL_MINOR_VERSION" link="libxfce4panel-Version-Information.html#LIBXFCE4PANEL-MINOR-VERSION:CAPS" since="4.8"/>
     <keyword type="macro" name="LIBXFCE4PANEL_MICRO_VERSION" link="libxfce4panel-Version-Information.html#LIBXFCE4PANEL-MICRO-VERSION:CAPS" since="4.8"/>
+    <keyword type="function" name="xfce_arrow_button_new ()" link="XfceArrowButton.html#xfce-arrow-button-new"/>
+    <keyword type="function" name="xfce_arrow_button_get_arrow_type ()" link="XfceArrowButton.html#xfce-arrow-button-get-arrow-type"/>
+    <keyword type="function" name="xfce_arrow_button_set_arrow_type ()" link="XfceArrowButton.html#xfce-arrow-button-set-arrow-type"/>
+    <keyword type="function" name="xfce_arrow_button_get_blinking ()" link="XfceArrowButton.html#xfce-arrow-button-get-blinking" since="4.8"/>
+    <keyword type="function" name="xfce_arrow_button_set_blinking ()" link="XfceArrowButton.html#xfce-arrow-button-set-blinking" since="4.8"/>
+    <keyword type="struct" name="struct XfceArrowButton" link="XfceArrowButton.html#XfceArrowButton-struct"/>
+    <keyword type="property" name="The “arrow-type” property" link="XfceArrowButton.html#XfceArrowButton--arrow-type"/>
+    <keyword type="signal" name="The “arrow-type-changed” signal" link="XfceArrowButton.html#XfceArrowButton-arrow-type-changed"/>
+    <keyword type="function" name="xfce_panel_create_button ()" link="libxfce4panel-Convenience-Functions.html#xfce-panel-create-button"/>
+    <keyword type="function" name="xfce_panel_create_toggle_button ()" link="libxfce4panel-Convenience-Functions.html#xfce-panel-create-toggle-button"/>
+    <keyword type="function" name="xfce_panel_get_channel_name ()" link="libxfce4panel-Convenience-Functions.html#xfce-panel-get-channel-name" since="4.8"/>
+    <keyword type="function" name="xfce_panel_pixbuf_from_source ()" link="libxfce4panel-Convenience-Functions.html#xfce-panel-pixbuf-from-source" since="4.8"/>
+    <keyword type="function" name="xfce_panel_pixbuf_from_source_at_size ()" link="libxfce4panel-Convenience-Functions.html#xfce-panel-pixbuf-from-source-at-size" since="4.10"/>
+    <keyword type="function" name="xfce_panel_set_image_from_source ()" link="libxfce4panel-Convenience-Functions.html#xfce-panel-set-image-from-source" since="4.17.4"/>
+    <keyword type="function" name="xfce_panel_image_new ()" link="XfcePanelImage.html#xfce-panel-image-new" deprecated="4.18.1: Use gtk_image_new() instead." since="4.8"/>
+    <keyword type="function" name="xfce_panel_image_new_from_pixbuf ()" link="XfcePanelImage.html#xfce-panel-image-new-from-pixbuf" deprecated="4.18.1: Use gtk_image_new_from_pixbuf() instead." since="4.8"/>
+    <keyword type="function" name="xfce_panel_image_new_from_source ()" link="XfcePanelImage.html#xfce-panel-image-new-from-source" deprecated="4.18.1: Use gtk_image_new() and xfce_panel_set_image_from_source() instead." since="4.8"/>
+    <keyword type="function" name="xfce_panel_image_set_from_pixbuf ()" link="XfcePanelImage.html#xfce-panel-image-set-from-pixbuf" deprecated="4.18.1: Use gtk_image_set_from_pixbuf()." since="4.8"/>
+    <keyword type="function" name="xfce_panel_image_set_from_source ()" link="XfcePanelImage.html#xfce-panel-image-set-from-source" deprecated="4.18.1: Use xfce_panel_set_image_from_source() instead." since="4.8"/>
+    <keyword type="function" name="xfce_panel_image_set_size ()" link="XfcePanelImage.html#xfce-panel-image-set-size" deprecated="" since="4.8"/>
+    <keyword type="function" name="xfce_panel_image_get_size ()" link="XfcePanelImage.html#xfce-panel-image-get-size" deprecated="" since="4.8"/>
+    <keyword type="function" name="xfce_panel_image_clear ()" link="XfcePanelImage.html#xfce-panel-image-clear" deprecated="4.18.1: Use gtk_image_clear() instead." since="4.8"/>
+    <keyword type="struct" name="struct XfcePanelImage" link="XfcePanelImage.html#XfcePanelImage-struct"/>
+    <keyword type="property" name="The “pixbuf” property" link="XfcePanelImage.html#XfcePanelImage--pixbuf"/>
+    <keyword type="property" name="The “size” property" link="XfcePanelImage.html#XfcePanelImage--size"/>
+    <keyword type="property" name="The “source” property" link="XfcePanelImage.html#XfcePanelImage--source"/>
     <keyword type="macro" name="xfce_screen_position_get_orientation()" link="libxfce4panel-Standard-Enumerations.html#xfce-screen-position-get-orientation"/>
     <keyword type="macro" name="xfce_screen_position_is_bottom()" link="libxfce4panel-Standard-Enumerations.html#xfce-screen-position-is-bottom"/>
     <keyword type="macro" name="xfce_screen_position_is_floating()" link="libxfce4panel-Standard-Enumerations.html#xfce-screen-position-is-floating"/>
@@ -73,6 +97,7 @@
     <keyword type="function" name="xfce_panel_plugin_position_widget ()" link="XfcePanelPlugin.html#xfce-panel-plugin-position-widget"/>
     <keyword type="function" name="xfce_panel_plugin_position_menu ()" link="XfcePanelPlugin.html#xfce-panel-plugin-position-menu" deprecated="4.17.2: Use xfce_panel_plugin_popup_menu() instead."/>
     <keyword type="function" name="xfce_panel_plugin_popup_menu ()" link="XfcePanelPlugin.html#xfce-panel-plugin-popup-menu" since="4.17.2"/>
+    <keyword type="function" name="xfce_panel_plugin_popup_window ()" link="XfcePanelPlugin.html#xfce-panel-plugin-popup-window" since="4.19.0"/>
     <keyword type="function" name="xfce_panel_plugin_focus_widget ()" link="XfcePanelPlugin.html#xfce-panel-plugin-focus-widget"/>
     <keyword type="function" name="xfce_panel_plugin_block_autohide ()" link="XfcePanelPlugin.html#xfce-panel-plugin-block-autohide"/>
     <keyword type="function" name="xfce_panel_plugin_lookup_rc_file ()" link="XfcePanelPlugin.html#xfce-panel-plugin-lookup-rc-file"/>
@@ -85,6 +110,7 @@
     <keyword type="function" name="xfce_panel_plugin_get_small ()" link="XfcePanelPlugin.html#xfce-panel-plugin-get-small" since="4.10"/>
     <keyword type="function" name="xfce_panel_plugin_set_shrink ()" link="XfcePanelPlugin.html#xfce-panel-plugin-set-shrink"/>
     <keyword type="function" name="xfce_panel_plugin_set_small ()" link="XfcePanelPlugin.html#xfce-panel-plugin-set-small"/>
+    <keyword type="macro" name="XFCE_PANEL_PLUGIN_ICON_PADDING" link="XfcePanelPlugin.html#XFCE-PANEL-PLUGIN-ICON-PADDING:CAPS" since="4.19.6"/>
     <keyword type="struct" name="struct XfcePanelPlugin" link="XfcePanelPlugin.html#XfcePanelPlugin-struct"/>
     <keyword type="struct" name="struct XfcePanelPluginClass" link="XfcePanelPlugin.html#XfcePanelPluginClass"/>
     <keyword type="property" name="The “arguments” property" link="XfcePanelPlugin.html#XfcePanelPlugin--arguments"/>
@@ -105,6 +131,7 @@
     <keyword type="signal" name="The “about” signal" link="XfcePanelPlugin.html#XfcePanelPlugin-about"/>
     <keyword type="signal" name="The “configure-plugin” signal" link="XfcePanelPlugin.html#XfcePanelPlugin-configure-plugin"/>
     <keyword type="signal" name="The “free-data” signal" link="XfcePanelPlugin.html#XfcePanelPlugin-free-data"/>
+    <keyword type="signal" name="The “hidden-event” signal" link="XfcePanelPlugin.html#XfcePanelPlugin-hidden-event"/>
     <keyword type="signal" name="The “mode-changed” signal" link="XfcePanelPlugin.html#XfcePanelPlugin-mode-changed"/>
     <keyword type="signal" name="The “nrows-changed” signal" link="XfcePanelPlugin.html#XfcePanelPlugin-nrows-changed"/>
     <keyword type="signal" name="The “orientation-changed” signal" link="XfcePanelPlugin.html#XfcePanelPlugin-orientation-changed"/>
@@ -113,6 +140,7 @@
     <keyword type="signal" name="The “save” signal" link="XfcePanelPlugin.html#XfcePanelPlugin-save"/>
     <keyword type="signal" name="The “screen-position-changed” signal" link="XfcePanelPlugin.html#XfcePanelPlugin-screen-position-changed"/>
     <keyword type="signal" name="The “size-changed” signal" link="XfcePanelPlugin.html#XfcePanelPlugin-size-changed"/>
+    <keyword type="macro" name="XFCE_PANEL_CHANNEL_NAME" link="libxfce4panel-Commonly-used-plugin-macros.html#XFCE-PANEL-CHANNEL-NAME:CAPS" since="4.8"/>
     <keyword type="function" name="XfcePanelPluginCheck ()" link="libxfce4panel-Panel-Plugin-Register-Macros.html#XfcePanelPluginCheck"/>
     <keyword type="function" name="XfcePanelPluginFunc ()" link="libxfce4panel-Panel-Plugin-Register-Macros.html#XfcePanelPluginFunc"/>
     <keyword type="function" name="XfcePanelPluginPreInit ()" link="libxfce4panel-Panel-Plugin-Register-Macros.html#XfcePanelPluginPreInit" since="4.6"/>
@@ -124,33 +152,6 @@
     <keyword type="macro" name="XFCE_PANEL_DEFINE_TYPE()" link="libxfce4panel-GObject-Oriented-Panel-Plugin-Registers-Macros.html#XFCE-PANEL-DEFINE-TYPE:CAPS" since="4.8"/>
     <keyword type="macro" name="XFCE_PANEL_DEFINE_PREINIT_FUNC()" link="libxfce4panel-GObject-Oriented-Panel-Plugin-Registers-Macros.html#XFCE-PANEL-DEFINE-PREINIT-FUNC:CAPS" since="4.8"/>
     <keyword type="typedef" name="XfcePanelTypeModule" link="libxfce4panel-GObject-Oriented-Panel-Plugin-Registers-Macros.html#XfcePanelTypeModule" since="4.8"/>
-    <keyword type="function" name="xfce_arrow_button_new ()" link="XfceArrowButton.html#xfce-arrow-button-new"/>
-    <keyword type="function" name="xfce_arrow_button_get_arrow_type ()" link="XfceArrowButton.html#xfce-arrow-button-get-arrow-type"/>
-    <keyword type="function" name="xfce_arrow_button_set_arrow_type ()" link="XfceArrowButton.html#xfce-arrow-button-set-arrow-type"/>
-    <keyword type="function" name="xfce_arrow_button_get_blinking ()" link="XfceArrowButton.html#xfce-arrow-button-get-blinking" since="4.8"/>
-    <keyword type="function" name="xfce_arrow_button_set_blinking ()" link="XfceArrowButton.html#xfce-arrow-button-set-blinking" since="4.8"/>
-    <keyword type="struct" name="struct XfceArrowButton" link="XfceArrowButton.html#XfceArrowButton-struct"/>
-    <keyword type="property" name="The “arrow-type” property" link="XfceArrowButton.html#XfceArrowButton--arrow-type"/>
-    <keyword type="signal" name="The “arrow-type-changed” signal" link="XfceArrowButton.html#XfceArrowButton-arrow-type-changed"/>
-    <keyword type="function" name="xfce_panel_image_new ()" link="XfcePanelImage.html#xfce-panel-image-new" deprecated="4.18.1: Use gtk_image_new() instead." since="4.8"/>
-    <keyword type="function" name="xfce_panel_image_new_from_pixbuf ()" link="XfcePanelImage.html#xfce-panel-image-new-from-pixbuf" deprecated="4.18.1: Use gtk_image_new_from_pixbuf() instead." since="4.8"/>
-    <keyword type="function" name="xfce_panel_image_new_from_source ()" link="XfcePanelImage.html#xfce-panel-image-new-from-source" deprecated="4.18.1: Use gtk_image_new() and xfce_panel_set_image_from_source() instead." since="4.8"/>
-    <keyword type="function" name="xfce_panel_image_set_from_pixbuf ()" link="XfcePanelImage.html#xfce-panel-image-set-from-pixbuf" deprecated="4.18.1: Use gtk_image_set_from_pixbuf()." since="4.8"/>
-    <keyword type="function" name="xfce_panel_image_set_from_source ()" link="XfcePanelImage.html#xfce-panel-image-set-from-source" deprecated="4.18.1: Use xfce_panel_set_image_from_source() instead." since="4.8"/>
-    <keyword type="function" name="xfce_panel_image_set_size ()" link="XfcePanelImage.html#xfce-panel-image-set-size" deprecated="" since="4.8"/>
-    <keyword type="function" name="xfce_panel_image_get_size ()" link="XfcePanelImage.html#xfce-panel-image-get-size" deprecated="" since="4.8"/>
-    <keyword type="function" name="xfce_panel_image_clear ()" link="XfcePanelImage.html#xfce-panel-image-clear" deprecated="4.18.1: Use gtk_image_clear() instead." since="4.8"/>
-    <keyword type="struct" name="struct XfcePanelImage" link="XfcePanelImage.html#XfcePanelImage-struct"/>
-    <keyword type="property" name="The “pixbuf” property" link="XfcePanelImage.html#XfcePanelImage--pixbuf"/>
-    <keyword type="property" name="The “size” property" link="XfcePanelImage.html#XfcePanelImage--size"/>
-    <keyword type="property" name="The “source” property" link="XfcePanelImage.html#XfcePanelImage--source"/>
-    <keyword type="function" name="xfce_panel_create_button ()" link="libxfce4panel-Convenience-Functions.html#xfce-panel-create-button"/>
-    <keyword type="function" name="xfce_panel_create_toggle_button ()" link="libxfce4panel-Convenience-Functions.html#xfce-panel-create-toggle-button"/>
-    <keyword type="function" name="xfce_panel_get_channel_name ()" link="libxfce4panel-Convenience-Functions.html#xfce-panel-get-channel-name" since="4.8"/>
-    <keyword type="function" name="xfce_panel_pixbuf_from_source ()" link="libxfce4panel-Convenience-Functions.html#xfce-panel-pixbuf-from-source" since="4.8"/>
-    <keyword type="function" name="xfce_panel_pixbuf_from_source_at_size ()" link="libxfce4panel-Convenience-Functions.html#xfce-panel-pixbuf-from-source-at-size" since="4.10"/>
-    <keyword type="function" name="xfce_panel_set_image_from_source ()" link="libxfce4panel-Convenience-Functions.html#xfce-panel-set-image-from-source" since="4.17.4"/>
-    <keyword type="macro" name="XFCE_PANEL_CHANNEL_NAME" link="libxfce4panel-Commonly-used-plugin-macros.html#XFCE-PANEL-CHANNEL-NAME:CAPS" since="4.8"/>
     <keyword type="constant" name="XFCE_SCREEN_POSITION_NONE" link="libxfce4panel-Standard-Enumerations.html#XFCE-SCREEN-POSITION-NONE:CAPS"/>
     <keyword type="constant" name="XFCE_SCREEN_POSITION_NW_H" link="libxfce4panel-Standard-Enumerations.html#XFCE-SCREEN-POSITION-NW-H:CAPS"/>
     <keyword type="constant" name="XFCE_SCREEN_POSITION_N" link="libxfce4panel-Standard-Enumerations.html#XFCE-SCREEN-POSITION-N:CAPS"/>
@@ -181,5 +182,6 @@
     <keyword type="member" name="XfcePanelPluginClass.remote-event" link="XfcePanelPlugin.html#XfcePanelPluginClass.remote-event"/>
     <keyword type="member" name="XfcePanelPluginClass.mode-changed" link="XfcePanelPlugin.html#XfcePanelPluginClass.mode-changed"/>
     <keyword type="member" name="XfcePanelPluginClass.nrows-changed" link="XfcePanelPlugin.html#XfcePanelPluginClass.nrows-changed"/>
+    <keyword type="member" name="XfcePanelPluginClass.hidden-event" link="XfcePanelPlugin.html#XfcePanelPluginClass.hidden-event"/>
   </functions>
 </book>

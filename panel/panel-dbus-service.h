@@ -19,28 +19,23 @@
 #ifndef __PANEL_DBUS_SERVICE_H__
 #define __PANEL_DBUS_SERVICE_H__
 
+#include "panel-gdbus-exported-service.h"
+
 #include <glib.h>
-#include <common/panel-dbus.h>
 
-typedef struct _PanelDBusServiceClass PanelDBusServiceClass;
-typedef struct _PanelDBusService      PanelDBusService;
+G_BEGIN_DECLS
 
-#define PANEL_TYPE_DBUS_SERVICE            (panel_dbus_service_get_type ())
-#define PANEL_DBUS_SERVICE(obj)            (G_TYPE_CHECK_INSTANCE_CAST ((obj), PANEL_TYPE_DBUS_SERVICE, PanelDBusService))
-#define PANEL_DBUS_CLASS_SERVICE(klass)    (G_TYPE_CHECK_CLASS_CAST ((klass), PANEL_TYPE_DBUS_SERVICE, PanelDBusServiceClass))
-#define PANEL_IS_DBUS_SERVICE(obj)         (G_TYPE_CHECK_INSTANCE_TYPE ((obj), PANEL_TYPE_DBUS_SERVICE))
-#define PANEL_IS_DBUS_SERVICE_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE ((klass), PANEL_TYPE_DBUS_SERVICE))
-#define PANEL_DBUS_SERVICE_GET_CLASS(obj)  (G_TYPE_INSTANCE_GET_CLASS ((obj), PANEL_TYPE_DBUS_SERVICE, PanelDBusServiceClass))
+#define PANEL_TYPE_DBUS_SERVICE (panel_dbus_service_get_type ())
+G_DECLARE_FINAL_TYPE (PanelDBusService, panel_dbus_service, PANEL, DBUS_SERVICE, XfcePanelExportedServiceSkeleton)
 
+PanelDBusService *
+panel_dbus_service_get (void);
 
+void
+panel_dbus_service_exit_panel (gboolean restart);
 
-GType               panel_dbus_service_get_type    (void) G_GNUC_CONST;
-
-PanelDBusService   *panel_dbus_service_get         (void);
-
-void                panel_dbus_service_exit_panel  (gboolean          restart);
-
-gboolean            panel_dbus_service_get_restart (void);
+gboolean
+panel_dbus_service_get_restart (void);
 
 G_END_DECLS
 

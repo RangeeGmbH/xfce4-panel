@@ -19,83 +19,105 @@
 #ifndef __PANEL_PLUGIN_EXTERNAL_H__
 #define __PANEL_PLUGIN_EXTERNAL_H__
 
+#include "panel-window.h"
+
+#include "libxfce4panel/libxfce4panel.h"
+#include "libxfce4panel/xfce-panel-plugin-provider.h"
+
 #include <gtk/gtk.h>
-#include <gtk/gtkx.h>
-#include <libxfce4panel/libxfce4panel.h>
-#include <libxfce4panel/xfce-panel-plugin-provider.h>
-#include <panel/panel-module.h>
 
 G_BEGIN_DECLS
 
-typedef struct _PanelPluginExternalClass   PanelPluginExternalClass;
-typedef struct _PanelPluginExternal        PanelPluginExternal;
-typedef struct _PanelPluginExternalPrivate PanelPluginExternalPrivate;
-
-#define PANEL_TYPE_PLUGIN_EXTERNAL            (panel_plugin_external_get_type ())
-#define PANEL_PLUGIN_EXTERNAL(obj)            (G_TYPE_CHECK_INSTANCE_CAST ((obj), PANEL_TYPE_PLUGIN_EXTERNAL, PanelPluginExternal))
-#define PANEL_PLUGIN_EXTERNAL_CLASS(klass)    (G_TYPE_CHECK_CLASS_CAST ((klass), PANEL_TYPE_PLUGIN_EXTERNAL, PanelPluginExternalClass))
-#define PANEL_IS_PLUGIN_EXTERNAL(obj)         (G_TYPE_CHECK_INSTANCE_TYPE ((obj), PANEL_TYPE_PLUGIN_EXTERNAL))
-#define PANEL_IS_PLUGIN_EXTERNAL_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE ((klass), PANEL_TYPE_PLUGIN_EXTERNAL))
-#define PANEL_PLUGIN_EXTERNAL_GET_CLASS(obj)  (G_TYPE_INSTANCE_GET_CLASS ((obj), PANEL_TYPE_PLUGIN_EXTERNAL, PanelPluginExternalClass))
+#define PANEL_TYPE_PLUGIN_EXTERNAL (panel_plugin_external_get_type ())
+G_DECLARE_DERIVABLE_TYPE (PanelPluginExternal, panel_plugin_external, PANEL, PLUGIN_EXTERNAL, GtkBox)
 
 struct _PanelPluginExternalClass
 {
-  GtkSocketClass __parent__;
+  GtkBoxClass __parent__;
 
   /* send panel values to the plugin or wrapper */
-  void       (*set_properties) (PanelPluginExternal *external,
-                                GSList              *properties);
+  void (*set_properties) (PanelPluginExternal *external,
+                          GSList *properties);
 
   /* complete startup array for the plugin */
-  gchar    **(*get_argv)       (PanelPluginExternal  *external,
-                                gchar               **arguments);
+  gchar **(*get_argv) (PanelPluginExternal *external,
+                       gchar **arguments);
+
+  /* spawn wrapper process according to windowing environment */
+  gboolean (*spawn) (PanelPluginExternal *external,
+                     gchar **argv,
+                     GPid *pid,
+                     GError **error);
 
   /* handling of remote events */
-  gboolean   (*remote_event)   (PanelPluginExternal  *external,
-                                const gchar          *name,
-                                const GValue         *value,
-                                guint                *handle);
-};
-
-struct _PanelPluginExternal
-{
-  GtkSocket __parent__;
-
-  PanelPluginExternalPrivate *priv;
-
-  PanelModule                *module;
-
-  gint                        unique_id;
+  gboolean (*remote_event) (PanelPluginExternal *external,
+                            const gchar *name,
+                            const GValue *value,
+                            guint *handle);
 
   /* some info received on plugin startup by the
    * implementations of the abstract object */
-  guint                       show_configure : 1;
-  guint                       show_about : 1;
+  gboolean (*get_show_configure) (PanelPluginExternal *external);
+  gboolean (*get_show_about) (PanelPluginExternal *external);
+
+  /* X11 only */
+  void (*set_background_color) (PanelPluginExternal *external,
+                                const GdkRGBA *color);
+  void (*set_background_image) (PanelPluginExternal *external,
+                                const gchar *image);
+
+  /* Wayland only */
+  void (*set_geometry) (PanelPluginExternal *external,
+                        PanelWindow *window);
+  gboolean (*pointer_is_outside) (PanelPluginExternal *external);
 };
 
 typedef struct
 {
   XfcePanelPluginProviderPropType type;
-  GValue                          value;
-}
-PluginProperty;
+  GValue value;
+} PluginProperty;
 
+void
+panel_plugin_external_queue_add (PanelPluginExternal *external,
+                                 XfcePanelPluginProviderPropType type,
+                                 const GValue *value);
 
+void
+panel_plugin_external_queue_add_action (PanelPluginExternal *external,
+                                        XfcePanelPluginProviderPropType type);
 
-GType        panel_plugin_external_get_type             (void) G_GNUC_CONST;
+void
+panel_plugin_external_restart (PanelPluginExternal *external);
 
-void         panel_plugin_external_restart              (PanelPluginExternal  *external);
+void
+panel_plugin_external_set_opacity (PanelPluginExternal *external,
+                                   gdouble opacity);
 
-void         panel_plugin_external_set_opacity          (PanelPluginExternal *external,
-                                                         gdouble              opacity);
+void
+panel_plugin_external_set_background_color (PanelPluginExternal *external,
+                                            const GdkRGBA *color);
 
-void         panel_plugin_external_set_background_color (PanelPluginExternal  *external,
-                                                         const GdkRGBA        *color);
+void
+panel_plugin_external_set_background_image (PanelPluginExternal *external,
+                                            const gchar *image);
 
-void         panel_plugin_external_set_background_image (PanelPluginExternal  *external,
-                                                         const gchar          *image);
+void
+panel_plugin_external_set_geometry (PanelPluginExternal *external,
+                                    PanelWindow *window);
 
-GPid         panel_plugin_external_get_pid              (PanelPluginExternal  *external);
+gboolean
+panel_plugin_external_pointer_is_outside (PanelPluginExternal *external);
+
+gboolean
+panel_plugin_external_get_embedded (PanelPluginExternal *external);
+
+void
+panel_plugin_external_set_embedded (PanelPluginExternal *external,
+                                    gboolean embedded);
+
+GPid
+panel_plugin_external_get_pid (PanelPluginExternal *external);
 
 G_END_DECLS
 

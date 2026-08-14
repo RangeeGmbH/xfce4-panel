@@ -10,11 +10,8 @@ plugindir = $(libdir)/xfce4/panel/plugins
 plugin_LTLIBRARIES = \
 	liblauncher.la
 
-liblauncher_built_sources = \
-	launcher-dialog_ui.h
-
 liblauncher_la_SOURCES = \
-	$(liblauncher_built_sources) \
+	$(top_srcdir)/common/xfce4-panel-resources.c \
 	launcher.c \
 	launcher.h \
 	launcher-dialog.c \
@@ -24,6 +21,7 @@ liblauncher_la_CFLAGS = \
 	$(GTK_CFLAGS) \
 	$(LIBXFCE4UTIL_CFLAGS) \
 	$(LIBXFCE4UI_CFLAGS) \
+	$(LIBXFCE4WINDOWING_CFLAGS) \
 	$(GARCON_CFLAGS) \
 	$(GARCON_GTK3_CFLAGS) \
 	$(GIO_CFLAGS) \
@@ -43,6 +41,7 @@ liblauncher_la_LIBADD = \
 	$(GTK_LIBS) \
 	$(LIBXFCE4UTIL_LIBS) \
 	$(LIBXFCE4UI_LIBS) \
+	$(LIBXFCE4WINDOWING_LIBS) \
 	$(GARCON_LIBS) \
 	$(GARCON_GTK3_LIBS) \
 	$(GIO_LIBS) \
@@ -58,24 +57,16 @@ liblauncher_la_DEPENDENCIES = \
 desktopdir = $(datadir)/xfce4/panel/plugins
 desktop_in_files = launcher.desktop.in.in
 desktop_DATA = $(desktop_in_files:.desktop.in.in=.desktop)
-@INTLTOOL_DESKTOP_RULE@
+
+%.desktop: %.desktop.in
+	$(AM_V_GEN) $(MSGFMT) --desktop --template $< -d $(top_srcdir)/po -o $@
 
 EXTRA_DIST = \
-	launcher-dialog.glade \
-	$(desktop_in_files)
+	$(desktop_in_files) \
+	meson.build \
+	$(NULL)
 
 DISTCLEANFILES = \
 	$(desktop_DATA)
-
-if MAINTAINER_MODE
-BUILT_SOURCES = \
-	$(liblauncher_built_sources)
-
-DISTCLEANFILES += \
-	$(libclock_built_sources)
-
-launcher-dialog_ui.h: launcher-dialog.glade
-	$(AM_V_GEN) xdt-csource --static --strip-comments --strip-content --name=launcher_dialog_ui $< >$@
-endif
 
 # vi:set ts=8 sw=8 noet ai nocindent syntax=automake:

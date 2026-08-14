@@ -9,11 +9,8 @@ plugindir = $(libdir)/xfce4/panel/plugins
 plugin_LTLIBRARIES = \
 	libdirectorymenu.la
 
-libdirectorymenu_built_sources = \
-	directorymenu-dialog_ui.h
-
 libdirectorymenu_la_SOURCES = \
-	$(libdirectorymenu_built_sources) \
+	$(top_srcdir)/common/xfce4-panel-resources.c \
 	directorymenu.c \
 	directorymenu.h
 
@@ -23,6 +20,7 @@ libdirectorymenu_la_CFLAGS = \
 	$(XFCONF_CFLAGS) \
 	$(LIBXFCE4UTIL_CFLAGS) \
 	$(LIBXFCE4UI_CFLAGS) \
+	$(LIBXFCE4WINDOWING_CFLAGS) \
 	$(GIO_CFLAGS) \
 	$(GIO_UNIX_CFLAGS) \
 	$(PLATFORM_CFLAGS)
@@ -41,6 +39,7 @@ libdirectorymenu_la_LIBADD = \
 	$(EXO_LIBS) \
 	$(LIBXFCE4UTIL_LIBS) \
 	$(LIBXFCE4UI_LIBS) \
+	$(LIBXFCE4WINDOWING_LIBS) \
 	$(GIO_LIBS) \
 	$(GIO_UNIX_LIBS) \
 	$(XFCONF_LIBS)
@@ -65,26 +64,18 @@ xfce4-popup-directorymenu: xfce4-popup-directorymenu.sh Makefile
 desktopdir = $(datadir)/xfce4/panel/plugins
 desktop_in_files = directorymenu.desktop.in.in
 desktop_DATA = $(desktop_in_files:.desktop.in.in=.desktop)
-@INTLTOOL_DESKTOP_RULE@
+
+%.desktop: %.desktop.in
+	$(AM_V_GEN) $(MSGFMT) --desktop --template $< -d $(top_srcdir)/po -o $@
 
 EXTRA_DIST = \
-	directorymenu-dialog.glade \
 	xfce4-popup-directorymenu.sh \
-	$(desktop_in_files)
+	$(desktop_in_files) \
+	meson.build \
+	$(NULL)
 
 DISTCLEANFILES = \
 	$(desktop_DATA) \
 	xfce4-popup-directorymenu
-
-if MAINTAINER_MODE
-BUILT_SOURCES = \
-	$(libdirectorymenu_built_sources)
-
-DISTCLEANFILES += \
-	$(libdirectorymenu_built_sources)
-
-directorymenu-dialog_ui.h: directorymenu-dialog.glade
-	$(AM_V_GEN) xdt-csource --static --strip-comments --strip-content --name=directorymenu_dialog_ui $< >$@
-endif
 
 # vi:set ts=8 sw=8 noet ai nocindent syntax=automake:

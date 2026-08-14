@@ -17,17 +17,15 @@
  */
 
 #ifdef HAVE_CONFIG_H
-#include <config.h>
+#include "config.h"
 #endif
 
-#include <string.h>
+#include "clock-sleep-monitor.h"
+
+#include "common/panel-debug.h"
 
 #include <gio/gio.h>
-
 #include <libxfce4util/libxfce4util.h>
-#include <common/panel-debug.h>
-
-#include "clock-sleep-monitor.h"
 
 
 
@@ -41,8 +39,10 @@
  */
 
 #define SLEEP_MONITOR_USE_LOGIND 1
+#define SLEEP_MONITOR_USE_CONSOLEKIT 1
 
 
+#define LOGIND_RUNNING() (access ("/run/systemd/seats/", F_OK) >= 0)
 
 /* Base class
  *
@@ -52,109 +52,95 @@
 
 static guint clock_sleep_monitor_woke_up_signal = 0;
 
-struct _ClockSleepMonitor
+typedef struct _ClockSleepMonitorPrivate
 {
-  GObject parent_instance;
-};
+} ClockSleepMonitorPrivate;
 
-struct _ClockSleepMonitorClass
-{
-  GObjectClass parent_class;
-};
+G_DEFINE_ABSTRACT_TYPE (ClockSleepMonitor, clock_sleep_monitor, G_TYPE_OBJECT)
 
-typedef struct _ClockSleepMonitorClass ClockSleepMonitorClass;
+static void
+clock_sleep_monitor_finalize (GObject *object);
 
-G_DEFINE_TYPE (ClockSleepMonitor, clock_sleep_monitor, G_TYPE_OBJECT)
-
-static void clock_sleep_monitor_finalize (GObject *object);
-
-static void clock_sleep_monitor_class_init (ClockSleepMonitorClass *klass)
+static void
+clock_sleep_monitor_class_init (ClockSleepMonitorClass *klass)
 {
   GObjectClass *gobject_class;
 
   gobject_class = G_OBJECT_CLASS (klass);
   gobject_class->finalize = clock_sleep_monitor_finalize;
 
-  clock_sleep_monitor_woke_up_signal =
-    g_signal_new (
-      g_intern_static_string ("woke-up"),
-      G_TYPE_FROM_CLASS (gobject_class),
-      G_SIGNAL_RUN_LAST,
-      0, NULL, NULL,
-      g_cclosure_marshal_VOID__VOID,
-      G_TYPE_NONE, 0);
+  clock_sleep_monitor_woke_up_signal = g_signal_new (g_intern_static_string ("woke-up"),
+                                                     G_TYPE_FROM_CLASS (gobject_class),
+                                                     G_SIGNAL_RUN_LAST,
+                                                     0, NULL, NULL,
+                                                     g_cclosure_marshal_VOID__VOID,
+                                                     G_TYPE_NONE, 0);
 }
 
-static void clock_sleep_monitor_init (ClockSleepMonitor *monitor)
+static void
+clock_sleep_monitor_init (ClockSleepMonitor *monitor)
 {
 }
 
-static void clock_sleep_monitor_finalize (GObject *object)
+static void
+clock_sleep_monitor_finalize (GObject *object)
 {
   G_OBJECT_CLASS (clock_sleep_monitor_parent_class)->finalize (object);
 }
 
 
 
-/* Logind-based implementation */
+#if defined(SLEEP_MONITOR_USE_LOGIND) || defined(SLEEP_MONITOR_USE_CONSOLEKIT)
 
-#ifdef SLEEP_MONITOR_USE_LOGIND
-
-struct _ClockSleepMonitorLogind
+struct _ClockSleepDBusMonitor
 {
   ClockSleepMonitor parent_instance;
-  GDBusProxy *logind_proxy;
+  GDBusProxy *proxy;
 };
 
-struct _ClockSleepMonitorLogindClass
-{
-  ClockSleepMonitorClass parent_class;
-};
+#define CLOCK_TYPE_SLEEP_DBUS_MONITOR (clock_sleep_dbus_monitor_get_type ())
+G_DECLARE_FINAL_TYPE (ClockSleepDBusMonitor, clock_sleep_dbus_monitor, CLOCK, SLEEP_DBUS_MONITOR, ClockSleepMonitor)
 
-typedef struct _ClockSleepMonitorLogind ClockSleepMonitorLogind;
-typedef struct _ClockSleepMonitorLogindClass ClockSleepMonitorLogindClass;
+G_DEFINE_FINAL_TYPE (ClockSleepDBusMonitor, clock_sleep_dbus_monitor, CLOCK_TYPE_SLEEP_MONITOR)
 
-GType clock_sleep_monitor_logind_get_type (void) G_GNUC_CONST;
+static void
+clock_sleep_dbus_monitor_finalize (GObject *object);
 
-#define XFCE_TYPE_CLOCK_SLEEP_MONITOR_LOGIND (clock_sleep_monitor_logind_get_type ())
-#define XFCE_CLOCK_SLEEP_MONITOR_LOGIND(object) (G_TYPE_CHECK_INSTANCE_CAST ((object), XFCE_TYPE_CLOCK_SLEEP_MONITOR_LOGIND, ClockSleepMonitorLogind))
-#define XFCE_IS_CLOCK_SLEEP_MONITOR_LOGIND(object) (G_TYPE_CHECK_INSTANCE_TYPE ((object), XFCE_TYPE_CLOCK_SLEEP_MONITOR_LOGIND))
-
-G_DEFINE_TYPE (ClockSleepMonitorLogind, clock_sleep_monitor_logind, XFCE_TYPE_CLOCK_SLEEP_MONITOR)
-
-static void clock_sleep_monitor_logind_finalize (GObject *object);
-
-static void clock_sleep_monitor_logind_class_init (ClockSleepMonitorLogindClass *klass)
+static void
+clock_sleep_dbus_monitor_class_init (ClockSleepDBusMonitorClass *klass)
 {
   GObjectClass *gobject_class;
 
   gobject_class = G_OBJECT_CLASS (klass);
-  gobject_class->finalize = clock_sleep_monitor_logind_finalize;
+  gobject_class->finalize = clock_sleep_dbus_monitor_finalize;
 }
 
-static void clock_sleep_monitor_logind_init (ClockSleepMonitorLogind *monitor)
+static void
+clock_sleep_dbus_monitor_init (ClockSleepDBusMonitor *monitor)
 {
 }
 
-static void clock_sleep_monitor_logind_finalize (GObject *object)
+static void
+clock_sleep_dbus_monitor_finalize (GObject *object)
 {
-  ClockSleepMonitorLogind *monitor = XFCE_CLOCK_SLEEP_MONITOR_LOGIND (object);
+  ClockSleepDBusMonitor *monitor = CLOCK_SLEEP_DBUS_MONITOR (object);
   g_return_if_fail (monitor != NULL);
 
-  if (monitor->logind_proxy != NULL)
+  if (monitor->proxy != NULL)
     {
-      g_signal_handlers_disconnect_by_data (monitor->logind_proxy, monitor);
-      g_object_unref (G_OBJECT (monitor->logind_proxy));
+      g_signal_handlers_disconnect_by_data (monitor->proxy, monitor);
+      g_object_unref (G_OBJECT (monitor->proxy));
     }
 
-  G_OBJECT_CLASS (clock_sleep_monitor_logind_parent_class)->finalize (object);
+  G_OBJECT_CLASS (clock_sleep_dbus_monitor_parent_class)->finalize (object);
 }
 
-static void on_logind_signal (GDBusProxy *proxy,
-                              gchar *sender_name,
-                              gchar *signal_name,
-                              GVariant *parameters,
-                              ClockSleepMonitor *monitor)
+static void
+on_prepare_sleep_signal (GDBusProxy *proxy,
+                         gchar *sender_name,
+                         gchar *signal_name,
+                         GVariant *parameters,
+                         ClockSleepMonitor *monitor)
 {
   const gchar *format_string = "(b)";
   gboolean going_to_sleep;
@@ -174,15 +160,58 @@ static void on_logind_signal (GDBusProxy *proxy,
     g_signal_emit (G_OBJECT (monitor), clock_sleep_monitor_woke_up_signal, 0);
 }
 
-static ClockSleepMonitor* clock_sleep_monitor_logind_create (void)
+static void
+proxy_ready (GObject *source_object,
+             GAsyncResult *res,
+             gpointer data)
 {
-  ClockSleepMonitorLogind *monitor;
-  gchar *owner_name;
+  ClockSleepDBusMonitor *monitor = data;
+  GError *error = NULL;
+  GDBusProxy *proxy = g_dbus_proxy_new_for_bus_finish (res, &error);
 
-  panel_debug (PANEL_DEBUG_CLOCK, "trying to instantiate logind sleep monitor");
+  if (proxy != NULL)
+    {
+      if (monitor->proxy != NULL)
+        {
+          panel_debug (PANEL_DEBUG_CLOCK, "dropping proxy for %s", g_dbus_proxy_get_name (proxy));
+          g_object_unref (proxy);
+        }
+      else
+        {
+          gchar *owner_name = g_dbus_proxy_get_name_owner (proxy);
+          if (owner_name == NULL)
+            {
+              panel_debug (PANEL_DEBUG_CLOCK, "d-bus service %s not active", g_dbus_proxy_get_name (proxy));
+              g_object_unref (proxy);
+              return;
+            }
+          g_free (owner_name);
 
-  monitor = g_object_new (XFCE_TYPE_CLOCK_SLEEP_MONITOR_LOGIND, NULL);
-  monitor->logind_proxy = g_dbus_proxy_new_for_bus_sync (
+          panel_debug (PANEL_DEBUG_CLOCK, "keeping proxy for %s", g_dbus_proxy_get_name (proxy));
+          g_signal_connect (proxy, "g-signal", G_CALLBACK (on_prepare_sleep_signal), monitor);
+          monitor->proxy = proxy;
+        }
+    }
+  else
+    {
+      panel_debug (PANEL_DEBUG_CLOCK, "could not get proxy: %s", error->message);
+      g_error_free (error);
+    }
+}
+
+static ClockSleepMonitor *
+clock_sleep_dbus_monitor_create (void)
+{
+  ClockSleepDBusMonitor *monitor;
+
+  panel_debug (PANEL_DEBUG_CLOCK, "trying to instantiate d-bus sleep monitor");
+
+  monitor = g_object_new (CLOCK_TYPE_SLEEP_DBUS_MONITOR, NULL);
+
+  if (!LOGIND_RUNNING ())
+    panel_debug (PANEL_DEBUG_CLOCK, "logind not running");
+  else
+    g_dbus_proxy_new_for_bus (
       G_BUS_TYPE_SYSTEM,
       G_DBUS_PROXY_FLAGS_NONE,
       NULL,
@@ -190,29 +219,24 @@ static ClockSleepMonitor* clock_sleep_monitor_logind_create (void)
       "/org/freedesktop/login1",
       "org.freedesktop.login1.Manager",
       NULL,
-      NULL);
-  if (monitor->logind_proxy == NULL)
-    {
-      g_message ("could not get proxy for org.freedesktop.login1");
-      g_object_unref (G_OBJECT (monitor));
-      return NULL;
-    }
+      proxy_ready,
+      monitor);
 
-  owner_name = g_dbus_proxy_get_name_owner (monitor->logind_proxy);
-  if (owner_name == NULL)
-    {
-      g_message ("logind not active");
-      g_object_unref (G_OBJECT (monitor));
-      return NULL;
-    }
-  g_free (owner_name);
+  g_dbus_proxy_new_for_bus (
+    G_BUS_TYPE_SYSTEM,
+    G_DBUS_PROXY_FLAGS_NONE,
+    NULL,
+    "org.freedesktop.ConsoleKit",
+    "/org/freedesktop/ConsoleKit/Manager",
+    "org.freedesktop.ConsoleKit.Manager",
+    NULL,
+    proxy_ready,
+    monitor);
 
-  g_signal_connect (monitor->logind_proxy, "g-signal", G_CALLBACK (on_logind_signal), monitor);
-
-  return XFCE_CLOCK_SLEEP_MONITOR (monitor);
+  return CLOCK_SLEEP_MONITOR (monitor);
 }
 
-#endif /* defined SLEEP_MONITOR_USE_LOGIND */
+#endif /* defined (SLEEP_MONITOR_USE_LOGIND) || defined (SLEEP_MONITOR_USE_CONSOLEKIT) */
 
 
 
@@ -221,17 +245,17 @@ static ClockSleepMonitor* clock_sleep_monitor_logind_create (void)
  * Collect available implementations in a reasonable order.
  */
 
-typedef ClockSleepMonitor* (*SleepMonitorFactory) (void);
+typedef ClockSleepMonitor *(*SleepMonitorFactory) (void);
 
-static SleepMonitorFactory sleep_monitor_factories[] =
-{
-  #ifdef SLEEP_MONITOR_USE_LOGIND
-  clock_sleep_monitor_logind_create,
-  #endif
+static SleepMonitorFactory sleep_monitor_factories[] = {
+#if defined(SLEEP_MONITOR_USE_LOGIND) || defined(SLEEP_MONITOR_USE_CONSOLEKIT)
+  clock_sleep_dbus_monitor_create,
+#endif
   NULL
 };
 
-ClockSleepMonitor *clock_sleep_monitor_create (void)
+ClockSleepMonitor *
+clock_sleep_monitor_create (void)
 {
   SleepMonitorFactory *factory_ptr = &sleep_monitor_factories[0];
   ClockSleepMonitor *monitor = NULL;
@@ -240,7 +264,7 @@ ClockSleepMonitor *clock_sleep_monitor_create (void)
     monitor = (*factory_ptr) ();
 
   if (monitor == NULL && sleep_monitor_factories[0] != NULL)
-    g_warning ("could not instantiate a sleep monitor");
+    panel_debug (PANEL_DEBUG_CLOCK, "could not instantiate a sleep monitor");
 
   return monitor;
 }

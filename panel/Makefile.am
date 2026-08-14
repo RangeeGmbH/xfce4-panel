@@ -2,9 +2,9 @@
 AM_CPPFLAGS = \
 	-I$(top_srcdir) \
 	-DG_LOG_DOMAIN=\"xfce4-panel\" \
-	-DWNCK_I_KNOW_THIS_IS_UNSTABLE \
-	-DDATADIR=\"$(datadir)/xfce4\" \
-	-DLIBDIR=\"$(libdir)/xfce4\" \
+	-DPREFIX=\"$(prefix)\" \
+	-DDATADIR=\"$(datadir)\" \
+	-DLIBDIR=\"$(libdir)\" \
 	-DHELPERDIR=\"$(HELPER_PATH_PREFIX)/xfce4/panel\" \
 	-DPACKAGE_LOCALE_DIR=\"$(localedir)\" \
 	-DDBUS_API_SUBJECT_TO_CHANGE \
@@ -14,13 +14,14 @@ bin_PROGRAMS = \
 	xfce4-panel
 
 xfce4_panel_built_sources = \
+	$(top_srcdir)/common/xfce4-panel-resources.c \
 	panel-gdbus-exported-service.h \
 	panel-gdbus-exported-service.c \
 	panel-marshal.c \
 	panel-marshal.h \
 	panel-plugin-external-wrapper-exported.h \
 	panel-plugin-external-wrapper-exported.c \
-	panel-preferences-dialog-ui.h
+	$(NULL)
 
 xfce4_panel_SOURCES = \
 	$(xfce4_panel_built_sources) \
@@ -54,15 +55,27 @@ xfce4_panel_SOURCES = \
 	panel-window.c \
 	panel-window.h
 
+if ENABLE_X11
+xfce4_panel_SOURCES += \
+	panel-plugin-external-wrapper-x11.c \
+	panel-plugin-external-wrapper-x11.h
+endif
+
+if HAVE_GTK_LAYER_SHELL
+xfce4_panel_SOURCES += \
+	panel-plugin-external-wrapper-wayland.c \
+	panel-plugin-external-wrapper-wayland.h
+endif
+
 xfce4_panel_CFLAGS = \
 	$(GTK_CFLAGS) \
 	$(GMODULE_CFLAGS) \
-	$(GIO_UNIX_CFLAGS) \
 	$(LIBXFCE4UTIL_CFLAGS) \
 	$(LIBXFCE4UI_CFLAGS) \
-	$(LIBWNCK_CFLAGS) \
 	$(XFCONF_CFLAGS) \
 	$(LIBX11_CFLAGS) \
+	$(GTK_LAYER_SHELL_CFLAGS) \
+	$(LIBXFCE4WINDOWING_CFLAGS) \
 	$(PLATFORM_CFLAGS)
 
 xfce4_panel_LDFLAGS = \
@@ -74,19 +87,17 @@ xfce4_panel_LDADD = \
 	$(top_builddir)/common/libpanel-common.la \
 	$(GTK_LIBS) \
 	$(GMODULE_LIBS) \
-	$(GIO_UNIX_LIBS) \
 	$(LIBXFCE4UTIL_LIBS) \
 	$(LIBXFCE4UI_LIBS) \
-	$(LIBWNCK_LIBS) \
 	$(XFCONF_LIBS) \
 	$(LIBX11_LIBS) \
+	$(GTK_LAYER_SHELL_LIBS) \
+	$(LIBXFCE4WINDOWING_LIBS) \
 	-lm
 
 xfce4_panel_DEPENDENCIES = \
 	$(top_builddir)/libxfce4panel/libxfce4panel-$(LIBXFCE4PANEL_VERSION_API).la \
 	$(top_builddir)/common/libpanel-common.la
-
-if MAINTAINER_MODE
 
 panel-marshal.h: panel-marshal.list Makefile
 	$(AM_V_GEN) glib-genmarshal --prefix=_panel_marshal --internal --header $< > $@
@@ -111,28 +122,17 @@ panel-plugin-external-wrapper-exported.c: panel-plugin-external-wrapper-infos.xm
 	--generate-c-code panel-plugin-external-wrapper-exported \
 	$(srcdir)/panel-plugin-external-wrapper-infos.xml
 
-panel-preferences-dialog-ui.h: $(srcdir)/panel-preferences-dialog.glade Makefile
-	$(AM_V_GEN) xdt-csource --static --strip-comments --strip-content --name=panel_preferences_dialog_ui $< >$@
-
-#panel-marshal.h: $(srcdir)/panel-marshal.list Makefile
-#	$(AM_V_GEN) glib-genmarshal --header --prefix=panel_marshal $< > $@
-#
-#panel-marshal.c: $(srcdir)/panel-marshal.list Makefile
-#	$(AM_V_GEN) echo "#include <panel/panel-marshal.h>" > $@ \
-#	&& glib-genmarshal --body --prefix=panel_marshal $< >> $@
-
 DISTCLEANFILES = \
 	$(xfce4_panel_built_sources)
 
 BUILT_SOURCES = \
 	$(xfce4_panel_built_sources)
 
-endif
-
 EXTRA_DIST = \
 	panel-dbus-service-infos.xml \
 	panel-plugin-external-wrapper-infos.xml \
-	panel-preferences-dialog.glade \
-	panel-marshal.list
+	panel-marshal.list \
+	meson.build \
+	$(NULL)
 
 # vi:set ts=8 sw=8 noet ai nocindent syntax=automake:

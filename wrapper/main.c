@@ -18,49 +18,60 @@
  */
 
 #ifdef HAVE_CONFIG_H
-#include <config.h>
+#include "config.h"
 #endif
 
-#ifdef HAVE_SYS_PRCTL_H
-#include <sys/prctl.h>
-#endif
-#ifdef HAVE_STDIO_H
-#include <stdio.h>
-#endif
-#ifdef HAVE_STDLIB_H
-#include <stdlib.h>
-#endif
-#ifdef HAVE_STRING_H
-#include <string.h>
-#endif
+#include "wrapper-module.h"
+#include "wrapper-plug.h"
+
+#include "common/panel-dbus.h"
+#include "common/panel-private.h"
+#include "libxfce4panel/libxfce4panel.h"
+#include "libxfce4panel/xfce-panel-plugin-provider.h"
 
 #include <gio/gio.h>
-
 #include <gtk/gtk.h>
-#include <common/panel-private.h>
-#include <common/panel-dbus.h>
 #include <libxfce4util/libxfce4util.h>
-#include <libxfce4panel/libxfce4panel.h>
-#include <libxfce4panel/xfce-panel-plugin-provider.h>
-
-#include <wrapper/wrapper-plug.h>
-#include <wrapper/wrapper-module.h>
 
 
 
-static GQuark   plug_quark = 0;
-static gint     retval = PLUGIN_EXIT_FAILURE;
+static gint retval = PLUGIN_EXIT_FAILURE;
+#ifndef ENABLE_X11
+typedef gulong Window;
+#endif
 
 
 
 static void
-wrapper_gproxy_set (XfcePanelPluginProvider *provider,
-                    GVariant                *parameters)
+wrapper_gproxy_name_owner_changed (GDBusProxy *proxy,
+                                   GParamSpec *pspec,
+                                   gpointer data)
 {
-  WrapperPlug                    *plug;
-  GVariantIter                    iter;
-  GVariant                       *variant;
+  gchar *name_owner;
+
+  name_owner = g_dbus_proxy_get_name_owner (proxy);
+
+  /* we lost communication with the panel, silently close the wrapper */
+  if (name_owner == NULL)
+    gtk_main_quit ();
+
+  g_free (name_owner);
+}
+
+
+
+static void
+wrapper_gproxy_set (GDBusProxy *proxy,
+                    gchar *sender_name,
+                    gchar *signal_name,
+                    GVariant *parameters,
+                    XfcePanelPluginProvider *provider)
+{
+  GtkWidget *plug;
+  GVariantIter iter;
+  GVariant *variant;
   XfcePanelPluginProviderPropType type;
+  GdkRectangle geom;
 
   panel_return_if_fail (XFCE_IS_PANEL_PLUGIN_PROVIDER (provider));
   panel_return_if_fail (g_variant_is_of_type (parameters, G_VARIANT_TYPE_TUPLE));
@@ -104,21 +115,32 @@ wrapper_gproxy_set (XfcePanelPluginProvider *provider,
           break;
 
         case PROVIDER_PROP_TYPE_SET_OPACITY:
-          plug = g_object_get_qdata (G_OBJECT (provider), plug_quark);
-          wrapper_plug_set_opacity (plug, g_variant_get_double (variant));
+          plug = gtk_widget_get_parent (GTK_WIDGET (provider));
+          gtk_widget_set_opacity (plug, g_variant_get_double (variant));
           break;
 
         case PROVIDER_PROP_TYPE_SET_BACKGROUND_COLOR:
         case PROVIDER_PROP_TYPE_SET_BACKGROUND_IMAGE:
         case PROVIDER_PROP_TYPE_ACTION_BACKGROUND_UNSET:
-          plug = g_object_get_qdata (G_OBJECT (provider), plug_quark);
+          plug = gtk_widget_get_parent (GTK_WIDGET (provider));
 
           if (type == PROVIDER_PROP_TYPE_SET_BACKGROUND_COLOR)
-            wrapper_plug_set_background_color (plug, g_variant_get_string (variant, NULL));
+            wrapper_plug_set_background_color (WRAPPER_PLUG (plug), g_variant_get_string (variant, NULL));
           else if (type == PROVIDER_PROP_TYPE_SET_BACKGROUND_IMAGE)
-            wrapper_plug_set_background_image (plug, g_variant_get_string (variant, NULL));
+            wrapper_plug_set_background_image (WRAPPER_PLUG (plug), g_variant_get_string (variant, NULL));
           else /* PROVIDER_PROP_TYPE_ACTION_BACKGROUND_UNSET */
-            wrapper_plug_set_background_color (plug, NULL);
+            wrapper_plug_set_background_color (WRAPPER_PLUG (plug), NULL);
+          break;
+
+        case PROVIDER_PROP_TYPE_SET_MONITOR:
+          plug = gtk_widget_get_parent (GTK_WIDGET (provider));
+          wrapper_plug_set_monitor (WRAPPER_PLUG (plug), g_variant_get_int32 (variant));
+          break;
+
+        case PROVIDER_PROP_TYPE_SET_GEOMETRY:
+          g_variant_get (variant, "(iiii)", &geom.x, &geom.y, &geom.width, &geom.height);
+          plug = gtk_widget_get_parent (GTK_WIDGET (provider));
+          wrapper_plug_set_geometry (WRAPPER_PLUG (plug), &geom);
           break;
 
         case PROVIDER_PROP_TYPE_ACTION_REMOVED:
@@ -133,6 +155,8 @@ wrapper_gproxy_set (XfcePanelPluginProvider *provider,
           retval = PLUGIN_EXIT_SUCCESS_AND_RESTART;
           /* fall through */
         case PROVIDER_PROP_TYPE_ACTION_QUIT:
+          /* do not call gtk_main_quit() twice */
+          g_signal_handlers_disconnect_by_func (proxy, wrapper_gproxy_name_owner_changed, NULL);
           gtk_main_quit ();
           break;
 
@@ -148,6 +172,10 @@ wrapper_gproxy_set (XfcePanelPluginProvider *provider,
           xfce_panel_plugin_provider_ask_remove (provider);
           break;
 
+        case PROVIDER_PROP_TYPE_EVENT_HIDDEN:
+          xfce_panel_plugin_provider_emit_hidden_event (provider, g_variant_get_boolean (variant));
+          break;
+
         default:
           g_critical ("Received unknown plugin property %u for %s-%d",
                       type, xfce_panel_plugin_provider_get_name (provider),
@@ -160,175 +188,77 @@ wrapper_gproxy_set (XfcePanelPluginProvider *provider,
 }
 
 
+
 static void
-wrapper_dbus_return_remote_event_result (GDBusProxy *proxy,
-                                         guint handle,
-                                         gboolean wrapper_result)
+wrapper_gproxy_remote_event (GDBusProxy *proxy,
+                             gchar *sender_name,
+                             gchar *signal_name,
+                             GVariant *parameters,
+                             XfcePanelPluginProvider *provider)
 {
+  WrapperPlug *plug;
   GVariant *variant;
-  GError   *error = NULL;
-
-  variant = g_dbus_proxy_call_sync (proxy,
-                                    "RemoteEventResult",
-                                    g_variant_new ("(ub)",
-                                                   handle,
-                                                   wrapper_result),
-                                    G_DBUS_CALL_FLAGS_NONE,
-                                    -1,
-                                    NULL,
-                                    &error);
-
-  if (G_UNLIKELY (error != NULL ))
-    {
-      g_warning ("RemoteEventResult call failed: %s", error->message);
-      g_error_free (error);
-    }
-
-  if (variant)
-    g_variant_unref (variant);
-
-}
-
-
-static void
-wrapper_gproxy_remote_event (XfcePanelPluginProvider *provider,
-                             GDBusProxy *proxy,
-                             GVariant   *parameters)
-{
-  GVariant     *variant;
-  guint         handle;
-  const gchar  *name;
-  gboolean      result;
-  GValue        real_value = { 0, };
+  guint handle;
+  const gchar *name;
+  gboolean result;
+  GValue real_value = { 0 };
 
   panel_return_if_fail (XFCE_IS_PANEL_PLUGIN_PROVIDER (provider));
 
-  if (G_LIKELY (g_variant_is_of_type (parameters, G_VARIANT_TYPE("(svu)"))))
+  if (G_LIKELY (g_variant_is_of_type (parameters, G_VARIANT_TYPE ("(svu)"))))
     {
       g_variant_get (parameters, "(&svu)", &name, &variant, &handle);
-      if ( g_variant_is_of_type (variant, G_VARIANT_TYPE_BYTE) &&
-           g_variant_get_byte (variant) == '\0')
+      if (g_variant_is_of_type (variant, G_VARIANT_TYPE_BYTE) && g_variant_get_byte (variant) == '\0')
         {
           result = xfce_panel_plugin_provider_remote_event (provider, name, NULL, NULL);
         }
       else
         {
-          g_dbus_gvariant_to_gvalue(variant, &real_value);
+          g_dbus_gvariant_to_gvalue (variant, &real_value);
           result = xfce_panel_plugin_provider_remote_event (provider, name, &real_value, NULL);
           g_value_unset (&real_value);
         }
 
-      wrapper_dbus_return_remote_event_result (proxy, handle, result);
+      plug = WRAPPER_PLUG (gtk_widget_get_parent (GTK_WIDGET (provider)));
+      wrapper_plug_proxy_remote_event_result (plug, handle, result);
 
       g_variant_unref (variant);
     }
   else
     {
       g_warning ("property changed handler expects (svu) type, but %s received",
-                 g_variant_get_type_string(parameters));
+                 g_variant_get_type_string (parameters));
     }
-
-}
-
-
-
-static void
-wrapper_gproxy_g_signal (GDBusProxy *proxy,
-                         gchar      *sender_name,
-                         gchar      *signal_name,
-                         GVariant   *parameters,
-                         XfcePanelPluginProvider *provider)
-{
-  if (g_strcmp0(signal_name, "RemoteEvent") == 0)
-    wrapper_gproxy_remote_event (provider, proxy, parameters);
-  else if (g_strcmp0(signal_name, "Set") == 0)
-    wrapper_gproxy_set (provider, parameters);
-  else
-    g_warning ("Unhandled signal name :%s", signal_name);
-}
-
-
-
-static void
-wrapper_gproxy_provider_signal (XfcePanelPluginProvider       *provider,
-                                XfcePanelPluginProviderSignal  provider_signal,
-                                GDBusProxy                    *proxy)
-{
-  GVariant *variant;
-  GError   *error = NULL;
-
-  panel_return_if_fail (XFCE_IS_PANEL_PLUGIN_PROVIDER (provider));
-
-  variant = g_dbus_proxy_call_sync (proxy,
-                                    "ProviderSignal",
-                                    g_variant_new ("(u)",
-                                                   provider_signal),
-                                    G_DBUS_CALL_FLAGS_NONE,
-                                    -1,
-                                    NULL,
-                                    &error);
-
-  if (G_UNLIKELY (error != NULL ))
-    {
-      g_warning ("ProviderSignal call failed: %s", error->message);
-      g_error_free (error);
-    }
-
-  if (variant)
-    g_variant_unref (variant);
-}
-
-
-static void
-wrapper_gproxy_name_owner_changed (GDBusProxy *proxy,
-                                   GParamSpec *pspec,
-                                   gpointer data)
-{
-   gchar *name_owner;
-
-   name_owner = g_dbus_proxy_get_name_owner (proxy);
-
-   /* we lost communication with the panel, silently close the wrapper */
-   if (name_owner == NULL)
-     gtk_main_quit ();
-
-   g_free (name_owner);
 }
 
 
 
 gint
-main (gint argc, gchar **argv)
+main (gint argc,
+      gchar **argv)
 {
 #if defined(HAVE_SYS_PRCTL_H) && defined(PR_SET_NAME)
-  gchar                    process_name[16];
+  gchar process_name[16];
 #endif
-  GModule                 *library = NULL;
-  XfcePanelPluginPreInit   preinit_func;
-  GDBusConnection         *dbus_gconnection;
-  GDBusProxy              *dbus_gproxy = NULL;
-  WrapperModule           *module = NULL;
-  WrapperPlug             *plug;
-  GtkWidget               *provider = NULL;
-  gchar                   *path;
-  guint                    gproxy_destroy_id = 0;
-  guint                    gproxy_signal_id = 0;
-  GError                  *error = NULL;
-  const gchar             *filename;
-  gint                     unique_id;
-  Window                   socket_id;
-  const gchar             *name;
-  const gchar             *display_name;
-  const gchar             *comment;
-  gchar                  **arguments;
+  GModule *library = NULL;
+  XfcePanelPluginPreInit preinit_func;
+  GDBusConnection *dbus_gconnection;
+  GDBusProxy *dbus_gproxy = NULL;
+  WrapperModule *module = NULL;
+  GtkWidget *plug;
+  GtkWidget *provider = NULL;
+  gchar *path;
+  GError *error = NULL;
+  const gchar *filename;
+  gint unique_id;
+  Window socket_id;
+  const gchar *name;
+  const gchar *display_name;
+  const gchar *comment;
+  gchar **arguments;
 
   /* set translation domain */
   xfce_textdomain (GETTEXT_PACKAGE, PACKAGE_LOCALE_DIR, "UTF-8");
-
-#ifdef G_ENABLE_DEBUG
-  /* terminate the program on warnings and critical messages */
-  g_log_set_always_fatal (G_LOG_LEVEL_CRITICAL | G_LOG_LEVEL_WARNING);
-#endif
 
   /* check if we have all the reuiqred arguments */
   if (G_UNLIKELY (argc < PLUGIN_ARGV_ARGUMENTS))
@@ -366,7 +296,7 @@ main (gint argc, gchar **argv)
   /* check for a plugin preinit function */
   if (g_module_symbol (library, "xfce_panel_module_preinit", (gpointer) &preinit_func)
       && preinit_func != NULL
-      && (*preinit_func) (argc, argv) == FALSE)
+      && !(*preinit_func) (argc, argv))
     {
       retval = PLUGIN_EXIT_PREINIT_FAILED;
       goto leave;
@@ -393,8 +323,8 @@ main (gint argc, gchar **argv)
     goto leave;
 
   /* quit when the proxy is destroyed (panel segfault for example) */
-  gproxy_destroy_id = g_signal_connect (G_OBJECT (dbus_gproxy), "notify::g-name-owner",
-      G_CALLBACK (wrapper_gproxy_name_owner_changed), NULL);
+  g_signal_connect (G_OBJECT (dbus_gproxy), "notify::g-name-owner",
+                    G_CALLBACK (wrapper_gproxy_name_owner_changed), NULL);
 
   /* create the type module */
   module = wrapper_module_new (library);
@@ -409,39 +339,38 @@ main (gint argc, gchar **argv)
   if (G_LIKELY (provider != NULL))
     {
       /* create the wrapper plug */
-      plug = wrapper_plug_new (socket_id);
+      plug = wrapper_plug_new (socket_id, unique_id, dbus_gproxy, &error);
+      if (plug == NULL)
+        {
+          gtk_widget_destroy (provider);
+          goto leave;
+        }
+
       gtk_container_add (GTK_CONTAINER (plug), GTK_WIDGET (provider));
       g_object_add_weak_pointer (G_OBJECT (plug), (gpointer *) &plug);
-      gtk_widget_show (GTK_WIDGET (plug));
-
-      /* set plug data to provider */
-      plug_quark = g_quark_from_static_string ("plug-quark");
-      g_object_set_qdata (G_OBJECT (provider), plug_quark, plug);
+      gtk_widget_show (plug);
 
       /* monitor provider signals */
-      g_signal_connect (G_OBJECT (provider), "provider-signal",
-          G_CALLBACK (wrapper_gproxy_provider_signal), dbus_gproxy);
+      g_signal_connect_swapped (G_OBJECT (provider), "provider-signal",
+                                G_CALLBACK (wrapper_plug_proxy_provider_signal), plug);
 
       /* connect to service signals */
-      gproxy_signal_id = g_signal_connect_object (dbus_gproxy, "g-signal",
-                                                  G_CALLBACK (wrapper_gproxy_g_signal),
-                                                  provider, 0);
+      g_signal_connect_object (dbus_gproxy, "g-signal::Set",
+                               G_CALLBACK (wrapper_gproxy_set), provider, 0);
+      g_signal_connect_object (dbus_gproxy, "g-signal::RemoteEvent",
+                               G_CALLBACK (wrapper_gproxy_remote_event), provider, 0);
 
       /* show the plugin */
       gtk_widget_show (GTK_WIDGET (provider));
 
       gtk_main ();
 
-      /* disconnect signals */
-      g_signal_handler_disconnect (G_OBJECT (dbus_gproxy), gproxy_destroy_id);
-      g_signal_handler_disconnect (G_OBJECT (dbus_gproxy), gproxy_signal_id);
+      if (retval != PLUGIN_EXIT_SUCCESS_AND_RESTART)
+        retval = plug == NULL || GPOINTER_TO_INT (g_object_get_data (G_OBJECT (plug), "exit-code"));
 
       /* destroy the plug and provider */
       if (plug != NULL)
-        gtk_widget_destroy (GTK_WIDGET (plug));
-
-      if (retval != PLUGIN_EXIT_SUCCESS_AND_RESTART)
-        retval = PLUGIN_EXIT_SUCCESS;
+        gtk_widget_destroy (plug);
     }
   else
     {
@@ -450,13 +379,7 @@ main (gint argc, gchar **argv)
 
 leave:
   if (G_LIKELY (dbus_gproxy != NULL))
-    {
-      /* We are listening to destroy notify signal but we go no plugin provider */
-      if (G_LIKELY (gproxy_destroy_id != 0) && provider == NULL)
-        g_signal_handler_disconnect (G_OBJECT (dbus_gproxy), gproxy_destroy_id);
-
-      g_object_unref (G_OBJECT (dbus_gproxy));
-    }
+    g_object_unref (G_OBJECT (dbus_gproxy));
 
   if (G_LIKELY (module != NULL))
     g_object_unref (G_OBJECT (module));

@@ -9,11 +9,8 @@ plugindir = $(libdir)/xfce4/panel/plugins
 plugin_LTLIBRARIES = \
 	libapplicationsmenu.la
 
-libapplicationsmenu_built_sources = \
-	applicationsmenu-dialog_ui.h
-
 libapplicationsmenu_la_SOURCES = \
-	$(libapplicationsmenu_built_sources) \
+	$(top_srcdir)/common/xfce4-panel-resources.c \
 	applicationsmenu.c \
 	applicationsmenu.h
 
@@ -23,6 +20,7 @@ libapplicationsmenu_la_CFLAGS = \
 	$(XFCONF_CFLAGS) \
 	$(LIBXFCE4UTIL_CFLAGS) \
 	$(LIBXFCE4UI_CFLAGS) \
+	$(LIBXFCE4WINDOWING_CFLAGS) \
 	$(GARCON_CFLAGS) \
 	$(GARCON_GTK3_CFLAGS) \
 	$(PLATFORM_CFLAGS)
@@ -41,6 +39,7 @@ libapplicationsmenu_la_LIBADD = \
 	$(EXO_LIBS) \
 	$(LIBXFCE4UTIL_LIBS) \
 	$(LIBXFCE4UI_LIBS) \
+	$(LIBXFCE4WINDOWING_LIBS) \
 	$(GARCON_LIBS) \
 	$(GARCON_GTK3_LIBS) \
 	$(XFCONF_LIBS)
@@ -65,26 +64,18 @@ xfce4-popup-applicationsmenu: xfce4-popup-applicationsmenu.sh Makefile
 desktopdir = $(datadir)/xfce4/panel/plugins
 desktop_in_files = applicationsmenu.desktop.in.in
 desktop_DATA = $(desktop_in_files:.desktop.in.in=.desktop)
-@INTLTOOL_DESKTOP_RULE@
+
+%.desktop: %.desktop.in
+	$(AM_V_GEN) $(MSGFMT) --desktop --template $< -d $(top_srcdir)/po -o $@
 
 EXTRA_DIST = \
-	applicationsmenu-dialog.glade \
 	xfce4-popup-applicationsmenu.sh \
-	$(desktop_in_files)
+	$(desktop_in_files) \
+	meson.build \
+	$(NULL)
 
 DISTCLEANFILES = \
 	$(desktop_DATA) \
 	xfce4-popup-applicationsmenu
-
-if MAINTAINER_MODE
-BUILT_SOURCES = \
-	$(libapplicationsmenu_built_sources)
-
-DISTCLEANFILES += \
-	$(libapplicationsmenu_built_sources)
-
-applicationsmenu-dialog_ui.h: applicationsmenu-dialog.glade
-	$(AM_V_GEN) xdt-csource --static --strip-comments --strip-content --name=applicationsmenu_dialog_ui $< >$@
-endif
 
 # vi:set ts=8 sw=8 noet ai nocindent syntax=automake:

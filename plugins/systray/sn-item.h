@@ -23,51 +23,52 @@
 
 G_BEGIN_DECLS
 
-typedef struct _SnItemClass SnItemClass;
-typedef struct _SnItem      SnItem;
+#define SN_TYPE_ITEM (sn_item_get_type ())
+G_DECLARE_FINAL_TYPE (SnItem, sn_item, SN, ITEM, GObject)
 
-#define XFCE_TYPE_SN_ITEM            (sn_item_get_type ())
-#define XFCE_SN_ITEM(obj)            (G_TYPE_CHECK_INSTANCE_CAST ((obj), XFCE_TYPE_SN_ITEM, SnItem))
-#define XFCE_SN_ITEM_CLASS(klass)    (G_TYPE_CHECK_CLASS_CAST ((klass), XFCE_TYPE_SN_ITEM, SnItemClass))
-#define XFCE_IS_SN_ITEM(obj)         (G_TYPE_CHECK_INSTANCE_TYPE ((obj), XFCE_TYPE_SN_ITEM))
-#define XFCE_IS_SN_ITEM_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE ((klass), XFCE_TYPE_SN_ITEM))
-#define XFCE_SN_ITEM_GET_CLASS(obj)  (G_TYPE_INSTANCE_GET_CLASS ((obj), XFCE_TYPE_SN_ITEM, SnItemClass))
+void
+sn_item_start (SnItem *item);
 
-GType                  sn_item_get_type                        (void) G_GNUC_CONST;
+void
+sn_item_invalidate (SnItem *item,
+                    gboolean force_update);
 
-void                   sn_item_start                           (SnItem                  *item);
+const gchar *
+sn_item_get_name (SnItem *item);
 
-void                   sn_item_invalidate                      (SnItem                  *item,
-                                                                gboolean                 force_update);
+void
+sn_item_get_icon (SnItem *item,
+                  const gchar **theme_path,
+                  const gchar **icon_name,
+                  GdkPixbuf **icon_pixbuf,
+                  const gchar **overlay_icon_name,
+                  GdkPixbuf **overlay_icon_pixbuf);
 
-const gchar           *sn_item_get_name                        (SnItem                  *item);
+void
+sn_item_get_tooltip (SnItem *item,
+                     const gchar **title,
+                     const gchar **subtitle);
 
-void                   sn_item_get_icon                        (SnItem                  *item,
-                                                                const gchar            **theme_path,
-                                                                const gchar            **icon_name,
-                                                                GdkPixbuf              **icon_pixbuf,
-                                                                const gchar            **overlay_icon_name,
-                                                                GdkPixbuf              **overlay_icon_pixbuf);
+gboolean
+sn_item_is_menu_only (SnItem *item);
 
-void                   sn_item_get_tooltip                     (SnItem                  *item,
-	                                                           const gchar            **title,
-	                                                           const gchar            **subtitle);
+GtkWidget *
+sn_item_get_menu (SnItem *item);
 
-gboolean               sn_item_is_menu_only                    (SnItem                  *item);
+void
+sn_item_activate (SnItem *item,
+                  gint x_root,
+                  gint y_root);
 
-GtkWidget             *sn_item_get_menu                        (SnItem                  *item);
+void
+sn_item_secondary_activate (SnItem *item,
+                            gint x_root,
+                            gint y_root);
 
-void                   sn_item_activate                        (SnItem                  *item,
-                                                                gint                     x_root,
-                                                                gint                     y_root);
-
-void                   sn_item_secondary_activate              (SnItem                  *item,
-                                                                gint                     x_root,
-                                                                gint                     y_root);
-
-void                   sn_item_scroll                          (SnItem                  *item,
-                                                                gint                     delta_x,
-                                                                gint                     delta_y);
+void
+sn_item_scroll (SnItem *item,
+                gint delta_x,
+                gint delta_y);
 
 G_END_DECLS
 

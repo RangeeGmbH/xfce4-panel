@@ -185,7 +185,7 @@ void xfce_panel_exported_service_call_plugin_event (
 
 gboolean xfce_panel_exported_service_call_plugin_event_finish (
     XfcePanelExportedService *proxy,
-    gboolean *out_succeed,
+    gboolean* out_succeed,
     GAsyncResult *res,
     GError **error);
 
@@ -194,7 +194,7 @@ gboolean xfce_panel_exported_service_call_plugin_event_sync (
     const gchar *arg_plugin_name,
     const gchar *arg_name,
     GVariant *arg_value,
-    gboolean *out_succeed,
+    gboolean* out_succeed,
     GCancellable *cancellable,
     GError **error);
 

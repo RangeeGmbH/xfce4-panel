@@ -17,51 +17,43 @@
  */
 
 #ifdef HAVE_CONFIG_H
-#include <config.h>
+#include "config.h"
 #endif
 
-#include <gmodule.h>
+#include "panel-module-factory.h"
+#include "panel-module.h"
+#include "panel-plugin-external-wrapper.h"
+
+#include "common/panel-debug.h"
+#include "common/panel-private.h"
+
 #include <glib/gstdio.h>
+#include <gmodule.h>
 #include <libxfce4util/libxfce4util.h>
 
-#include <common/panel-private.h>
-#include <common/panel-debug.h>
-#include <libxfce4panel/libxfce4panel.h>
-#include <libxfce4panel/xfce-panel-plugin-provider.h>
-
-#include <panel/panel-module.h>
-#include <panel/panel-module-factory.h>
-#include <panel/panel-plugin-external-wrapper.h>
-
-#define PANEL_PLUGINS_LIB_DIR (LIBDIR G_DIR_SEPARATOR_S "panel" G_DIR_SEPARATOR_S "plugins")
-#define PANEL_PLUGINS_LIB_DIR_OLD (LIBDIR G_DIR_SEPARATOR_S "panel-plugins")
-
-
-typedef enum _PanelModuleRunMode PanelModuleRunMode;
-typedef enum _PanelModuleUnique  PanelModuleUnique;
+#ifdef HAVE_GTK_LAYER_SHELL
+#include <gtk-layer-shell.h>
+#else
+#define gtk_layer_is_supported() FALSE
+#endif
 
 
 
-static void      panel_module_dispose          (GObject          *object);
-static void      panel_module_finalize         (GObject          *object);
-static gboolean  panel_module_load             (GTypeModule      *type_module);
-static void      panel_module_unload           (GTypeModule      *type_module);
-static void      panel_module_plugin_destroyed (gpointer          user_data,
-                                                GObject          *where_the_plugin_was);
+typedef enum _PanelModuleUnique PanelModuleUnique;
 
 
 
-struct _PanelModuleClass
-{
-  GTypeModuleClass __parent__;
-};
+static void
+panel_module_dispose (GObject *object);
+static gboolean
+panel_module_load (GTypeModule *type_module);
+static void
+panel_module_unload (GTypeModule *type_module);
+static void
+panel_module_plugin_destroyed (gpointer user_data,
+                               GObject *where_the_plugin_was);
 
-enum _PanelModuleRunMode
-{
-  UNKNOWN,    /* Unset */
-  INTERNAL,   /* plugin library will be loaded in the panel */
-  WRAPPER     /* external library with communication through PanelPluginExternal */
-};
+
 
 enum _PanelModuleUnique
 {
@@ -75,31 +67,31 @@ struct _PanelModule
   GTypeModule __parent__;
 
   /* module type */
-  PanelModuleRunMode   mode;
+  PanelModuleRunMode mode;
 
   /* filename of the library */
-  gchar               *filename;
+  gchar *filename;
 
   /* plugin information from the desktop file */
-  gchar               *display_name;
-  gchar               *comment;
-  gchar               *icon_name;
+  gchar *display_name;
+  gchar *comment;
+  gchar *icon_name;
 
   /* unique handling */
-  guint                use_count;
-  PanelModuleUnique    unique_mode;
+  guint use_count;
+  PanelModuleUnique unique_mode;
 
   /* module location */
-  GModule             *library;
+  GModule *library;
 
   /* for non-gobject plugin */
-  PluginConstructFunc  construct_func;
+  PluginConstructFunc construct_func;
 
   /* for gobject plugins */
-  GType                plugin_type;
+  GType plugin_type;
 
   /* for wrapper plugins */
-  gchar               *api;
+  gchar *api;
 };
 
 
@@ -108,19 +100,18 @@ static GQuark module_quark = 0;
 
 
 
-G_DEFINE_TYPE (PanelModule, panel_module, G_TYPE_TYPE_MODULE)
+G_DEFINE_FINAL_TYPE (PanelModule, panel_module, G_TYPE_TYPE_MODULE)
 
 
 
 static void
 panel_module_class_init (PanelModuleClass *klass)
 {
-  GObjectClass     *gobject_class;
+  GObjectClass *gobject_class;
   GTypeModuleClass *gtype_module_class;
 
   gobject_class = G_OBJECT_CLASS (klass);
   gobject_class->dispose = panel_module_dispose;
-  gobject_class->finalize = panel_module_finalize;
 
   gtype_module_class = G_TYPE_MODULE_CLASS (klass);
   gtype_module_class->load = panel_module_load;
@@ -134,7 +125,7 @@ panel_module_class_init (PanelModuleClass *klass)
 static void
 panel_module_init (PanelModule *module)
 {
-  module->mode = UNKNOWN;
+  module->mode = PANEL_MODULE_RUN_MODE_NONE;
   module->filename = NULL;
   module->display_name = NULL;
   module->comment = NULL;
@@ -152,28 +143,25 @@ panel_module_init (PanelModule *module)
 static void
 panel_module_dispose (GObject *object)
 {
-  /* Do nothing to avoid problems with dispose in GTypeModule when
-   * types are registered.
-   *
-   * For us this is not a problem since the modules are released when
-   * everything is destroyed. So we really want that last unref before
-   * closing the application. */
-}
-
-
-
-static void
-panel_module_finalize (GObject *object)
-{
   PanelModule *module = PANEL_MODULE (object);
 
-  g_free (module->filename);
-  g_free (module->display_name);
-  g_free (module->comment);
-  g_free (module->icon_name);
-  g_free (module->api);
+  if (module->api != NULL)
+    {
+      g_free (module->filename);
+      g_free (module->display_name);
+      g_free (module->comment);
+      g_free (module->icon_name);
+      g_free (module->api);
+      module->api = NULL;
+      if (module->plugin_type != G_TYPE_NONE)
+        {
+          /* a module containing type implementations must exist forever */
+          g_object_ref (module);
+          return;
+        }
+    }
 
-  (*G_OBJECT_CLASS (panel_module_parent_class)->finalize) (object);
+  G_OBJECT_CLASS (panel_module_parent_class)->dispose (object);
 }
 
 
@@ -181,14 +169,14 @@ panel_module_finalize (GObject *object)
 static gboolean
 panel_module_load (GTypeModule *type_module)
 {
-  PanelModule    *module = PANEL_MODULE (type_module);
-  PluginInitFunc  init_func;
-  gboolean        make_resident = TRUE;
-  gpointer        foo;
+  PanelModule *module = PANEL_MODULE (type_module);
+  PluginInitFunc init_func;
+  gboolean make_resident = TRUE;
+  gpointer foo;
 
   panel_return_val_if_fail (PANEL_IS_MODULE (module), FALSE);
   panel_return_val_if_fail (G_IS_TYPE_MODULE (module), FALSE);
-  panel_return_val_if_fail (module->mode == INTERNAL, FALSE);
+  panel_return_val_if_fail (module->mode == PANEL_MODULE_RUN_MODE_INTERNAL, FALSE);
   panel_return_val_if_fail (module->library == NULL, FALSE);
   panel_return_val_if_fail (module->plugin_type == G_TYPE_NONE, FALSE);
   panel_return_val_if_fail (module->construct_func == NULL, FALSE);
@@ -203,19 +191,20 @@ panel_module_load (GTypeModule *type_module)
       return FALSE;
     }
 
-    /* check if there is a preinit function */
+  /* check if there is a preinit function */
   if (g_module_symbol (module->library, "xfce_panel_module_preinit", &foo))
     {
       /* large message, but technically never shown to normal users */
       g_warning ("The plugin \"%s\" is marked as internal in the desktop file, "
                  "but the developer has defined an pre-init function, which is "
                  "not supported for internal plugins. " PACKAGE_NAME " will force "
-                 "the plugin to run external.", module->filename);
+                 "the plugin to run external.",
+                 module->filename);
 
       panel_module_unload (type_module);
 
       /* from now on, run this plugin in a wrapper */
-      module->mode = WRAPPER;
+      module->mode = PANEL_MODULE_RUN_MODE_EXTERNAL;
       g_free (module->api);
       module->api = g_strdup (LIBXFCE4PANEL_VERSION_API);
 
@@ -232,15 +221,24 @@ panel_module_load (GTypeModule *type_module)
       if (make_resident)
         g_module_make_resident (module->library);
     }
-  else if (!g_module_symbol (module->library, "xfce_panel_module_construct",
-                             (gpointer) &module->construct_func))
+  else
     {
-      g_critical ("Module \"%s\" lacks a plugin register function.",
-                  module->filename);
-
-      panel_module_unload (type_module);
-
-      return FALSE;
+      if (g_module_symbol (module->library, "xfce_panel_module_construct",
+                           (gpointer) &module->construct_func))
+        {
+          /* avoid static memory allocation issues when removing the plugin, with e.g
+           * g_intern_static_string() or G_PARAM_STATIC_STRINGS in signals/properties
+           * declarations, and keep plugin types in memory so plugin can be re-added
+           * after being removed */
+          if (module->mode == PANEL_MODULE_RUN_MODE_INTERNAL)
+            g_module_make_resident (module->library);
+        }
+      else
+        {
+          g_critical ("Module \"%s\" lacks a plugin register function.", module->filename);
+          panel_module_unload (type_module);
+          return FALSE;
+        }
     }
 
   return TRUE;
@@ -255,7 +253,7 @@ panel_module_unload (GTypeModule *type_module)
 
   panel_return_if_fail (PANEL_IS_MODULE (module));
   panel_return_if_fail (G_IS_TYPE_MODULE (module));
-  panel_return_if_fail (module->mode == INTERNAL);
+  panel_return_if_fail (module->mode == PANEL_MODULE_RUN_MODE_INTERNAL);
   panel_return_if_fail (module->library != NULL);
   panel_return_if_fail (module->plugin_type != G_TYPE_NONE
                         || module->construct_func != NULL);
@@ -271,8 +269,8 @@ panel_module_unload (GTypeModule *type_module)
 
 
 static void
-panel_module_plugin_destroyed (gpointer  user_data,
-                               GObject  *where_the_plugin_was)
+panel_module_plugin_destroyed (gpointer user_data,
+                               GObject *where_the_plugin_was)
 {
   PanelModule *module = PANEL_MODULE (user_data);
 
@@ -284,7 +282,7 @@ panel_module_plugin_destroyed (gpointer  user_data,
   module->use_count--;
 
   /* unuse the library if the plugin runs internal */
-  if (module->mode == INTERNAL)
+  if (module->mode == PANEL_MODULE_RUN_MODE_INTERNAL)
     g_type_module_unuse (G_TYPE_MODULE (module));
 
   /* emit signal unique signal in the factory */
@@ -297,17 +295,18 @@ panel_module_plugin_destroyed (gpointer  user_data,
 PanelModule *
 panel_module_new_from_desktop_file (const gchar *filename,
                                     const gchar *name,
-                                    gboolean     force_external)
+                                    const gchar *libdir,
+                                    PanelModuleRunMode forced_mode)
 {
   PanelModule *module = NULL;
-  XfceRc      *rc;
+  XfceRc *rc;
   const gchar *module_name;
-  gchar       *path;
+  gchar *path;
   const gchar *module_unique;
-  gboolean     found;
+  gboolean found;
 
-  panel_return_val_if_fail (!panel_str_is_empty (filename), NULL);
-  panel_return_val_if_fail (!panel_str_is_empty (name), NULL);
+  panel_return_val_if_fail (!xfce_str_is_empty (filename), NULL);
+  panel_return_val_if_fail (!xfce_str_is_empty (name), NULL);
 
   rc = xfce_rc_simple_open (filename, TRUE);
   if (G_UNLIKELY (rc == NULL))
@@ -319,8 +318,8 @@ panel_module_new_from_desktop_file (const gchar *filename,
 
   if (!xfce_rc_has_group (rc, "Xfce Panel"))
     {
-      g_critical ("Plugin %s: Desktop file \"%s\" has no "
-                  "\"Xfce Panel\" group", name, filename);
+      g_critical ("Plugin %s: Desktop file \"%s\" has no \"Xfce Panel\" group",
+                  name, filename);
       xfce_rc_close (rc);
       return NULL;
     }
@@ -328,7 +327,8 @@ panel_module_new_from_desktop_file (const gchar *filename,
   if (g_strcmp0 (xfce_rc_read_entry (rc, "X-XFCE-API", "1.0"), "2.0") != 0)
     {
       g_critical ("Plugin %s: The Desktop file %s requested the Gtk2 API (v1.0), which is "
-                  "no longer supported.", name, filename);
+                  "no longer supported.",
+                  name, filename);
       xfce_rc_close (rc);
       return NULL;
     }
@@ -339,27 +339,8 @@ panel_module_new_from_desktop_file (const gchar *filename,
   module_name = xfce_rc_read_entry_untranslated (rc, "X-XFCE-Module", NULL);
   if (G_LIKELY (module_name != NULL))
     {
-#ifndef NDEBUG
-      if (xfce_rc_has_entry (rc, "X-XFCE-Module-Path"))
-        {
-          /* show a messsage if the old module path key still exists */
-          g_message ("Plugin %s: The \"X-XFCE-Module-Path\" key is "
-                     "ignored in \"%s\", the panel will look for the "
-                     "module in %s. See bug #5455 why this decision was made",
-                     name, filename, PANEL_PLUGINS_LIB_DIR);
-        }
-#endif
-
-      path = g_module_build_path (PANEL_PLUGINS_LIB_DIR, module_name);
+      path = g_module_build_path (libdir, module_name);
       found = g_file_test (path, G_FILE_TEST_EXISTS);
-
-      if (!found)
-        {
-          /* deprecated location for module plugin directories */
-          g_free (path);
-          path = g_module_build_path (PANEL_PLUGINS_LIB_DIR_OLD, module_name);
-          found = g_file_test (path, G_FILE_TEST_EXISTS);
-        }
 
       if (G_LIKELY (found))
         {
@@ -368,20 +349,27 @@ panel_module_new_from_desktop_file (const gchar *filename,
           module->filename = path;
 
           /* run mode of the module, by default everything runs in
-           * the wrapper, unless defined otherwise */
-          if (force_external || !xfce_rc_read_bool_entry (rc, "X-XFCE-Internal", FALSE))
+           * the wrapper, unless defined otherwise or unsupported */
+          if (forced_mode != PANEL_MODULE_RUN_MODE_INTERNAL
+              && ((WINDOWING_IS_X11 ()
+                   && (forced_mode == PANEL_MODULE_RUN_MODE_EXTERNAL
+                       || !xfce_rc_read_bool_entry (rc, "X-XFCE-Internal", FALSE)))
+                  || (gtk_layer_is_supported () && forced_mode == PANEL_MODULE_RUN_MODE_EXTERNAL)))
             {
-              module->mode = WRAPPER;
+              module->mode = PANEL_MODULE_RUN_MODE_EXTERNAL;
               g_free (module->api);
               module->api = g_strdup (xfce_rc_read_entry (rc, "X-XFCE-API", LIBXFCE4PANEL_VERSION_API));
             }
           else
-            module->mode = INTERNAL;
+            module->mode = PANEL_MODULE_RUN_MODE_INTERNAL;
         }
       else
         {
-          g_critical ("Plugin %s: There was no module found at \"%s\"",
-                      name, path);
+          if (g_strcmp0 (libdir, LIBDIR) == 0)
+            g_critical ("Plugin %s: There was no module found at \"%s\"", name, path);
+          else
+            panel_debug_filtered (PANEL_DEBUG_MODULE, "Plugin %s: There was no module found at \"%s\"", name, path);
+
           g_free (path);
         }
     }
@@ -389,7 +377,7 @@ panel_module_new_from_desktop_file (const gchar *filename,
   if (G_LIKELY (module != NULL))
     {
       g_type_module_set_name (G_TYPE_MODULE (module), name);
-      panel_assert (module->mode != UNKNOWN);
+      panel_assert (module->mode != PANEL_MODULE_RUN_MODE_NONE);
 
       /* read the remaining information */
       module->display_name = g_strdup (xfce_rc_read_entry (rc, "Name", name));
@@ -399,16 +387,16 @@ panel_module_new_from_desktop_file (const gchar *filename,
       module_unique = xfce_rc_read_entry (rc, "X-XFCE-Unique", NULL);
       if (G_LIKELY (module_unique == NULL))
         module->unique_mode = UNIQUE_FALSE;
-      else if (strcasecmp (module_unique, "screen") == 0)
+      else if (strcasecmp (module_unique, "screen") == 0 && WINDOWING_IS_X11 ())
         module->unique_mode = UNIQUE_SCREEN;
       else if (strcasecmp (module_unique, "true") == 0)
         module->unique_mode = UNIQUE_TRUE;
       else
         module->unique_mode = UNIQUE_FALSE;
 
-       panel_debug_filtered (PANEL_DEBUG_MODULE, "new module %s, filename=%s, internal=%s",
-                             name, module->filename,
-                             PANEL_DEBUG_BOOL (module->mode == INTERNAL));
+      panel_debug_filtered (PANEL_DEBUG_MODULE, "new module %s, filename=%s, internal=%s",
+                            name, module->filename,
+                            PANEL_DEBUG_BOOL (module->mode == PANEL_MODULE_RUN_MODE_INTERNAL));
     }
 
   xfce_rc_close (rc);
@@ -419,19 +407,19 @@ panel_module_new_from_desktop_file (const gchar *filename,
 
 
 GtkWidget *
-panel_module_new_plugin (PanelModule  *module,
-                         GdkScreen    *screen,
-                         gint          unique_id,
-                         gchar       **arguments)
+panel_module_new_plugin (PanelModule *module,
+                         GdkScreen *screen,
+                         gint unique_id,
+                         gchar **arguments)
 {
-  GtkWidget   *plugin = NULL;
+  GtkWidget *plugin = NULL;
   const gchar *debug_type = NULL;
 
   panel_return_val_if_fail (PANEL_IS_MODULE (module), NULL);
   panel_return_val_if_fail (G_IS_TYPE_MODULE (module), NULL);
   panel_return_val_if_fail (GDK_IS_SCREEN (screen), NULL);
   panel_return_val_if_fail (unique_id != -1, NULL);
-  panel_return_val_if_fail (module->mode != UNKNOWN, NULL);
+  panel_return_val_if_fail (module->mode != PANEL_MODULE_RUN_MODE_NONE, NULL);
 
   /* return null if the module is not usable (unique and already used) */
   if (G_UNLIKELY (!panel_module_is_usable (module, screen)))
@@ -439,7 +427,7 @@ panel_module_new_plugin (PanelModule  *module,
 
   switch (module->mode)
     {
-    case INTERNAL:
+    case PANEL_MODULE_RUN_MODE_INTERNAL:
       if (g_type_module_use (G_TYPE_MODULE (module)))
         {
           if (module->plugin_type != G_TYPE_NONE)
@@ -468,18 +456,12 @@ panel_module_new_plugin (PanelModule  *module,
               debug_type = "construct-func";
             }
 
-          if (G_LIKELY (plugin != NULL))
-            break;
-          else
+          if (G_UNLIKELY (plugin == NULL))
             g_type_module_unuse (G_TYPE_MODULE (module));
         }
+      break;
 
-      /* fall-through (make wrapper plugin), probably a plugin with
-       * preinit_func which is not supported for internal plugins
-       * note: next comment tells GCC7 to ignore the fallthrough */
-      /* fall through */
-
-    case WRAPPER:
+    case PANEL_MODULE_RUN_MODE_EXTERNAL:
       plugin = panel_plugin_external_wrapper_new (module, unique_id, arguments);
       debug_type = "external-wrapper";
       break;
@@ -495,11 +477,10 @@ panel_module_new_plugin (PanelModule  *module,
       module->use_count++;
 
       panel_debug (PANEL_DEBUG_MODULE, "new item (type=%s, name=%s, id=%d)",
-          debug_type, panel_module_get_name (module), unique_id);
+                   debug_type, panel_module_get_name (module), unique_id);
 
       /* handle module use count and unloading */
-      g_object_weak_ref (G_OBJECT (plugin),
-          panel_module_plugin_destroyed, module);
+      g_object_weak_ref (G_OBJECT (plugin), panel_module_plugin_destroyed, module);
 
       /* add link to the module */
       g_object_set_qdata (G_OBJECT (plugin), module_quark, module);
@@ -538,7 +519,8 @@ panel_module_get_display_name (PanelModule *module)
   panel_return_val_if_fail (PANEL_IS_MODULE (module), NULL);
   panel_return_val_if_fail (G_IS_TYPE_MODULE (module), NULL);
   panel_return_val_if_fail (module->display_name == NULL
-                            || g_utf8_validate (module->display_name, -1, NULL), NULL);
+                              || g_utf8_validate (module->display_name, -1, NULL),
+                            NULL);
 
   return module->display_name;
 }
@@ -550,7 +532,8 @@ panel_module_get_comment (PanelModule *module)
 {
   panel_return_val_if_fail (PANEL_IS_MODULE (module), NULL);
   panel_return_val_if_fail (module->comment == NULL
-                            || g_utf8_validate (module->comment, -1, NULL), NULL);
+                              || g_utf8_validate (module->comment, -1, NULL),
+                            NULL);
 
   return module->comment;
 }
@@ -562,7 +545,8 @@ panel_module_get_icon_name (PanelModule *module)
 {
   panel_return_val_if_fail (PANEL_IS_MODULE (module), NULL);
   panel_return_val_if_fail (module->icon_name == NULL
-                            || g_utf8_validate (module->icon_name, -1, NULL), NULL);
+                              || g_utf8_validate (module->icon_name, -1, NULL),
+                            NULL);
 
   return module->icon_name;
 }
@@ -613,11 +597,11 @@ panel_module_is_unique (PanelModule *module)
 
 gboolean
 panel_module_is_usable (PanelModule *module,
-                        GdkScreen   *screen)
+                        GdkScreen *screen)
 {
   PanelModuleFactory *factory;
-  GSList             *plugins, *li;
-  gboolean            usable = TRUE;
+  GSList *plugins, *li;
+  gboolean usable = TRUE;
 
   panel_return_val_if_fail (PANEL_IS_MODULE (module), FALSE);
   panel_return_val_if_fail (GDK_IS_SCREEN (screen), FALSE);

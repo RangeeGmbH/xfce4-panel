@@ -34,7 +34,7 @@ G_BEGIN_DECLS
  *
  * Since: 4.8
  **/
-#define LIBXFCE4PANEL_VERSION ("4.18.4")
+#define LIBXFCE4PANEL_VERSION ("4.20.7")
 
 /**
  * LIBXFCE4PANEL_MAJOR_VERSION:
@@ -43,7 +43,7 @@ G_BEGIN_DECLS
  * Like libxfce4panel_major_version, but from the headers used at
  * application compile time, rather than from the library
  * linked against at application run time.
- * 
+ *
  * Since: 4.8
  **/
 #define LIBXFCE4PANEL_MAJOR_VERSION (4)
@@ -55,10 +55,10 @@ G_BEGIN_DECLS
  * Like libxfce4panel_minor_version, but from the headers used at
  * application compile time, rather than from the library
  * linked against at application run time.
- * 
+ *
  * Since: 4.8
  **/
-#define LIBXFCE4PANEL_MINOR_VERSION (18)
+#define LIBXFCE4PANEL_MINOR_VERSION (20)
 
 /**
  * LIBXFCE4PANEL_MICRO_VERSION:
@@ -67,10 +67,10 @@ G_BEGIN_DECLS
  * Like libxfce4panel_micro_version, but from the headers used at
  * application compile time, rather than from the library
  * linked against at application run time
- * 
+ *
  * Since: 4.8
  **/
-#define LIBXFCE4PANEL_MICRO_VERSION (4)
+#define LIBXFCE4PANEL_MICRO_VERSION (7)
 
 /**
  * LIBXFCE4PANEL_CHECK_VERSION:
@@ -82,10 +82,10 @@ G_BEGIN_DECLS
  *
  * Returns: %TRUE if the version of the libxfce4panel header files is
  *          the same as or newer than the passed-in version.
- * 
+ *
  * Since: 4.8
  **/
-#define LIBXFCE4PANEL_CHECK_VERSION(major,minor,micro) \
+#define LIBXFCE4PANEL_CHECK_VERSION(major, minor, micro) \
   (LIBXFCE4PANEL_MAJOR_VERSION > (major) \
    || (LIBXFCE4PANEL_MAJOR_VERSION == (major) \
        && LIBXFCE4PANEL_MINOR_VERSION > (minor)) \
@@ -97,9 +97,10 @@ extern const guint libxfce4panel_major_version;
 extern const guint libxfce4panel_minor_version;
 extern const guint libxfce4panel_micro_version;
 
-const gchar *libxfce4panel_check_version (guint required_major,
-                                          guint required_minor,
-                                          guint required_micro);
+const gchar *
+libxfce4panel_check_version (guint required_major,
+                             guint required_minor,
+                             guint required_micro);
 
 G_END_DECLS
 

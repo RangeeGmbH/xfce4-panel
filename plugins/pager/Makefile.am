@@ -10,11 +10,8 @@ plugindir = $(libdir)/xfce4/panel/plugins
 plugin_LTLIBRARIES = \
 	libpager.la
 
-libpager_built_sources = \
-	pager-dialog_ui.h
-
 libpager_la_SOURCES = \
-	$(libpager_built_sources) \
+	$(top_srcdir)/common/xfce4-panel-resources.c \
 	pager.c \
 	pager.h \
 	pager-buttons.h \
@@ -25,6 +22,8 @@ libpager_la_CFLAGS = \
 	$(XFCONF_CFLAGS) \
 	$(LIBXFCE4UTIL_CFLAGS) \
 	$(LIBWNCK_CFLAGS) \
+	$(LIBXFCE4WINDOWING_CFLAGS) \
+	$(LIBXFCE4WINDOWINGUI_CFLAGS) \
 	$(LIBXFCE4UI_CFLAGS) \
 	$(PLATFORM_CFLAGS)
 
@@ -41,6 +40,8 @@ libpager_la_LIBADD = \
 	$(GTK_LIBS) \
 	$(LIBXFCE4UTIL_LIBS) \
 	$(LIBWNCK_LIBS) \
+	$(LIBXFCE4WINDOWING_LIBS) \
+	$(LIBXFCE4WINDOWINGUI_LIBS) \
 	$(LIBXFCE4UI_LIBS) \
 	$(XFCONF_LIBS)
 
@@ -54,24 +55,16 @@ libpager_la_DEPENDENCIES = \
 desktopdir = $(datadir)/xfce4/panel/plugins
 desktop_in_files = pager.desktop.in.in
 desktop_DATA = $(desktop_in_files:.desktop.in.in=.desktop)
-@INTLTOOL_DESKTOP_RULE@
+
+%.desktop: %.desktop.in
+	$(AM_V_GEN) $(MSGFMT) --desktop --template $< -d $(top_srcdir)/po -o $@
 
 EXTRA_DIST = \
-	pager-dialog.glade \
-	$(desktop_in_files)
+	$(desktop_in_files) \
+	meson.build \
+	$(NULL)
 
 DISTCLEANFILES = \
 	$(desktop_DATA)
-
-if MAINTAINER_MODE
-BUILT_SOURCES = \
-	$(libpager_built_sources)
-
-DISTCLEANFILES += \
-	$(libpager_built_sources)
-
-pager-dialog_ui.h: pager-dialog.glade
-	$(AM_V_GEN) xdt-csource --static --strip-comments --strip-content --name=pager_dialog_ui $< >$@
-endif
 
 # vi:set ts=8 sw=8 noet ai nocindent syntax=automake:

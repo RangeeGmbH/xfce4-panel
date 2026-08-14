@@ -17,83 +17,89 @@
  */
 
 #ifdef HAVE_CONFIG_H
-#include <config.h>
+#include "config.h"
 #endif
 
-#ifdef HAVE_STDLIB_H
-#include <stdlib.h>
-#endif
+#include "panel-application.h"
+#include "panel-base-window.h"
+#include "panel-dbus-service.h"
+#include "panel-dialogs.h"
+#include "panel-item-dialog.h"
+#include "panel-itembar.h"
+#include "panel-module-factory.h"
+#include "panel-plugin-external.h"
+#include "panel-preferences-dialog.h"
+
+#include "common/panel-debug.h"
+#include "common/panel-private.h"
+#include "common/panel-utils.h"
+#include "common/panel-xfconf.h"
+#include "libxfce4panel/libxfce4panel.h"
+#include "libxfce4panel/xfce-panel-plugin-provider.h"
 
 #include <glib/gstdio.h>
-#include <xfconf/xfconf.h>
-#include <libxfce4util/libxfce4util.h>
 #include <libxfce4ui/libxfce4ui.h>
+#include <libxfce4util/libxfce4util.h>
+#include <xfconf/xfconf.h>
 
-#ifdef GDK_WINDOWING_X11
-#include <X11/Xlib.h>
-#include <X11/Xatom.h>
+#ifdef HAVE_GTK_LAYER_SHELL
+#include <gtk-layer-shell.h>
+#else
+#define gtk_layer_is_supported() FALSE
 #endif
 
-#include <common/panel-private.h>
-#include <common/panel-xfconf.h>
-#include <common/panel-debug.h>
-#include <common/panel-utils.h>
-#include <libxfce4panel/libxfce4panel.h>
-#include <libxfce4panel/xfce-panel-plugin-provider.h>
+#ifdef ENABLE_X11
+#include <X11/Xatom.h>
+#include <X11/Xlib.h>
+#endif
 
-#include <panel/panel-dbus-service.h>
-#include <panel/panel-base-window.h>
-#include <panel/panel-window.h>
-#include <panel/panel-application.h>
-#include <panel/panel-itembar.h>
-#include <panel/panel-module-factory.h>
-#include <panel/panel-preferences-dialog.h>
-#include <panel/panel-item-dialog.h>
-#include <panel/panel-dialogs.h>
-#include <panel/panel-plugin-external.h>
-
-#define AUTOSAVE_INTERVAL   (10 * 60)
-#define MIGRATE_BIN         HELPERDIR G_DIR_SEPARATOR_S "migrate"
+#define MIGRATE_BIN HELPERDIR G_DIR_SEPARATOR_S "migrate"
 
 
 
-static void      panel_application_dispose            (GObject                *object);
-static void      panel_application_finalize           (GObject                *object);
-static gboolean  panel_application_autosave_timer     (gpointer                user_data);
-static void      panel_application_plugin_move        (GtkWidget              *item,
-                                                       PanelApplication       *application);
-static gboolean  panel_application_plugin_insert      (PanelApplication       *application,
-                                                       PanelWindow            *window,
-                                                       const gchar            *name,
-                                                       gint                    unique_id,
-                                                       gchar                 **arguments,
-                                                       gint                    position);
-static void      panel_application_dialog_destroyed   (GtkWindow              *dialog,
-                                                       PanelApplication       *application);
-static void      panel_application_drag_data_received (PanelWindow            *window,
-                                                       GdkDragContext         *context,
-                                                       gint                    x,
-                                                       gint                    y,
-                                                       GtkSelectionData       *selection_data,
-                                                       guint                   info,
-                                                       guint                   drag_time,
-                                                       GtkWidget              *itembar);
-static gboolean  panel_application_drag_motion        (GtkWidget              *window,
-                                                       GdkDragContext         *context,
-                                                       gint                    x,
-                                                       gint                    y,
-                                                       guint                   drag_time,
-                                                       PanelApplication       *application);
-static gboolean  panel_application_drag_drop          (GtkWidget              *window,
-                                                       GdkDragContext         *context,
-                                                       gint                    x,
-                                                       gint                    y,
-                                                       guint                   drag_time,
-                                                       PanelApplication       *application);
-static void      panel_application_drag_leave         (GtkWidget              *window,
-                                                       GdkDragContext         *context,
-                                                       guint                   drag_time,
-                                                       PanelApplication       *application);
+static void
+panel_application_finalize (GObject *object);
+static void
+panel_application_plugin_move (GtkWidget *item,
+                               PanelApplication *application);
+static gboolean
+panel_application_plugin_insert (PanelApplication *application,
+                                 PanelWindow *window,
+                                 const gchar *name,
+                                 gint unique_id,
+                                 gchar **arguments,
+                                 gint position);
+static void
+panel_application_dialog_destroyed (GtkWindow *dialog,
+                                    PanelApplication *application);
+static void
+panel_application_drag_data_received (PanelWindow *window,
+                                      GdkDragContext *context,
+                                      gint x,
+                                      gint y,
+                                      GtkSelectionData *selection_data,
+                                      guint info,
+                                      guint drag_time,
+                                      GtkWidget *itembar);
+static gboolean
+panel_application_drag_motion (GtkWidget *window,
+                               GdkDragContext *context,
+                               gint x,
+                               gint y,
+                               guint drag_time,
+                               PanelApplication *application);
+static gboolean
+panel_application_drag_drop (GtkWidget *window,
+                             GdkDragContext *context,
+                             gint x,
+                             gint y,
+                             guint drag_time,
+                             PanelApplication *application);
+static void
+panel_application_drag_leave (GtkWidget *window,
+                              GdkDragContext *context,
+                              guint drag_time,
+                              PanelApplication *application);
 
 
 
@@ -103,56 +109,47 @@ enum
   PROP_ITEMS_CHANGED
 };
 
-struct _PanelApplicationClass
-{
-  GObjectClass __parent__;
-};
-
 struct _PanelApplication
 {
-  GObject  __parent__;
+  GObject __parent__;
 
   /* the plugin factory */
   PanelModuleFactory *factory;
 
   /* xfconf channel */
-  XfconfChannel      *xfconf;
+  XfconfChannel *xfconf;
 
   /* internal list of all the panel windows */
-  GSList             *windows;
+  GSList *windows;
 
   /* internal list of opened dialogs */
-  GSList             *dialogs;
-
-  /* autosave timer for plugins */
-  guint               autosave_timer_id;
+  GSList *dialogs;
 
   /* autohide count at application level */
-  gint                autohide_block;
+  gint autohide_block;
 
-#ifdef GDK_WINDOWING_X11
-  guint               wait_for_wm_timeout_id;
+#ifdef ENABLE_X11
+  guint wait_for_wm_timeout_id;
 #endif
 
   /* drag and drop data */
-  guint               drop_data_ready : 1;
-  guint               drop_occurred : 1;
-  guint               drop_desktop_files : 1;
-  guint               drop_index;
+  guint drop_data_ready : 1;
+  guint drop_occurred : 1;
+  guint drop_desktop_files : 1;
+  guint drop_index;
 };
 
-#ifdef GDK_WINDOWING_X11
+#ifdef ENABLE_X11
 typedef struct
 {
   PanelApplication *application;
 
-  Display          *dpy;
-  Atom             *atoms;
-  guint             atom_count;
-  guint             have_wm : 1;
-  guint             counter;
-}
-WaitForWM;
+  Display *dpy;
+  Atom *atoms;
+  guint atom_count;
+  guint have_wm : 1;
+  guint counter;
+} WaitForWM;
 #endif
 
 enum
@@ -162,14 +159,12 @@ enum
   TARGET_TEXT_URI_LIST
 };
 
-static const GtkTargetEntry drag_targets[] =
-{
+static const GtkTargetEntry drag_targets[] = {
   { "xfce-panel/plugin-widget",
     GTK_TARGET_SAME_APP, TARGET_PLUGIN_WIDGET }
 };
 
-static const GtkTargetEntry drop_targets[] =
-{
+static const GtkTargetEntry drop_targets[] = {
   { "xfce-panel/plugin-name",
     GTK_TARGET_SAME_APP, TARGET_PLUGIN_NAME },
   { "xfce-panel/plugin-widget",
@@ -179,7 +174,7 @@ static const GtkTargetEntry drop_targets[] =
 
 
 
-G_DEFINE_TYPE (PanelApplication, panel_application, G_TYPE_OBJECT)
+G_DEFINE_FINAL_TYPE (PanelApplication, panel_application, G_TYPE_OBJECT)
 
 
 
@@ -189,7 +184,6 @@ panel_application_class_init (PanelApplicationClass *klass)
   GObjectClass *gobject_class;
 
   gobject_class = G_OBJECT_CLASS (klass);
-  gobject_class->dispose = panel_application_dispose;
   gobject_class->finalize = panel_application_finalize;
 }
 
@@ -199,7 +193,7 @@ static void
 panel_application_init (PanelApplication *application)
 {
   GError *error = NULL;
-  gint    configver;
+  gint configver;
 
   application->windows = NULL;
   application->dialogs = NULL;
@@ -208,8 +202,11 @@ panel_application_init (PanelApplication *application)
   application->drop_occurred = FALSE;
   application->autohide_block = 0;
 
+  /* set application name so internal plugins can't override it */
+  g_set_application_name (PACKAGE_NAME);
+
   /* get the xfconf channel (singleton) */
-  application->xfconf = panel_properties_get_channel (G_OBJECT (application));
+  application->xfconf = xfconf_channel_get (XFCE_PANEL_CHANNEL_NAME);
 
   /* check if we need to migrate configuration */
   configver = xfconf_channel_get_int (application->xfconf, "/configver", -1);
@@ -222,35 +219,32 @@ panel_application_init (PanelApplication *application)
         }
     }
 
-  /* check if we need to force all plugins to run external */
-  if (xfconf_channel_get_bool (application->xfconf, "/force-all-external", FALSE))
-    panel_module_factory_force_all_external ();
+  /* check if we need to force all plugins to run internal/external */
+  if (xfconf_channel_get_bool (application->xfconf, "/force-all-internal", FALSE))
+    panel_module_factory_force_run_mode (PANEL_MODULE_RUN_MODE_INTERNAL);
+  else if (xfconf_channel_get_bool (application->xfconf, "/force-all-external", FALSE))
+    panel_module_factory_force_run_mode (PANEL_MODULE_RUN_MODE_EXTERNAL);
 
   /* get a factory reference so it never unloads */
   application->factory = panel_module_factory_get ();
 
-  /* start the autosave timer for plugins */
-  application->autosave_timer_id = g_timeout_add_seconds (60 * 10,
-      panel_application_autosave_timer, application);
-}
-
-
-
-static void
-panel_application_dispose (GObject *object)
-{
-  PanelApplication *application = PANEL_APPLICATION (object);
-
-  /* save plugins: xfconf_shutdown() is called via a weak ref i.e. on dispose(),
-   * so this should be done here to avoid any use-after-free */
-  if (application->autosave_timer_id != 0)
+#ifdef ENABLE_WAYLAND
+  /* warn the user about restricted features on Wayland */
+  if (WINDOWING_IS_WAYLAND ())
     {
-      g_source_remove (application->autosave_timer_id);
-      application->autosave_timer_id = 0;
-      panel_application_autosave_timer (application);
+      if (!gtk_layer_is_supported ())
+        g_warning ("Wayland detected without layer-shell support (either because of your"
+                   " compositor or because Xfce4-panel was built without this support):"
+                   " Xfce4-panel might not look like a panel and many of its features will"
+                   " not be available");
+      if (!gdk_wayland_display_query_registry (gdk_display_get_default (),
+                                               "zwlr_foreign_toplevel_manager_v1"))
+        g_warning ("Wayland detected without foreign-toplevel-management support (your"
+                   " compositor does not seem to support it): Some Xfce4-panel features will"
+                   " not work (e.g. intellihide), as well as some plugins (e.g. ShowDesktop,"
+                   " Tasklist, WindowMenu)");
     }
-
-  (*G_OBJECT_CLASS (panel_application_parent_class)->dispose) (object);
+#endif
 }
 
 
@@ -262,15 +256,16 @@ panel_application_finalize (GObject *object)
 
   panel_return_if_fail (application->dialogs == NULL);
 
-#ifdef GDK_WINDOWING_X11
+  panel_application_save (application, SAVE_PLUGIN_PROVIDERS);
+
+#ifdef ENABLE_X11
   /* stop autostart timeout */
   if (application->wait_for_wm_timeout_id != 0)
     g_source_remove (application->wait_for_wm_timeout_id);
 #endif
 
   /* destroy all panels */
-  g_slist_foreach (application->windows, (GFunc) (void (*)(void)) gtk_widget_destroy, NULL);
-  g_slist_free (application->windows);
+  g_slist_free_full (application->windows, (GDestroyNotify) gtk_widget_destroy);
 
   g_object_unref (G_OBJECT (application->factory));
 
@@ -282,27 +277,13 @@ panel_application_finalize (GObject *object)
 
 
 
-static gboolean
-panel_application_autosave_timer (gpointer user_data)
-{
-  PanelApplication *application = PANEL_APPLICATION (user_data);
-
-  /* emit a save signal for the plugins */
-  panel_application_save (application, SAVE_PLUGIN_PROVIDERS);
-
-  return TRUE;
-}
-
-
-
 static void
 panel_application_xfconf_window_bindings (PanelApplication *application,
-                                          PanelWindow      *window,
-                                          gboolean          save_properties)
+                                          PanelWindow *window,
+                                          gboolean save_properties)
 {
-  gchar               *property_base;
-  const PanelProperty  properties[] =
-  {
+  gchar *property_base;
+  const PanelProperty properties[] = {
     { "position-locked", G_TYPE_BOOLEAN },
     { "autohide-behavior", G_TYPE_UINT },
     { "popdown-speed", G_TYPE_UINT },
@@ -317,25 +298,23 @@ panel_application_xfconf_window_bindings (PanelApplication *application,
     { "background-style", G_TYPE_UINT },
     { "background-rgba", GDK_TYPE_RGBA },
     { "background-image", G_TYPE_STRING },
+    { "border-width", G_TYPE_UINT },
     { "icon-size", G_TYPE_UINT },
     { "output-name", G_TYPE_STRING },
     { "position", G_TYPE_STRING },
     { "enable-struts", G_TYPE_BOOLEAN },
     { NULL }
   };
-  const PanelProperty  global_properties[] =
-  {
+  const PanelProperty global_properties[] = {
     { "dark-mode", G_TYPE_BOOLEAN },
     { NULL }
   };
-  const PanelProperty  old_properties[] =
-  {
+  const PanelProperty old_properties[] = {
     { "autohide", G_TYPE_BOOLEAN },
     { "disable-struts", G_TYPE_BOOLEAN },
     { NULL }
   };
-  const PanelProperty  new_properties[] =
-  {
+  const PanelProperty new_properties[] = {
     { "autohide-behavior", G_TYPE_UINT },
     { "enable-struts", G_TYPE_BOOLEAN },
     { NULL }
@@ -356,10 +335,44 @@ panel_application_xfconf_window_bindings (PanelApplication *application,
                          PANELS_PROPERTY_PREFIX, global_properties, save_properties);
 
   /* set locking for this panel */
-  panel_window_set_locked (window,
-      xfconf_channel_is_property_locked (application->xfconf, property_base));
+  panel_window_set_locked (window, xfconf_channel_is_property_locked (application->xfconf, property_base));
 
   g_free (property_base);
+}
+
+
+
+static gboolean
+panel_application_remove_plugin_dialog (GtkWindow *parent,
+                                        const gchar *plugin_name)
+{
+  gint response;
+  gchar *primary_text = g_strdup_printf (_("Plugin \"%s\" could not be loaded, do you want to remove it from xfce4-panel configuration?"), plugin_name);
+  const gchar *secondary_text_format =
+    _("This plugin is in the current xfce4-panel configuration but could not be loaded, probably "
+      "due to an installation issue. If you know what you're doing, you can remove it permanently, "
+      "otherwise you'd better quit and make a backup of the current configuration using %s, before "
+      "checking your installation and trying to start xfce4-panel again.");
+  const gchar *url = "<a href=\"https://gitlab.xfce.org/apps/xfce4-panel-profiles\">xfce4-panel-profiles</a>";
+  gchar *secondary_text = g_strdup_printf (secondary_text_format, url);
+
+  GtkWidget *dialog = xfce_message_dialog_new (parent, _("Plugin loading failure"), "dialog-question", primary_text,
+                                               secondary_text, _("_Remove"), GTK_RESPONSE_OK, _("_Quit"), GTK_RESPONSE_CANCEL,
+                                               NULL);
+
+  GtkLabel *label = panel_utils_gtk_dialog_find_label_by_text (GTK_DIALOG (dialog), secondary_text);
+  if (label != NULL)
+    gtk_label_set_use_markup (label, TRUE);
+
+  gtk_dialog_set_default_response (GTK_DIALOG (dialog), GTK_RESPONSE_CANCEL);
+  gtk_window_set_position (GTK_WINDOW (dialog), GTK_WIN_POS_CENTER);
+
+  response = gtk_dialog_run (GTK_DIALOG (dialog));
+  gtk_widget_destroy (dialog);
+  g_free (primary_text);
+  g_free (secondary_text);
+
+  return response == GTK_RESPONSE_OK;
 }
 
 
@@ -367,21 +380,21 @@ panel_application_xfconf_window_bindings (PanelApplication *application,
 static void
 panel_application_load_real (PanelApplication *application)
 {
-  PanelWindow  *window;
-  guint         i, j, n_panels;
-  gchar         buf[50];
-  gchar        *name;
-  gint          unique_id;
-  GdkScreen    *screen;
-  GPtrArray    *array;
+  PanelWindow *window;
+  guint i, j, n_panels;
+  gchar buf[50];
+  gchar *name;
+  gint unique_id;
+  GdkScreen *screen;
+  GPtrArray *array;
   const GValue *value;
-  gchar        *output_name;
-  gint          screen_num;
-  GdkDisplay   *display;
-  GValue        val = { 0, };
-  GPtrArray    *panels;
-  gint          panel_id;
-  gboolean      save_changed_ids = FALSE;
+  gchar *output_name;
+  gint screen_num;
+  GdkDisplay *display;
+  GValue val = G_VALUE_INIT;
+  GPtrArray *panels;
+  gint panel_id;
+  gboolean save_changed_ids = FALSE;
 
   panel_return_if_fail (PANEL_IS_APPLICATION (application));
   panel_return_if_fail (XFCONF_IS_CHANNEL (application->xfconf));
@@ -459,16 +472,19 @@ panel_application_load_real (PanelApplication *application)
                   || !panel_application_plugin_insert (application, window,
                                                        name, unique_id, NULL, -1))
                 {
-                  /* plugin could not be loaded, remove it from the channel */
-                  if (xfconf_channel_has_property (application->xfconf, buf))
-                    xfconf_channel_reset_property (application->xfconf, buf, TRUE);
-
-                  /* show warnings */
-                  g_message ("Plugin \"%s-%d\" was not found and has been "
-                             "removed from the configuration", name, unique_id);
-
-                  /* save configuration change after loading */
-                  save_changed_ids = TRUE;
+                  /* plugin could not be loaded, ask the user what to do */
+                  if (panel_application_remove_plugin_dialog (GTK_WINDOW (window), name))
+                    {
+                      save_changed_ids = TRUE;
+                      if (xfconf_channel_has_property (application->xfconf, buf))
+                        xfconf_channel_reset_property (application->xfconf, buf, TRUE);
+                    }
+                  else
+                    {
+                      save_changed_ids = FALSE;
+                      j = array->len;
+                      gtk_main_quit ();
+                    }
                 }
 
               g_free (name);
@@ -491,13 +507,13 @@ panel_application_load_real (PanelApplication *application)
 
 
 
-#ifdef GDK_WINDOWING_X11
+#ifdef ENABLE_X11
 static gboolean
 panel_application_wait_for_window_manager (gpointer data)
 {
   WaitForWM *wfwm = data;
-  guint      i;
-  gboolean   have_wm = TRUE;
+  guint i;
+  gboolean have_wm = TRUE;
 
   for (i = 0; i < wfwm->atom_count; i++)
     {
@@ -521,7 +537,7 @@ panel_application_wait_for_window_manager (gpointer data)
 static void
 panel_application_wait_for_window_manager_destroyed (gpointer data)
 {
-  WaitForWM        *wfwm = data;
+  WaitForWM *wfwm = data;
   PanelApplication *application = wfwm->application;
 
   application->wait_for_wm_timeout_id = 0;
@@ -529,7 +545,7 @@ panel_application_wait_for_window_manager_destroyed (gpointer data)
   if (!wfwm->have_wm)
     {
       g_printerr (G_LOG_DOMAIN ": No window manager registered on screen 0. "
-                  "To start the panel without this check, run with --disable-wm-check.\n");
+                               "To start the panel without this check, run with --disable-wm-check.\n");
     }
   else
     {
@@ -550,11 +566,11 @@ panel_application_wait_for_window_manager_destroyed (gpointer data)
 
 
 static void
-panel_application_plugin_move_drag_data_get (GtkWidget        *item,
-                                             GdkDragContext   *drag_context,
+panel_application_plugin_move_drag_data_get (GtkWidget *item,
+                                             GdkDragContext *drag_context,
                                              GtkSelectionData *selection_data,
-                                             guint             info,
-                                             guint             drag_time,
+                                             guint info,
+                                             guint drag_time,
                                              PanelApplication *application)
 {
   /* set some data, we never use this, but GTK_DEST_DEFAULT_ALL
@@ -567,18 +583,16 @@ panel_application_plugin_move_drag_data_get (GtkWidget        *item,
 
 
 static void
-panel_application_plugin_move_drag_end (GtkWidget        *item,
-                                        GdkDragContext   *context,
+panel_application_plugin_move_drag_end (GtkWidget *item,
+                                        GdkDragContext *context,
                                         PanelApplication *application)
 {
   panel_return_if_fail (XFCE_IS_PANEL_PLUGIN_PROVIDER (item));
   panel_return_if_fail (PANEL_IS_APPLICATION (application));
 
   /* disconnect this signal */
-  g_signal_handlers_disconnect_by_func (G_OBJECT (item),
-      G_CALLBACK (panel_application_plugin_move_drag_end), application);
-  g_signal_handlers_disconnect_by_func (G_OBJECT (item),
-      G_CALLBACK (panel_application_plugin_move_drag_data_get), application);
+  g_signal_handlers_disconnect_by_func (item, panel_application_plugin_move_drag_end, application);
+  g_signal_handlers_disconnect_by_func (item, panel_application_plugin_move_drag_data_get, application);
 
   /* unblock autohide */
   panel_application_windows_blocked (application, FALSE);
@@ -587,14 +601,14 @@ panel_application_plugin_move_drag_end (GtkWidget        *item,
 
 
 static void
-panel_application_plugin_move (GtkWidget        *item,
+panel_application_plugin_move (GtkWidget *item,
                                PanelApplication *application)
 {
-  GtkTargetList  *target_list;
-  const gchar    *icon_name;
+  GtkTargetList *target_list;
+  const gchar *icon_name;
   GdkDragContext *context;
-  PanelModule    *module;
-  GtkIconTheme   *theme;
+  PanelModule *module;
+  GtkIconTheme *theme;
 
   panel_return_if_fail (XFCE_IS_PANEL_PLUGIN_PROVIDER (item));
   panel_return_if_fail (PANEL_IS_APPLICATION (application));
@@ -612,7 +626,7 @@ panel_application_plugin_move (GtkWidget        *item,
   module = panel_module_get_from_plugin_provider (XFCE_PANEL_PLUGIN_PROVIDER (item));
   icon_name = panel_module_get_icon_name (module);
   theme = gtk_icon_theme_get_for_screen (gtk_widget_get_screen (item));
-  if (!panel_str_is_empty (icon_name)
+  if (!xfce_str_is_empty (icon_name)
       && gtk_icon_theme_has_icon (theme, icon_name))
     gtk_drag_set_icon_name (context, icon_name, 0, 0);
   else
@@ -620,23 +634,23 @@ panel_application_plugin_move (GtkWidget        *item,
 
   /* signal to make the window sensitive again on a drag end */
   g_signal_connect (G_OBJECT (item), "drag-end",
-      G_CALLBACK (panel_application_plugin_move_drag_end), application);
+                    G_CALLBACK (panel_application_plugin_move_drag_end), application);
   g_signal_connect (G_OBJECT (item), "drag-data-get",
-      G_CALLBACK (panel_application_plugin_move_drag_data_get), application);
+                    G_CALLBACK (panel_application_plugin_move_drag_data_get), application);
 }
 
 
 
 static void
 panel_application_plugin_delete_config (PanelApplication *application,
-                                        const gchar      *name,
-                                        gint              unique_id)
+                                        const gchar *name,
+                                        gint unique_id)
 {
   gchar *property;
   gchar *filename, *path;
 
   panel_return_if_fail (PANEL_IS_APPLICATION (application));
-  panel_return_if_fail (!panel_str_is_empty (name));
+  panel_return_if_fail (!xfce_str_is_empty (name));
   panel_return_if_fail (unique_id != -1);
 
   /* remove the xfconf property */
@@ -660,7 +674,7 @@ panel_application_plugin_delete_config (PanelApplication *application,
 
 static void
 panel_application_plugin_remove (GtkWidget *widget,
-                                 gpointer   user_data)
+                                 gpointer user_data)
 {
   panel_return_if_fail (XFCE_IS_PANEL_PLUGIN_PROVIDER (widget));
 
@@ -672,14 +686,14 @@ panel_application_plugin_remove (GtkWidget *widget,
 
 
 static void
-panel_application_plugin_provider_signal (XfcePanelPluginProvider       *provider,
-                                          XfcePanelPluginProviderSignal  provider_signal,
-                                          PanelApplication              *application)
+panel_application_plugin_provider_signal (XfcePanelPluginProvider *provider,
+                                          XfcePanelPluginProviderSignal provider_signal,
+                                          PanelApplication *application)
 {
-  GtkWidget   *itembar;
+  GtkWidget *itembar;
   PanelWindow *window;
-  gint         unique_id;
-  gchar       *name;
+  gint unique_id;
+  gchar *name;
 
   panel_return_if_fail (PANEL_IS_APPLICATION (application));
   panel_return_if_fail (XFCE_IS_PANEL_PLUGIN_PROVIDER (provider));
@@ -693,7 +707,22 @@ panel_application_plugin_provider_signal (XfcePanelPluginProvider       *provide
       /* check the window locking, not that of the provider, because
        * the users might have worked around that and both should be identical */
       if (!panel_window_get_locked (window))
-        panel_application_plugin_move (GTK_WIDGET (provider), application);
+        {
+          /* widget dnd doesn't seem to work on Wayland without holding down a mouse button,
+           * which leads to an unsolvable problem in GTK 3 because the plugin can't catch
+           * the event before its child widgets (no "capture" phase as in GTK 4) */
+          if (WINDOWING_IS_WAYLAND ())
+            {
+              gint item;
+              itembar = gtk_bin_get_child (GTK_BIN (window));
+              item = panel_itembar_get_child_index (PANEL_ITEMBAR (itembar), GTK_WIDGET (provider));
+              g_object_set_data_full (G_OBJECT (window), "prefs-dialog-item",
+                                      g_strdup_printf ("%d", item), g_free);
+              panel_preferences_dialog_show (window);
+            }
+          else
+            panel_application_plugin_move (GTK_WIDGET (provider), application);
+        }
       break;
 
     case PROVIDER_SIGNAL_EXPAND_PLUGIN:
@@ -787,9 +816,9 @@ panel_application_plugin_provider_signal (XfcePanelPluginProvider       *provide
       break;
 
     case PROVIDER_SIGNAL_FOCUS_PLUGIN:
-       /* focus the panel window (as part of focusing a widget within the plugin) */
-       panel_window_focus (window);
-       break;
+      /* focus the panel window (as part of focusing a widget within the plugin) */
+      panel_window_focus (window);
+      break;
 
     case PROVIDER_SIGNAL_SHOW_CONFIGURE:
     case PROVIDER_SIGNAL_SHOW_ABOUT:
@@ -805,15 +834,15 @@ panel_application_plugin_provider_signal (XfcePanelPluginProvider       *provide
 
 
 static gboolean
-panel_application_plugin_insert (PanelApplication  *application,
-                                 PanelWindow       *window,
-                                 const gchar       *name,
-                                 gint               unique_id,
-                                 gchar            **arguments,
-                                 gint               position)
+panel_application_plugin_insert (PanelApplication *application,
+                                 PanelWindow *window,
+                                 const gchar *name,
+                                 gint unique_id,
+                                 gchar **arguments,
+                                 gint position)
 {
   GtkWidget *itembar, *provider;
-  gint       new_unique_id;
+  gint new_unique_id;
 
   panel_return_val_if_fail (PANEL_IS_APPLICATION (application), FALSE);
   panel_return_val_if_fail (PANEL_IS_WINDOW (window), FALSE);
@@ -833,7 +862,7 @@ panel_application_plugin_insert (PanelApplication  *application,
 
   /* add signal to monitor provider signals */
   g_signal_connect (G_OBJECT (provider), "provider-signal",
-      G_CALLBACK (panel_application_plugin_provider_signal), application);
+                    G_CALLBACK (panel_application_plugin_provider_signal), application);
 
   /* add the item to the panel */
   itembar = gtk_bin_get_child (GTK_BIN (window));
@@ -841,7 +870,8 @@ panel_application_plugin_insert (PanelApplication  *application,
                         GTK_WIDGET (provider), position);
 
   /* send all the needed info about the panel to the plugin */
-  panel_window_set_provider_info (window, provider, FALSE);
+  if (gtk_widget_get_realized (GTK_WIDGET (window)))
+    panel_window_set_provider_info (window, provider, FALSE);
 
   /* show the plugin */
   gtk_widget_show (provider);
@@ -852,7 +882,7 @@ panel_application_plugin_insert (PanelApplication  *application,
 
 
 static void
-panel_application_dialog_destroyed (GtkWindow        *dialog,
+panel_application_dialog_destroyed (GtkWindow *dialog,
                                     PanelApplication *application)
 {
   panel_return_if_fail (GTK_IS_WINDOW (dialog));
@@ -870,29 +900,29 @@ panel_application_dialog_destroyed (GtkWindow        *dialog,
 
 
 static void
-panel_application_drag_data_received (PanelWindow      *window,
-                                      GdkDragContext   *context,
-                                      gint              x,
-                                      gint              y,
+panel_application_drag_data_received (PanelWindow *window,
+                                      GdkDragContext *context,
+                                      gint x,
+                                      gint y,
                                       GtkSelectionData *selection_data,
-                                      guint             info,
-                                      guint             drag_time,
-                                      GtkWidget        *itembar)
+                                      guint info,
+                                      guint drag_time,
+                                      GtkWidget *itembar)
 {
-  PanelApplication  *application;
-  GtkWidget         *provider;
-  gboolean           succeed = FALSE;
-  gboolean           save_application = FALSE;
-  const gchar       *name;
-  guint              old_position;
-  gchar            **uris;
-  guint              i;
-  gboolean           found;
-  gint               n_items;
-  gboolean           child_small;
-  gboolean           child_expand;
-  gboolean           child_shrink;
-  GtkWidget         *parent_itembar;
+  PanelApplication *application;
+  GtkWidget *provider;
+  gboolean succeed = FALSE;
+  gboolean save_application = FALSE;
+  const gchar *name;
+  guint old_position;
+  gchar **uris;
+  guint i;
+  gboolean found;
+  gint n_items;
+  gboolean child_small;
+  gboolean child_expand;
+  gboolean child_shrink;
+  GtkWidget *parent_itembar;
 
   panel_return_if_fail (PANEL_IS_WINDOW (window));
   panel_return_if_fail (GDK_IS_DRAG_CONTEXT (context));
@@ -1008,10 +1038,10 @@ panel_application_drag_data_received (PanelWindow      *window,
               uris = gtk_selection_data_get_uris (selection_data);
               if (G_LIKELY (uris != NULL))
                 {
+                  const gchar *text = _("This will create a new launcher plugin on the panel and inserts "
+                                        "the dropped files as menu items.");
                   n_items = g_strv_length (uris);
-                  if (xfce_dialog_confirm (NULL, "list-add", _("Create _Launcher"),
-                                           _("This will create a new launcher plugin on the panel and inserts "
-                                             "the dropped files as menu items."),
+                  if (xfce_dialog_confirm (NULL, "list-add", _("Create _Launcher"), text,
                                            ngettext ("Create new launcher from %d desktop file",
                                                      "Create new launcher from %d desktop files",
                                                      n_items),
@@ -1045,7 +1075,7 @@ panel_application_drag_data_received (PanelWindow      *window,
     }
   else
     {
-      invalid_drag:
+invalid_drag:
       gdk_drag_status (context, 0, drag_time);
     }
 
@@ -1055,16 +1085,16 @@ panel_application_drag_data_received (PanelWindow      *window,
 
 
 static gboolean
-panel_application_drag_motion (GtkWidget        *window,
-                               GdkDragContext   *context,
-                               gint              x,
-                               gint              y,
-                               guint             drag_time,
+panel_application_drag_motion (GtkWidget *window,
+                               GdkDragContext *context,
+                               gint x,
+                               gint y,
+                               guint drag_time,
                                PanelApplication *application)
 {
-  GdkAtom        target;
-  GtkWidget     *itembar;
-  GdkDragAction  drag_action = 0;
+  GdkAtom target;
+  GtkWidget *itembar;
+  GdkDragAction drag_action = 0;
 
   panel_return_val_if_fail (PANEL_IS_WINDOW (window), FALSE);
   panel_return_val_if_fail (GDK_IS_DRAG_CONTEXT (context), FALSE);
@@ -1123,11 +1153,11 @@ not_a_drop_zone:
 
 
 static gboolean
-panel_application_drag_drop (GtkWidget        *window,
-                             GdkDragContext   *context,
-                             gint              x,
-                             gint              y,
-                             guint             drag_time,
+panel_application_drag_drop (GtkWidget *window,
+                             GdkDragContext *context,
+                             gint x,
+                             gint y,
+                             guint drag_time,
                              PanelApplication *application)
 {
   GdkAtom target;
@@ -1156,9 +1186,9 @@ panel_application_drag_drop (GtkWidget        *window,
 
 
 static void
-panel_application_drag_leave (GtkWidget        *window,
-                              GdkDragContext   *context,
-                              guint             drag_time,
+panel_application_drag_leave (GtkWidget *window,
+                              GdkDragContext *context,
+                              guint drag_time,
                               PanelApplication *application)
 {
   GtkWidget *itembar;
@@ -1181,7 +1211,7 @@ panel_application_drag_leave (GtkWidget        *window,
 
 static gboolean
 panel_application_window_id_exists (PanelApplication *application,
-                                    gint              id)
+                                    gint id)
 {
   GSList *li;
 
@@ -1215,21 +1245,21 @@ panel_application_get (void)
 
 
 gboolean
-panel_application_load (PanelApplication  *application,
-                        gboolean           disable_wm_check)
+panel_application_load (PanelApplication *application,
+                        gboolean disable_wm_check)
 {
-#ifdef GDK_WINDOWING_X11
-  Display    *display;
-  WaitForWM  *wfwm;
-  guint       i;
-  gchar     **atom_names;
+#ifdef ENABLE_X11
+  Display *display;
+  WaitForWM *wfwm;
+  guint i;
+  gchar **atom_names;
 
-  if (!disable_wm_check)
+  if (!disable_wm_check && WINDOWING_IS_X11 ())
     {
       display = XOpenDisplay (NULL);
       if (display == NULL)
         {
-          g_message ("Unable to open display from environment variable DISPLAY='%s', exiting.",
+          g_warning ("Unable to open display from environment variable DISPLAY='%s', exiting.",
                      g_getenv ("DISPLAY"));
           return FALSE;
         }
@@ -1256,8 +1286,8 @@ panel_application_load (PanelApplication  *application,
 
       /* setup timeout to check for a window manager */
       application->wait_for_wm_timeout_id =
-          gdk_threads_add_timeout_full (G_PRIORITY_DEFAULT_IDLE, 50, panel_application_wait_for_window_manager,
-                                        wfwm, panel_application_wait_for_window_manager_destroyed);
+        gdk_threads_add_timeout_full (G_PRIORITY_DEFAULT_IDLE, 50, panel_application_wait_for_window_manager,
+                                      wfwm, panel_application_wait_for_window_manager_destroyed);
     }
   else
     {
@@ -1276,13 +1306,13 @@ panel_application_load (PanelApplication  *application,
 
 void
 panel_application_save (PanelApplication *application,
-                        PanelSaveTypes    save_types)
+                        PanelSaveTypes save_types)
 {
-  GSList        *li;
+  GSList *li;
   XfconfChannel *channel = application->xfconf;
-  GValue        *value;
-  GPtrArray     *panels = NULL;
-  gint           panel_id;
+  GValue *value;
+  GPtrArray *panels = NULL;
+  gint panel_id;
 
   panel_return_if_fail (PANEL_IS_APPLICATION (application));
   panel_return_if_fail (XFCONF_IS_CHANNEL (channel));
@@ -1323,18 +1353,18 @@ panel_application_save (PanelApplication *application,
 
 void
 panel_application_save_window (PanelApplication *application,
-                               PanelWindow      *window,
-                               PanelSaveTypes    save_types)
+                               PanelWindow *window,
+                               PanelSaveTypes save_types)
 {
-  GList                   *children, *lp;
-  GtkWidget               *itembar;
+  GList *children, *lp;
+  GtkWidget *itembar;
   XfcePanelPluginProvider *provider;
-  gchar                    buf[50];
-  XfconfChannel           *channel = application->xfconf;
-  GPtrArray               *array = NULL;
-  GValue                  *value;
-  gint                     plugin_id;
-  gint                     panel_id;
+  gchar buf[50];
+  XfconfChannel *channel = application->xfconf;
+  GPtrArray *array = NULL;
+  GValue *value;
+  gint plugin_id;
+  gint panel_id;
 
   panel_return_if_fail (PANEL_IS_APPLICATION (application));
   panel_return_if_fail (PANEL_IS_WINDOW (window));
@@ -1409,7 +1439,7 @@ panel_application_save_window (PanelApplication *application,
 
 void
 panel_application_take_dialog (PanelApplication *application,
-                               GtkWindow        *dialog)
+                               GtkWindow *dialog)
 {
   panel_return_if_fail (PANEL_IS_APPLICATION (application));
   panel_return_if_fail (GTK_IS_WINDOW (dialog));
@@ -1420,7 +1450,7 @@ panel_application_take_dialog (PanelApplication *application,
 
   /* monitor window destruction */
   g_signal_connect (G_OBJECT (dialog), "destroy",
-      G_CALLBACK (panel_application_dialog_destroyed), application);
+                    G_CALLBACK (panel_application_dialog_destroyed), application);
   application->dialogs = g_slist_prepend (application->dialogs, dialog);
 }
 
@@ -1446,10 +1476,10 @@ panel_application_destroy_dialogs (PanelApplication *application)
 
 
 void
-panel_application_add_new_item (PanelApplication  *application,
-                                PanelWindow       *window,
-                                const gchar       *plugin_name,
-                                gchar            **arguments)
+panel_application_add_new_item (PanelApplication *application,
+                                PanelWindow *window,
+                                const gchar *plugin_name,
+                                gchar **arguments)
 {
   gint panel_id;
 
@@ -1503,8 +1533,7 @@ panel_application_add_new_item (PanelApplication  *application,
     }
   else
     {
-      g_warning ("The plugin \"%s\" you want to add is not "
-                 "known by the panel", plugin_name);
+      g_warning ("The plugin \"%s\" you want to add is not known by the panel", plugin_name);
     }
 }
 
@@ -1512,19 +1541,19 @@ panel_application_add_new_item (PanelApplication  *application,
 
 PanelWindow *
 panel_application_new_window (PanelApplication *application,
-                              GdkScreen        *screen,
-                              gint              panel_id,
-                              gboolean          new_window)
+                              GdkScreen *screen,
+                              gint panel_id,
+                              gboolean new_window)
 {
-  GtkWidget          *window;
-  GtkWidget          *itembar;
-  gchar              *property;
-  gint                idx;
-  static const gchar *props[] = { "mode", "size", "nrows", "icon-size", "dark-mode" };
-  guint               i;
-  gchar              *position;
-  static gint         unqiue_id_counter = 1;
-  GtkWindowGroup     *window_group;
+  GtkWidget *window;
+  GtkWidget *itembar;
+  gchar *property;
+  gint idx;
+  static const gchar *props[] = { "mode", "size", "nrows", "icon-size", "dark-mode", "border-width" };
+  guint i;
+  gchar *position;
+  static gint unqiue_id_counter = 1;
+  GtkWindowGroup *window_group;
 
   panel_return_val_if_fail (PANEL_IS_APPLICATION (application), NULL);
   panel_return_val_if_fail (screen == NULL || GDK_IS_SCREEN (screen), NULL);
@@ -1587,7 +1616,7 @@ panel_application_new_window (PanelApplication *application,
   if (!panel_window_has_position (PANEL_WINDOW (window)))
     {
       if (!new_window)
-        g_message ("No panel position set, restoring default");
+        g_warning ("No panel position set, restoring default");
 
       /* create a position so not all panels overlap */
       idx = g_slist_index (application->windows, window);
@@ -1601,6 +1630,12 @@ panel_application_new_window (PanelApplication *application,
   if (new_window)
     panel_application_save (application, SAVE_PANEL_IDS);
 
+  /*
+   * Do not show the panel window here, this will trigger allocation and/or critical
+   * warnings if the output to which it is assigned is disconnected. It will be shown
+   * in panel_window_screen_layout_changed() if necessary.
+   */
+
   return PANEL_WINDOW (window);
 }
 
@@ -1608,11 +1643,11 @@ panel_application_new_window (PanelApplication *application,
 
 void
 panel_application_remove_window (PanelApplication *application,
-                                 PanelWindow      *window)
+                                 PanelWindow *window)
 {
-  gchar     *property;
+  gchar *property;
   GtkWidget *itembar;
-  gint       panel_id;
+  gint panel_id;
 
   panel_return_if_fail (PANEL_IS_WINDOW (window));
   panel_return_if_fail (PANEL_IS_APPLICATION (application));
@@ -1636,8 +1671,7 @@ panel_application_remove_window (PanelApplication *application,
 
   /* set all the plugins on this panel the remove signal */
   itembar = gtk_bin_get_child (GTK_BIN (window));
-  gtk_container_foreach (GTK_CONTAINER (itembar),
-      panel_application_plugin_remove, NULL);
+  gtk_container_foreach (GTK_CONTAINER (itembar), panel_application_plugin_remove, NULL);
 
   /* destroy */
   gtk_widget_destroy (GTK_WIDGET (window));
@@ -1668,8 +1702,8 @@ panel_application_get_windows (PanelApplication *application)
 
 
 PanelWindow *
-panel_application_get_window (PanelApplication  *application,
-                              gint               panel_id)
+panel_application_get_window (PanelApplication *application,
+                              gint panel_id)
 {
   GSList *li;
 
@@ -1686,7 +1720,7 @@ panel_application_get_window (PanelApplication  *application,
 
 void
 panel_application_window_select (PanelApplication *application,
-                                 PanelWindow      *window)
+                                 PanelWindow *window)
 {
   GSList *li;
 
@@ -1701,7 +1735,7 @@ panel_application_window_select (PanelApplication *application,
 
 void
 panel_application_windows_blocked (PanelApplication *application,
-                                   gboolean          blocked)
+                                   gboolean blocked)
 {
   void (*autohide_func) (PanelWindow *);
 
@@ -1755,23 +1789,30 @@ panel_application_get_locked (PanelApplication *application)
 void
 panel_application_logout (void)
 {
-  XfceSMClient *sm_client;
-  GError       *error = NULL;
-  const gchar  *command = "xfce4-session-logout";
+  GError *error = NULL;
+  const gchar *command = "xfce4-session-logout";
 
+#ifdef ENABLE_X11
   /* first try to session client to logout else fallback and spawn xfce4-session-logout */
-  sm_client = xfce_sm_client_get ();
-  if (xfce_sm_client_is_connected (sm_client))
+  if (WINDOWING_IS_X11 ())
     {
-      xfce_sm_client_request_shutdown (sm_client, XFCE_SM_CLIENT_SHUTDOWN_HINT_ASK);
-
-      return;
+      XfceSMClient *sm_client = xfce_sm_client_get ();
+      if (xfce_sm_client_is_connected (sm_client))
+        {
+          xfce_sm_client_request_shutdown (sm_client, XFCE_SM_CLIENT_SHUTDOWN_HINT_ASK);
+          return;
+        }
     }
-  else if (g_getenv ("SESSION_MANAGER") == NULL)
+#endif
+
+  if (g_getenv ("SESSION_MANAGER") == NULL)
     {
-      if (xfce_dialog_confirm (NULL, "application-exit", _("Quit"),
-          _("You have started X without session manager. Clicking Quit will close the X server."),
-          _("Are you sure you want to quit the panel?")))
+      const gchar *text = NULL;
+      if (WINDOWING_IS_X11 ())
+        text = _("You have started X without session manager. Clicking Quit will close the X server.");
+
+      if (xfce_dialog_confirm (NULL, "application-exit",
+                               _("Quit"), text, _("Are you sure you want to quit the panel?")))
         command = "xfce4-panel --quit";
       else
         return;

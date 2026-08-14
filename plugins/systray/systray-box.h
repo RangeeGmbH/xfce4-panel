@@ -19,55 +19,61 @@
 #ifndef __SYSTRAY_BOX_H__
 #define __SYSTRAY_BOX_H__
 
-typedef struct _SystrayBoxClass SystrayBoxClass;
-typedef struct _SystrayBox      SystrayBox;
+#include "libxfce4panel/libxfce4panel.h"
 
-/* keep those in sync with the glade file too! */
-#define SIZE_MAX_MIN     (12)
-#define SIZE_MAX_MAX     (64)
-#define SIZE_MAX_DEFAULT (22)
+#include <gtk/gtk.h>
 
-#define XFCE_TYPE_SYSTRAY_BOX            (systray_box_get_type ())
-#define XFCE_SYSTRAY_BOX(obj)            (G_TYPE_CHECK_INSTANCE_CAST ((obj), XFCE_TYPE_SYSTRAY_BOX, SystrayBox))
-#define XFCE_SYSTRAY_BOX_CLASS(klass)    (G_TYPE_CHECK_CLASS_CAST ((klass), XFCE_TYPE_SYSTRAY_BOX, SystrayBoxClass))
-#define XFCE_IS_SYSTRAY_BOX(obj)         (G_TYPE_CHECK_INSTANCE_TYPE ((obj), XFCE_TYPE_SYSTRAY_BOX))
-#define XFCE_IS_SYSTRAY_BOX_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE ((klass), XFCE_TYPE_SYSTRAY_BOX))
-#define XFCE_SYSTRAY_BOX_GET_CLASS(obj)  (G_TYPE_INSTANCE_GET_CLASS ((obj), XFCE_TYPE_SYSTRAY_BOX, SystrayBoxClass))
+G_BEGIN_DECLS
 
-GType      systray_box_get_type        (void) G_GNUC_CONST;
+#define SYSTRAY_TYPE_BOX (systray_box_get_type ())
+G_DECLARE_FINAL_TYPE (SystrayBox, systray_box, SYSTRAY, BOX, GtkContainer)
 
-void       systray_box_register_type   (XfcePanelTypeModule *module);
+void
+systray_box_register_type (XfcePanelTypeModule *module);
 
-GtkWidget *systray_box_new             (void) G_GNUC_MALLOC;
+GtkWidget *
+systray_box_new (void) G_GNUC_MALLOC;
 
-void       systray_box_set_orientation (SystrayBox          *box,
-                                        GtkOrientation       orientation);
+void
+systray_box_set_orientation (SystrayBox *box,
+                             GtkOrientation orientation);
 
-void       systray_box_set_dimensions  (SystrayBox          *box,
-                                        gint                 icon_size,
-                                        gint                 n_rows,
-                                        gint                 row_size,
-                                        gint                 padding);
+void
+systray_box_set_dimensions (SystrayBox *box,
+                            gint icon_size,
+                            gint n_rows,
+                            gint row_size,
+                            gint padding);
 
-void       systray_box_set_size_alloc  (SystrayBox          *box,
-                                        gint                 size_alloc);
+void
+systray_box_set_size_alloc (SystrayBox *box,
+                            gint size_alloc);
 
-void       systray_box_set_show_hidden (SystrayBox          *box,
-                                        gboolean             show_hidden);
+void
+systray_box_set_show_hidden (SystrayBox *box,
+                             gboolean show_hidden);
 
-gboolean   systray_box_get_show_hidden (SystrayBox          *box);
+gboolean
+systray_box_get_show_hidden (SystrayBox *box);
 
-void       systray_box_set_squared     (SystrayBox          *box,
-                                        gboolean             square_icons);
+void
+systray_box_set_squared (SystrayBox *box,
+                         gboolean square_icons);
 
-gboolean   systray_box_get_squared     (SystrayBox          *box);
+gboolean
+systray_box_get_squared (SystrayBox *box);
 
-void       systray_box_update          (SystrayBox          *box,
-                                        GSList              *names_ordered);
+void
+systray_box_update (SystrayBox *box,
+                    GSList *names_ordered);
 
-gboolean   systray_box_has_hidden_items (SystrayBox         *box);
+gboolean
+systray_box_has_hidden_items (SystrayBox *box);
 
-void       systray_box_set_single_row  (SystrayBox          *box,
-                                        gboolean             single_row);
+void
+systray_box_set_single_row (SystrayBox *box,
+                            gboolean single_row);
+
+G_END_DECLS
 
 #endif /* !__SYSTRAY_BOX_H__ */

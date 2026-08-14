@@ -17,40 +17,30 @@
  */
 
 #ifdef HAVE_CONFIG_H
-#include <config.h>
+#include "config.h"
 #endif
 
-#ifdef HAVE_STRING_H
-#include <string.h>
-#endif
+#include "panel-module-factory.h"
 
-#ifdef HAVE_TIME_H
-#include <time.h>
-#endif
+#include "common/panel-debug.h"
+#include "common/panel-private.h"
+#include "libxfce4panel/libxfce4panel.h"
 
 #include <libxfce4util/libxfce4util.h>
 
-#include <common/panel-private.h>
-#include <common/panel-debug.h>
-
-#include <libxfce4panel/libxfce4panel.h>
-
-#include <panel/panel-module.h>
-#include <panel/panel-module-factory.h>
-
-#define PANEL_PLUGINS_DATA_DIR     (DATADIR G_DIR_SEPARATOR_S "panel" G_DIR_SEPARATOR_S "plugins")
-#define PANEL_PLUGINS_DATA_DIR_OLD (DATADIR G_DIR_SEPARATOR_S "panel-plugins")
 
 
-
-static void     panel_module_factory_finalize        (GObject                  *object);
-static void     panel_module_factory_load_modules    (PanelModuleFactory       *factory,
-                                                      gboolean                  warn_if_known);
-static gboolean panel_module_factory_modules_cleanup (gpointer                  key,
-                                                      gpointer                  value,
-                                                      gpointer                  user_data);
-static void     panel_module_factory_remove_plugin   (gpointer                  user_data,
-                                                      GObject                  *where_the_object_was);
+static void
+panel_module_factory_finalize (GObject *object);
+static void
+panel_module_factory_load_modules (PanelModuleFactory *factory);
+static gboolean
+panel_module_factory_modules_cleanup (gpointer key,
+                                      gpointer value,
+                                      gpointer user_data);
+static void
+panel_module_factory_remove_plugin (gpointer user_data,
+                                    GObject *where_the_object_was);
 
 
 
@@ -60,33 +50,28 @@ enum
   LAST_SIGNAL
 };
 
-struct _PanelModuleFactoryClass
-{
-  GObjectClass __parent__;
-};
-
 struct _PanelModuleFactory
 {
-  GObject  __parent__;
+  GObject __parent__;
 
   /* relation for name -> PanelModule */
   GHashTable *modules;
 
   /* all plugins in all windows */
-  GSList     *plugins;
+  GSList *plugins;
 
   /* if the factory contains the launcher plugin */
-  guint       has_launcher : 1;
+  guint has_launcher : 1;
 };
 
 
 
-static guint    factory_signals[LAST_SIGNAL];
-static gboolean force_all_external = FALSE;
+static guint factory_signals[LAST_SIGNAL];
+static PanelModuleRunMode force_all_run_mode = PANEL_MODULE_RUN_MODE_NONE;
 
 
 
-G_DEFINE_TYPE (PanelModuleFactory, panel_module_factory, G_TYPE_OBJECT)
+G_DEFINE_FINAL_TYPE (PanelModuleFactory, panel_module_factory, G_TYPE_OBJECT)
 
 
 
@@ -101,13 +86,12 @@ panel_module_factory_class_init (PanelModuleFactoryClass *klass)
   /**
    * Emitted when the unique status of one of the modules changed.
    **/
-  factory_signals[UNIQUE_CHANGED] =
-    g_signal_new (g_intern_static_string ("unique-changed"),
-                  G_TYPE_FROM_CLASS (gobject_class),
-                  G_SIGNAL_RUN_LAST,
-                  0, NULL, NULL,
-                  g_cclosure_marshal_VOID__OBJECT,
-                  G_TYPE_NONE, 1, PANEL_TYPE_MODULE);
+  factory_signals[UNIQUE_CHANGED] = g_signal_new (g_intern_static_string ("unique-changed"),
+                                                  G_TYPE_FROM_CLASS (gobject_class),
+                                                  G_SIGNAL_RUN_LAST,
+                                                  0, NULL, NULL,
+                                                  g_cclosure_marshal_VOID__OBJECT,
+                                                  G_TYPE_NONE, 1, PANEL_TYPE_MODULE);
 }
 
 
@@ -120,7 +104,7 @@ panel_module_factory_init (PanelModuleFactory *factory)
                                             g_free, g_object_unref);
 
   /* load all the modules */
-  panel_module_factory_load_modules (factory, TRUE);
+  panel_module_factory_load_modules (factory);
 }
 
 
@@ -140,21 +124,21 @@ panel_module_factory_finalize (GObject *object)
 
 static void
 panel_module_factory_load_modules_dir (PanelModuleFactory *factory,
-                                       const gchar        *path,
-                                       gboolean            warn_if_known)
+                                       const gchar *datadir,
+                                       const gchar *libdir)
 {
-  GDir        *dir;
+  GDir *dir;
   const gchar *name, *p;
-  gchar       *filename;
+  gchar *filename;
   PanelModule *module;
-  gchar       *internal_name;
+  gchar *internal_name;
 
   /* try to open the directory */
-  dir = g_dir_open (path, 0, NULL);
+  dir = g_dir_open (datadir, 0, NULL);
   if (G_UNLIKELY (dir == NULL))
     return;
 
-  panel_debug (PANEL_DEBUG_MODULE_FACTORY, "reading %s", path);
+  panel_debug (PANEL_DEBUG_MODULE_FACTORY, "reading %s", datadir);
 
   /* walk the directory */
   for (;;)
@@ -169,7 +153,7 @@ panel_module_factory_load_modules_dir (PanelModuleFactory *factory,
         continue;
 
       /* create the full .desktop filename */
-      filename = g_build_filename (path, name, NULL);
+      filename = g_build_filename (datadir, name, NULL);
 
       /* find the dot in the name, this cannot
        * fail since it passed the .desktop suffix check */
@@ -180,18 +164,13 @@ panel_module_factory_load_modules_dir (PanelModuleFactory *factory,
 
       /* check if the modules name is already loaded */
       if (g_hash_table_lookup (factory->modules, internal_name) != NULL)
-        {
-          if (warn_if_known)
-            panel_debug (PANEL_DEBUG_MODULE_FACTORY, "Another plugin already registered with "
-                         "the internal name \"%s\".", internal_name);
-
-          goto exists;
-        }
+        goto exists;
 
       /* try to load the module */
       module = panel_module_new_from_desktop_file (filename,
                                                    internal_name,
-                                                   force_all_external);
+                                                   libdir,
+                                                   force_all_run_mode);
 
       if (G_LIKELY (module != NULL))
         {
@@ -204,7 +183,7 @@ panel_module_factory_load_modules_dir (PanelModuleFactory *factory,
         }
       else
         {
-          exists:
+exists:
           g_free (internal_name);
         }
 
@@ -217,14 +196,85 @@ panel_module_factory_load_modules_dir (PanelModuleFactory *factory,
 
 
 static void
-panel_module_factory_load_modules (PanelModuleFactory *factory,
-                                   gboolean            warn_if_known)
+panel_module_factory_load_modules (PanelModuleFactory *factory)
 {
+  const gchar *plugin_dir_suffix = G_DIR_SEPARATOR_S "xfce4" G_DIR_SEPARATOR_S "panel" G_DIR_SEPARATOR_S "plugins";
+  GList *datadirs = NULL, *libdirs = NULL;
+  gboolean build_dirs_added = FALSE;
+
   panel_return_if_fail (PANEL_IS_MODULE_FACTORY (factory));
 
-  /* load from the new and old location */
-  panel_module_factory_load_modules_dir (factory, PANEL_PLUGINS_DATA_DIR, warn_if_known);
-  panel_module_factory_load_modules_dir (factory, PANEL_PLUGINS_DATA_DIR_OLD, warn_if_known);
+  /* if DATADIR and LIBDIR have same PREFIX, try to derive plugin directories from XDG_DATA_DIRS */
+  if (g_str_has_prefix (DATADIR, PREFIX) && g_str_has_prefix (LIBDIR, PREFIX))
+    {
+      gsize build_prefix_len = strlen (PREFIX);
+      const gchar *datadir_suffix = (const gchar *) DATADIR + build_prefix_len;
+      const gchar *libdir_suffix = (const gchar *) LIBDIR + build_prefix_len;
+
+      if (g_str_has_prefix (datadir_suffix, G_DIR_SEPARATOR_S) && g_str_has_prefix (libdir_suffix, G_DIR_SEPARATOR_S))
+        {
+          const gchar *const *sys_datadirs = g_get_system_data_dirs ();
+          const gchar *user_datadir = g_get_user_data_dir ();
+          GHashTable *unique = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, NULL);
+
+          for (const gchar *const *p = sys_datadirs; *p != NULL; p++)
+            {
+              /* avoid trailing '/' or similar that could break string comparison below */
+              gchar *path = g_canonicalize_filename (*p, NULL);
+
+              if (g_hash_table_add (unique, (gpointer) path) && g_str_has_suffix (path, datadir_suffix))
+                {
+                  gsize prefix_len = g_strrstr_len (path, -1, datadir_suffix) - path;
+                  gchar *prefix = g_strndup (path, prefix_len);
+                  gchar *datadir = g_strconcat (path, plugin_dir_suffix, NULL);
+                  gchar *libdir = g_strconcat (prefix, libdir_suffix, plugin_dir_suffix, NULL);
+                  datadirs = g_list_prepend (datadirs, datadir);
+                  libdirs = g_list_prepend (libdirs, libdir);
+                  if (!build_dirs_added && g_strcmp0 (prefix, PREFIX) == 0)
+                    build_dirs_added = TRUE;
+                  g_free (prefix);
+                }
+            }
+
+          g_hash_table_destroy (unique);
+          datadirs = g_list_reverse (datadirs);
+          libdirs = g_list_reverse (libdirs);
+
+          if (!build_dirs_added)
+            {
+              gchar *datadir = g_strconcat (DATADIR, plugin_dir_suffix, NULL);
+              gchar *libdir = g_strconcat (LIBDIR, plugin_dir_suffix, NULL);
+              datadirs = g_list_prepend (datadirs, datadir);
+              libdirs = g_list_prepend (libdirs, libdir);
+              build_dirs_added = TRUE;
+            }
+
+          if (g_str_has_suffix (user_datadir, datadir_suffix))
+            {
+              gsize prefix_len = g_strrstr_len (user_datadir, -1, datadir_suffix) - user_datadir;
+              gchar *prefix = g_strndup (user_datadir, prefix_len);
+              gchar *datadir = g_strconcat (user_datadir, plugin_dir_suffix, NULL);
+              gchar *libdir = g_strconcat (prefix, libdir_suffix, plugin_dir_suffix, NULL);
+              datadirs = g_list_prepend (datadirs, datadir);
+              libdirs = g_list_prepend (libdirs, libdir);
+              g_free (prefix);
+            }
+        }
+    }
+
+  if (!build_dirs_added)
+    {
+      gchar *datadir = g_strconcat (DATADIR, plugin_dir_suffix, NULL);
+      gchar *libdir = g_strconcat (LIBDIR, plugin_dir_suffix, NULL);
+      datadirs = g_list_prepend (datadirs, datadir);
+      libdirs = g_list_prepend (libdirs, libdir);
+    }
+
+  for (GList *lp = datadirs, *lq = libdirs; lp != NULL && lq != NULL; lp = lp->next, lq = lq->next)
+    panel_module_factory_load_modules_dir (factory, lp->data, lq->data);
+
+  g_list_free_full (datadirs, g_free);
+  g_list_free_full (libdirs, g_free);
 }
 
 
@@ -235,8 +285,8 @@ panel_module_factory_modules_cleanup (gpointer key,
                                       gpointer user_data)
 {
   PanelModuleFactory *factory = PANEL_MODULE_FACTORY (user_data);
-  PanelModule        *module = PANEL_MODULE (value);
-  gboolean            remove_from_table;
+  PanelModule *module = PANEL_MODULE (value);
+  gboolean remove_from_table;
 
   panel_return_val_if_fail (PANEL_IS_MODULE (module), TRUE);
   panel_return_val_if_fail (PANEL_IS_MODULE_FACTORY (factory), TRUE);
@@ -246,8 +296,7 @@ panel_module_factory_modules_cleanup (gpointer key,
 
   /* if we're going to remove this item, check if it is the launcher */
   if (remove_from_table
-      && g_strcmp0 (LAUNCHER_PLUGIN_NAME,
-                    panel_module_get_name (module)) == 0)
+      && g_strcmp0 (LAUNCHER_PLUGIN_NAME, panel_module_get_name (module)) == 0)
     factory->has_launcher = FALSE;
 
   return remove_from_table;
@@ -256,8 +305,8 @@ panel_module_factory_modules_cleanup (gpointer key,
 
 
 static void
-panel_module_factory_remove_plugin (gpointer  user_data,
-                                    GObject  *where_the_object_was)
+panel_module_factory_remove_plugin (gpointer user_data,
+                                    GObject *where_the_object_was)
 {
   PanelModuleFactory *factory = PANEL_MODULE_FACTORY (user_data);
 
@@ -269,13 +318,12 @@ panel_module_factory_remove_plugin (gpointer  user_data,
 
 static inline gboolean
 panel_module_factory_unique_id_exists (PanelModuleFactory *factory,
-                                       gint                unique_id)
+                                       gint unique_id)
 {
   GSList *li;
 
   for (li = factory->plugins; li != NULL; li = li->next)
-    if (xfce_panel_plugin_provider_get_unique_id (
-        XFCE_PANEL_PLUGIN_PROVIDER (li->data)) == unique_id)
+    if (xfce_panel_plugin_provider_get_unique_id (li->data) == unique_id)
       return TRUE;
 
   return FALSE;
@@ -305,17 +353,14 @@ panel_module_factory_get (void)
 
 
 void
-panel_module_factory_force_all_external (void)
+panel_module_factory_force_run_mode (PanelModuleRunMode mode)
 {
-  force_all_external = TRUE;
+  const gchar *mode_name = mode == PANEL_MODULE_RUN_MODE_INTERNAL ? "internal" : "external";
 
-  panel_debug (PANEL_DEBUG_MODULE_FACTORY,
-               "forcing all plugins to run external");
-
-#ifndef NDEBUG
+  force_all_run_mode = mode;
+  panel_debug (PANEL_DEBUG_MODULE_FACTORY, "Forcing all plugins to run %s", mode_name);
   if (!panel_debug_has_domain (PANEL_DEBUG_YES))
-    g_message ("Forcing all plugins to run external.");
-#endif
+    g_message ("Forcing all plugins to run %s", mode_name);
 }
 
 
@@ -340,7 +385,6 @@ panel_module_factory_emit_unique_changed (PanelModule *module)
   factory = panel_module_factory_get ();
   g_signal_emit (G_OBJECT (factory), factory_signals[UNIQUE_CHANGED], 0, module);
   g_object_unref (G_OBJECT (factory));
-
 }
 
 
@@ -351,11 +395,10 @@ panel_module_factory_get_modules (PanelModuleFactory *factory)
   panel_return_val_if_fail (PANEL_IS_MODULE_FACTORY (factory), NULL);
 
   /* add new modules to the hash table */
-  panel_module_factory_load_modules (factory, FALSE);
+  panel_module_factory_load_modules (factory);
 
   /* remove modules that are not found on the harddisk */
-  g_hash_table_foreach_remove (factory->modules,
-      panel_module_factory_modules_cleanup, factory);
+  g_hash_table_foreach_remove (factory->modules, panel_module_factory_modules_cleanup, factory);
 
   return g_hash_table_get_values (factory->modules);
 }
@@ -364,7 +407,7 @@ panel_module_factory_get_modules (PanelModuleFactory *factory)
 
 gboolean
 panel_module_factory_has_module (PanelModuleFactory *factory,
-                                 const gchar        *name)
+                                 const gchar *name)
 {
   panel_return_val_if_fail (PANEL_IS_MODULE_FACTORY (factory), FALSE);
   panel_return_val_if_fail (name != NULL, FALSE);
@@ -376,10 +419,10 @@ panel_module_factory_has_module (PanelModuleFactory *factory,
 
 GSList *
 panel_module_factory_get_plugins (PanelModuleFactory *factory,
-                                  const gchar        *plugin_name)
+                                  const gchar *plugin_name)
 {
   GSList *li, *plugins = NULL;
-  gchar  *unique_name;
+  gchar *unique_name;
 
   panel_return_val_if_fail (PANEL_IS_MODULE_FACTORY (factory), NULL);
   panel_return_val_if_fail (plugin_name != NULL, NULL);
@@ -411,16 +454,16 @@ panel_module_factory_get_plugins (PanelModuleFactory *factory,
 
 
 GtkWidget *
-panel_module_factory_new_plugin (PanelModuleFactory  *factory,
-                                 const gchar         *name,
-                                 GdkScreen           *screen,
-                                 gint                 unique_id,
-                                 gchar              **arguments,
-                                 gint                *return_unique_id)
+panel_module_factory_new_plugin (PanelModuleFactory *factory,
+                                 const gchar *name,
+                                 GdkScreen *screen,
+                                 gint unique_id,
+                                 gchar **arguments,
+                                 gint *return_unique_id)
 {
   PanelModule *module;
-  GtkWidget   *provider;
-  static gint  unique_id_counter = 0;
+  GtkWidget *provider;
+  static gint unique_id_counter = 0;
 
   panel_return_val_if_fail (PANEL_IS_MODULE_FACTORY (factory), NULL);
   panel_return_val_if_fail (GDK_IS_SCREEN (screen), NULL);

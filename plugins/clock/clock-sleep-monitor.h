@@ -18,18 +18,17 @@
 
 #pragma once
 
-#include <glib.h>
 #include <glib-object.h>
 
 G_BEGIN_DECLS
 
-typedef struct _ClockSleepMonitor ClockSleepMonitor;
+#define CLOCK_TYPE_SLEEP_MONITOR (clock_sleep_monitor_get_type ())
+G_DECLARE_DERIVABLE_TYPE (ClockSleepMonitor, clock_sleep_monitor, CLOCK, SLEEP_MONITOR, GObject)
 
-GType clock_sleep_monitor_get_type (void) G_GNUC_CONST;
-
-#define XFCE_TYPE_CLOCK_SLEEP_MONITOR (clock_sleep_monitor_get_type ())
-#define XFCE_CLOCK_SLEEP_MONITOR(object) (G_TYPE_CHECK_INSTANCE_CAST((object), XFCE_TYPE_CLOCK_SLEEP_MONITOR, ClockSleepMonitor))
-#define XFCE_IS_CLOCK_SLEEP_MONITOR(object) (G_TYPE_CHECK_INSTANCE_TYPE((object), XFCE_TYPE_CLOCK_SLEEP_MONITOR))
+struct _ClockSleepMonitorClass
+{
+  GObjectClass parent_class;
+};
 
 /* Factory function that tries to instantiate a sleep monitor. Returns
  * NULL if no implementation could be found or instantiated.
@@ -37,6 +36,7 @@ GType clock_sleep_monitor_get_type (void) G_GNUC_CONST;
  * The sleep monitor emits a signal `woke-up()` when it detects wakeup
  * from a sleep state.
  */
-ClockSleepMonitor* clock_sleep_monitor_create (void);
+ClockSleepMonitor *
+clock_sleep_monitor_create (void);
 
 G_END_DECLS

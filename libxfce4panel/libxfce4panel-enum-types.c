@@ -3,7 +3,8 @@
 
 #include <libxfce4panel/libxfce4panel-enums.h>
 #include <libxfce4panel/libxfce4panel-enum-types.h>
-#include <libxfce4panel/libxfce4panel-alias.h>
+
+#include <libxfce4panel/libxfce4panel-visibility.h>
 
 /* enumerations from "libxfce4panel-enums.h" */
 GType
@@ -50,7 +51,7 @@ xfce_screen_position_get_type (void)
 }
 
 #define __LIBXFCE4PANEL_ENUM_TYPES_C__
-#include <libxfce4panel/libxfce4panel-aliasdef.c>
+#include <libxfce4panel/libxfce4panel-visibility.c>
 
 /* Generated data ends here */
 

@@ -17,6 +17,52 @@
 #  include <gio/gunixfdlist.h>
 #endif
 
+#ifdef G_ENABLE_DEBUG
+#define g_marshal_value_peek_boolean(v)  g_value_get_boolean (v)
+#define g_marshal_value_peek_char(v)     g_value_get_schar (v)
+#define g_marshal_value_peek_uchar(v)    g_value_get_uchar (v)
+#define g_marshal_value_peek_int(v)      g_value_get_int (v)
+#define g_marshal_value_peek_uint(v)     g_value_get_uint (v)
+#define g_marshal_value_peek_long(v)     g_value_get_long (v)
+#define g_marshal_value_peek_ulong(v)    g_value_get_ulong (v)
+#define g_marshal_value_peek_int64(v)    g_value_get_int64 (v)
+#define g_marshal_value_peek_uint64(v)   g_value_get_uint64 (v)
+#define g_marshal_value_peek_enum(v)     g_value_get_enum (v)
+#define g_marshal_value_peek_flags(v)    g_value_get_flags (v)
+#define g_marshal_value_peek_float(v)    g_value_get_float (v)
+#define g_marshal_value_peek_double(v)   g_value_get_double (v)
+#define g_marshal_value_peek_string(v)   (char*) g_value_get_string (v)
+#define g_marshal_value_peek_param(v)    g_value_get_param (v)
+#define g_marshal_value_peek_boxed(v)    g_value_get_boxed (v)
+#define g_marshal_value_peek_pointer(v)  g_value_get_pointer (v)
+#define g_marshal_value_peek_object(v)   g_value_get_object (v)
+#define g_marshal_value_peek_variant(v)  g_value_get_variant (v)
+#else /* !G_ENABLE_DEBUG */
+/* WARNING: This code accesses GValues directly, which is UNSUPPORTED API.
+ *          Do not access GValues directly in your code. Instead, use the
+ *          g_value_get_*() functions
+ */
+#define g_marshal_value_peek_boolean(v)  (v)->data[0].v_int
+#define g_marshal_value_peek_char(v)     (v)->data[0].v_int
+#define g_marshal_value_peek_uchar(v)    (v)->data[0].v_uint
+#define g_marshal_value_peek_int(v)      (v)->data[0].v_int
+#define g_marshal_value_peek_uint(v)     (v)->data[0].v_uint
+#define g_marshal_value_peek_long(v)     (v)->data[0].v_long
+#define g_marshal_value_peek_ulong(v)    (v)->data[0].v_ulong
+#define g_marshal_value_peek_int64(v)    (v)->data[0].v_int64
+#define g_marshal_value_peek_uint64(v)   (v)->data[0].v_uint64
+#define g_marshal_value_peek_enum(v)     (v)->data[0].v_long
+#define g_marshal_value_peek_flags(v)    (v)->data[0].v_ulong
+#define g_marshal_value_peek_float(v)    (v)->data[0].v_float
+#define g_marshal_value_peek_double(v)   (v)->data[0].v_double
+#define g_marshal_value_peek_string(v)   (v)->data[0].v_pointer
+#define g_marshal_value_peek_param(v)    (v)->data[0].v_pointer
+#define g_marshal_value_peek_boxed(v)    (v)->data[0].v_pointer
+#define g_marshal_value_peek_pointer(v)  (v)->data[0].v_pointer
+#define g_marshal_value_peek_object(v)   (v)->data[0].v_pointer
+#define g_marshal_value_peek_variant(v)  (v)->data[0].v_pointer
+#endif /* !G_ENABLE_DEBUG */
+
 typedef struct
 {
   GDBusArgInfo parent_struct;
@@ -151,6 +197,51 @@ _g_value_equal (const GValue *a, const GValue *b)
   return ret;
 }
 
+static void
+_g_dbus_codegen_marshal_BOOLEAN__OBJECT_STRING (
+    GClosure     *closure,
+    GValue       *return_value,
+    unsigned int  n_param_values,
+    const GValue *param_values,
+    void         *invocation_hint G_GNUC_UNUSED,
+    void         *marshal_data)
+{
+  typedef gboolean (*_GDbusCodegenMarshalBoolean_ObjectStringFunc)
+       (void *data1,
+        GDBusMethodInvocation *arg_method_invocation,
+        const gchar *arg_service,
+        void *data2);
+  _GDbusCodegenMarshalBoolean_ObjectStringFunc callback;
+  GCClosure *cc = (GCClosure*) closure;
+  void *data1, *data2;
+  gboolean v_return;
+
+  g_return_if_fail (return_value != NULL);
+  g_return_if_fail (n_param_values == 3);
+
+  if (G_CCLOSURE_SWAP_DATA (closure))
+    {
+      data1 = closure->data;
+      data2 = g_value_peek_pointer (param_values + 0);
+    }
+  else
+    {
+      data1 = g_value_peek_pointer (param_values + 0);
+      data2 = closure->data;
+    }
+
+  callback = (_GDbusCodegenMarshalBoolean_ObjectStringFunc)
+    (marshal_data ? marshal_data : cc->callback);
+
+  v_return =
+    callback (data1,
+              g_marshal_value_peek_object (param_values + 1),
+              g_marshal_value_peek_string (param_values + 2),
+              data2);
+
+  g_value_set_boolean (return_value, v_return);
+}
+
 /* ------------------------------------------------------------------------
  * Code for interface org.kde.StatusNotifierWatcher
  * ------------------------------------------------------------------------
@@ -163,6 +254,15 @@ _g_value_equal (const GValue *a, const GValue *b)
  *
  * This section contains code for working with the <link linkend="gdbus-interface-org-kde-StatusNotifierWatcher.top_of_page">org.kde.StatusNotifierWatcher</link> D-Bus interface in C.
  */
+
+enum
+{
+  _SN_WATCHER_STATUS_NOTIFIER_ITEM_REGISTERED,
+  _SN_WATCHER_STATUS_NOTIFIER_ITEM_UNREGISTERED,
+  _SN_WATCHER_STATUS_NOTIFIER_HOST_REGISTERED,
+};
+
+static unsigned _SN_WATCHER_SIGNALS[3] = { 0 };
 
 /* ---- Introspection data for org.kde.StatusNotifierWatcher ---- */
 
@@ -405,6 +505,71 @@ sn_watcher_override_properties (GObjectClass *klass, guint property_id_begin)
 }
 
 
+inline static void
+sn_watcher_signal_marshal_status_notifier_item_registered (
+    GClosure     *closure,
+    GValue       *return_value,
+    unsigned int  n_param_values,
+    const GValue *param_values,
+    void         *invocation_hint,
+    void         *marshal_data)
+{
+  g_cclosure_marshal_VOID__STRING (closure,
+    return_value, n_param_values, param_values, invocation_hint, marshal_data);
+}
+
+inline static void
+sn_watcher_signal_marshal_status_notifier_item_unregistered (
+    GClosure     *closure,
+    GValue       *return_value,
+    unsigned int  n_param_values,
+    const GValue *param_values,
+    void         *invocation_hint,
+    void         *marshal_data)
+{
+  g_cclosure_marshal_VOID__STRING (closure,
+    return_value, n_param_values, param_values, invocation_hint, marshal_data);
+}
+
+inline static void
+sn_watcher_signal_marshal_status_notifier_host_registered (
+    GClosure     *closure,
+    GValue       *return_value,
+    unsigned int  n_param_values,
+    const GValue *param_values,
+    void         *invocation_hint,
+    void         *marshal_data)
+{
+  g_cclosure_marshal_VOID__VOID (closure,
+    return_value, n_param_values, param_values, invocation_hint, marshal_data);
+}
+
+inline static void
+sn_watcher_method_marshal_register_status_notifier_item (
+    GClosure     *closure,
+    GValue       *return_value,
+    unsigned int  n_param_values,
+    const GValue *param_values,
+    void         *invocation_hint,
+    void         *marshal_data)
+{
+  _g_dbus_codegen_marshal_BOOLEAN__OBJECT_STRING (closure,
+    return_value, n_param_values, param_values, invocation_hint, marshal_data);
+}
+
+inline static void
+sn_watcher_method_marshal_register_status_notifier_host (
+    GClosure     *closure,
+    GValue       *return_value,
+    unsigned int  n_param_values,
+    const GValue *param_values,
+    void         *invocation_hint,
+    void         *marshal_data)
+{
+  _g_dbus_codegen_marshal_BOOLEAN__OBJECT_STRING (closure,
+    return_value, n_param_values, param_values, invocation_hint, marshal_data);
+}
+
 
 /**
  * SnWatcher:
@@ -452,7 +617,7 @@ sn_watcher_default_init (SnWatcherIface *iface)
     G_STRUCT_OFFSET (SnWatcherIface, handle_register_status_notifier_item),
     g_signal_accumulator_true_handled,
     NULL,
-    g_cclosure_marshal_generic,
+      sn_watcher_method_marshal_register_status_notifier_item,
     G_TYPE_BOOLEAN,
     2,
     G_TYPE_DBUS_METHOD_INVOCATION, G_TYPE_STRING);
@@ -475,7 +640,7 @@ sn_watcher_default_init (SnWatcherIface *iface)
     G_STRUCT_OFFSET (SnWatcherIface, handle_register_status_notifier_host),
     g_signal_accumulator_true_handled,
     NULL,
-    g_cclosure_marshal_generic,
+      sn_watcher_method_marshal_register_status_notifier_host,
     G_TYPE_BOOLEAN,
     2,
     G_TYPE_DBUS_METHOD_INVOCATION, G_TYPE_STRING);
@@ -490,15 +655,16 @@ sn_watcher_default_init (SnWatcherIface *iface)
    *
    * On the service-side, this signal can be used with e.g. g_signal_emit_by_name() to make the object emit the D-Bus signal.
    */
-  g_signal_new ("status-notifier-item-registered",
-    G_TYPE_FROM_INTERFACE (iface),
-    G_SIGNAL_RUN_LAST,
-    G_STRUCT_OFFSET (SnWatcherIface, status_notifier_item_registered),
-    NULL,
-    NULL,
-    g_cclosure_marshal_generic,
-    G_TYPE_NONE,
-    1, G_TYPE_STRING);
+  _SN_WATCHER_SIGNALS[_SN_WATCHER_STATUS_NOTIFIER_ITEM_REGISTERED] =
+    g_signal_new ("status-notifier-item-registered",
+      G_TYPE_FROM_INTERFACE (iface),
+      G_SIGNAL_RUN_LAST,
+      G_STRUCT_OFFSET (SnWatcherIface, status_notifier_item_registered),
+      NULL,
+      NULL,
+      sn_watcher_signal_marshal_status_notifier_item_registered,
+      G_TYPE_NONE,
+      1, G_TYPE_STRING);
 
   /**
    * SnWatcher::status-notifier-item-unregistered:
@@ -509,15 +675,16 @@ sn_watcher_default_init (SnWatcherIface *iface)
    *
    * On the service-side, this signal can be used with e.g. g_signal_emit_by_name() to make the object emit the D-Bus signal.
    */
-  g_signal_new ("status-notifier-item-unregistered",
-    G_TYPE_FROM_INTERFACE (iface),
-    G_SIGNAL_RUN_LAST,
-    G_STRUCT_OFFSET (SnWatcherIface, status_notifier_item_unregistered),
-    NULL,
-    NULL,
-    g_cclosure_marshal_generic,
-    G_TYPE_NONE,
-    1, G_TYPE_STRING);
+  _SN_WATCHER_SIGNALS[_SN_WATCHER_STATUS_NOTIFIER_ITEM_UNREGISTERED] =
+    g_signal_new ("status-notifier-item-unregistered",
+      G_TYPE_FROM_INTERFACE (iface),
+      G_SIGNAL_RUN_LAST,
+      G_STRUCT_OFFSET (SnWatcherIface, status_notifier_item_unregistered),
+      NULL,
+      NULL,
+      sn_watcher_signal_marshal_status_notifier_item_unregistered,
+      G_TYPE_NONE,
+      1, G_TYPE_STRING);
 
   /**
    * SnWatcher::status-notifier-host-registered:
@@ -527,15 +694,16 @@ sn_watcher_default_init (SnWatcherIface *iface)
    *
    * On the service-side, this signal can be used with e.g. g_signal_emit_by_name() to make the object emit the D-Bus signal.
    */
-  g_signal_new ("status-notifier-host-registered",
-    G_TYPE_FROM_INTERFACE (iface),
-    G_SIGNAL_RUN_LAST,
-    G_STRUCT_OFFSET (SnWatcherIface, status_notifier_host_registered),
-    NULL,
-    NULL,
-    g_cclosure_marshal_generic,
-    G_TYPE_NONE,
-    0);
+  _SN_WATCHER_SIGNALS[_SN_WATCHER_STATUS_NOTIFIER_HOST_REGISTERED] =
+    g_signal_new ("status-notifier-host-registered",
+      G_TYPE_FROM_INTERFACE (iface),
+      G_SIGNAL_RUN_LAST,
+      G_STRUCT_OFFSET (SnWatcherIface, status_notifier_host_registered),
+      NULL,
+      NULL,
+      sn_watcher_signal_marshal_status_notifier_host_registered,
+      G_TYPE_NONE,
+      0);
 
   /* GObject properties for D-Bus properties: */
   /**
@@ -698,7 +866,7 @@ sn_watcher_emit_status_notifier_item_registered (
     SnWatcher *object,
     const gchar *arg_service)
 {
-  g_signal_emit_by_name (object, "status-notifier-item-registered", arg_service);
+  g_signal_emit (object, _SN_WATCHER_SIGNALS[_SN_WATCHER_STATUS_NOTIFIER_ITEM_REGISTERED], 0, arg_service);
 }
 
 /**
@@ -713,7 +881,7 @@ sn_watcher_emit_status_notifier_item_unregistered (
     SnWatcher *object,
     const gchar *arg_service)
 {
-  g_signal_emit_by_name (object, "status-notifier-item-unregistered", arg_service);
+  g_signal_emit (object, _SN_WATCHER_SIGNALS[_SN_WATCHER_STATUS_NOTIFIER_ITEM_UNREGISTERED], 0, arg_service);
 }
 
 /**
@@ -726,7 +894,7 @@ void
 sn_watcher_emit_status_notifier_host_registered (
     SnWatcher *object)
 {
-  g_signal_emit_by_name (object, "status-notifier-host-registered");
+  g_signal_emit (object, _SN_WATCHER_SIGNALS[_SN_WATCHER_STATUS_NOTIFIER_HOST_REGISTERED], 0);
 }
 
 /**
@@ -1594,7 +1762,11 @@ sn_watcher_skeleton_dbus_interface_get_properties (GDBusInterfaceSkeleton *_skel
 
   GVariantBuilder builder;
   guint n;
-  g_variant_builder_init (&builder, G_VARIANT_TYPE ("a{sv}"));
+#if GLIB_VERSION_MAX_ALLOWED >= GLIB_VERSION_2_84
+  g_variant_builder_init_static (&builder, G_VARIANT_TYPE ("a{sv}"));
+#else
+  g_variant_builder_init(&builder, G_VARIANT_TYPE ("a{sv}"));
+#endif
   if (_sn_watcher_interface_info.parent_struct.properties == NULL)
     goto out;
   for (n = 0; _sn_watcher_interface_info.parent_struct.properties[n] != NULL; n++)
@@ -1727,8 +1899,14 @@ sn_watcher_skeleton_finalize (GObject *object)
     g_value_unset (&skeleton->priv->properties[n]);
   g_free (skeleton->priv->properties);
   g_list_free_full (skeleton->priv->changed_properties, (GDestroyNotify) _changed_property_free);
+#if GLIB_VERSION_MAX_ALLOWED >= GLIB_VERSION_2_38
+  /* coverity[missing_lock : SUPPRESS] */
+  g_clear_pointer (&skeleton->priv->changed_properties_idle_source, g_source_destroy);
+#else
   if (skeleton->priv->changed_properties_idle_source != NULL)
     g_source_destroy (skeleton->priv->changed_properties_idle_source);
+skeleton->priv->changed_properties_idle_source = NULL;
+#endif
   g_main_context_unref (skeleton->priv->context);
   g_mutex_clear (&skeleton->priv->lock);
   G_OBJECT_CLASS (sn_watcher_skeleton_parent_class)->finalize (object);
@@ -1757,8 +1935,13 @@ _sn_watcher_emit_changed (gpointer user_data)
   guint num_changes;
 
   g_mutex_lock (&skeleton->priv->lock);
+#if GLIB_VERSION_MAX_ALLOWED >= GLIB_VERSION_2_84
+  g_variant_builder_init_static (&builder, G_VARIANT_TYPE ("a{sv}"));
+  g_variant_builder_init_static (&invalidated_builder, G_VARIANT_TYPE ("as"));
+#else
   g_variant_builder_init (&builder, G_VARIANT_TYPE ("a{sv}"));
   g_variant_builder_init (&invalidated_builder, G_VARIANT_TYPE ("as"));
+#endif
   for (l = skeleton->priv->changed_properties, num_changes = 0; l != NULL; l = l->next)
     {
       ChangedProperty *cp = l->data;
@@ -1899,7 +2082,7 @@ sn_watcher_skeleton_get_registered_status_notifier_items (SnWatcher *object)
   SnWatcherSkeleton *skeleton = SN_WATCHER_SKELETON (object);
   const gchar *const *value;
   g_mutex_lock (&skeleton->priv->lock);
-  value = g_value_get_boxed (&(skeleton->priv->properties[0]));
+  value = g_marshal_value_peek_boxed (&(skeleton->priv->properties[0]));
   g_mutex_unlock (&skeleton->priv->lock);
   return value;
 }
@@ -1910,7 +2093,7 @@ sn_watcher_skeleton_get_is_status_notifier_host_registered (SnWatcher *object)
   SnWatcherSkeleton *skeleton = SN_WATCHER_SKELETON (object);
   gboolean value;
   g_mutex_lock (&skeleton->priv->lock);
-  value = g_value_get_boolean (&(skeleton->priv->properties[1]));
+  value = g_marshal_value_peek_boolean (&(skeleton->priv->properties[1]));
   g_mutex_unlock (&skeleton->priv->lock);
   return value;
 }
@@ -1921,7 +2104,7 @@ sn_watcher_skeleton_get_protocol_version (SnWatcher *object)
   SnWatcherSkeleton *skeleton = SN_WATCHER_SKELETON (object);
   gint value;
   g_mutex_lock (&skeleton->priv->lock);
-  value = g_value_get_int (&(skeleton->priv->properties[2]));
+  value = g_marshal_value_peek_int (&(skeleton->priv->properties[2]));
   g_mutex_unlock (&skeleton->priv->lock);
   return value;
 }

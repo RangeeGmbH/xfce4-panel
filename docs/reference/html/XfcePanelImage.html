@@ -1,14 +1,14 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
 <html>
 <head>
-<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<meta charset="UTF-8">
 <title>XfcePanelImage: xfce4-panel Reference Manual</title>
 <meta name="generator" content="DocBook XSL Stylesheets Vsnapshot">
 <link rel="home" href="index.html" title="xfce4-panel Reference Manual">
-<link rel="up" href="libxfce4panel-widgets.html" title="Part III. Additional Widgets">
-<link rel="prev" href="XfceArrowButton.html" title="XfceArrowButton">
-<link rel="next" href="libxfce4panel-miscelleanous.html" title="Part IV. Miscelleanous">
-<meta name="generator" content="GTK-Doc V1.33.1 (XML mode)">
+<link rel="up" href="ch01.html" title="[Insert title here]">
+<link rel="prev" href="libxfce4panel-Convenience-Functions.html" title="Convenience Functions">
+<link rel="next" href="libxfce4panel-Standard-Enumerations.html" title="Standard Enumerations">
+<meta name="generator" content="GTK-Doc V1.35.1 (XML mode)">
 <link rel="stylesheet" href="style.css" type="text/css">
 </head>
 <body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
@@ -21,9 +21,9 @@
                   <a href="#XfcePanelImage.properties" class="shortcut">Properties</a></span>
 </td>
 <td><a accesskey="h" href="index.html"><img src="home.png" width="16" height="16" border="0" alt="Home"></a></td>
-<td><a accesskey="u" href="libxfce4panel-widgets.html"><img src="up.png" width="16" height="16" border="0" alt="Up"></a></td>
-<td><a accesskey="p" href="XfceArrowButton.html"><img src="left.png" width="16" height="16" border="0" alt="Prev"></a></td>
-<td><a accesskey="n" href="libxfce4panel-miscelleanous.html"><img src="right.png" width="16" height="16" border="0" alt="Next"></a></td>
+<td><a accesskey="u" href="ch01.html"><img src="up.png" width="16" height="16" border="0" alt="Up"></a></td>
+<td><a accesskey="p" href="libxfce4panel-Convenience-Functions.html"><img src="left.png" width="16" height="16" border="0" alt="Prev"></a></td>
+<td><a accesskey="n" href="libxfce4panel-Standard-Enumerations.html"><img src="right.png" width="16" height="16" border="0" alt="Next"></a></td>
 </tr></table>
 <div class="refentry">
 <a name="XfcePanelImage"></a><div class="titlepage"></div>
@@ -92,7 +92,7 @@
 </tr>
 <tr>
 <td class="function_type">
-<a href="/usr/share/gtk-doc/html/glib/glib-Basic-Types.html#gint"><span class="returnvalue">gint</span></a>
+<span class="returnvalue">gint</span>
 </td>
 <td class="function_name">
 <a class="link" href="XfcePanelImage.html#xfce-panel-image-get-size" title="xfce_panel_image_get_size ()">xfce_panel_image_get_size</a> <span class="c_punctuation">()</span>
@@ -153,8 +153,8 @@
 </div>
 <div class="refsect1">
 <a name="XfcePanelImage.object-hierarchy"></a><h2>Object Hierarchy</h2>
-<pre class="screen">    <a href="/usr/share/gtk-doc/html/gobject/gobject-The-Base-Object-Type.html#GObject-struct">GObject</a>
-    <span class="lineart">╰──</span> <a href="/usr/share/gtk-doc/html/gobject/gobject-The-Base-Object-Type.html#GInitiallyUnowned">GInitiallyUnowned</a>
+<pre class="screen">    GObject
+    <span class="lineart">╰──</span> GInitiallyUnowned
         <span class="lineart">╰──</span> <a href="/usr/share/gtk-doc/html/gtk3/GtkWidget.html#GtkWidget-struct">GtkWidget</a>
             <span class="lineart">╰──</span> XfcePanelImage
 </pre>
@@ -228,7 +228,7 @@ the size set with <a class="link" href="XfcePanelImage.html#xfce-panel-image-set
 </colgroup>
 <tbody><tr>
 <td class="parameter_name"><p>pixbuf</p></td>
-<td class="parameter_description"><p>a <span class="type">GdkPixbuf</span>, or <a href="/usr/share/gtk-doc/html/glib/glib-Standard-Macros.html#NULL:CAPS"><code class="literal">NULL</code></a>. </p></td>
+<td class="parameter_description"><p>a <span class="type">GdkPixbuf</span>, or <code class="literal">NULL</code>. </p></td>
 <td class="parameter_annotations"><span class="annotation">[<acronym title="NULL is OK, both for passing and for returning."><span class="acronym">allow-none</span></acronym>]</span></td>
 </tr></tbody>
 </table></div>
@@ -243,7 +243,7 @@ the size set with <a class="link" href="XfcePanelImage.html#xfce-panel-image-set
 <div class="refsect2">
 <a name="xfce-panel-image-new-from-source"></a><h3>xfce_panel_image_new_from_source ()</h3>
 <pre class="programlisting"><a href="/usr/share/gtk-doc/html/gtk3/GtkWidget.html#GtkWidget-struct"><span class="returnvalue">GtkWidget</span></a> *
-xfce_panel_image_new_from_source (<em class="parameter"><code>const <a href="/usr/share/gtk-doc/html/glib/glib-Basic-Types.html#gchar"><span class="type">gchar</span></a> *source</code></em>);</pre>
+xfce_panel_image_new_from_source (<em class="parameter"><code>const <span class="type">gchar</span> *source</code></em>);</pre>
 <div class="warning">
 <p><code class="literal">xfce_panel_image_new_from_source</code> has been deprecated since version 4.18.1 and should not be used in newly-written code.</p>
 <p>Use <a href="/usr/share/gtk-doc/html/gtk3/GtkImage.html#gtk-image-new"><code class="function">gtk_image_new()</code></a> and <a class="link" href="libxfce4panel-Convenience-Functions.html#xfce-panel-set-image-from-source" title="xfce_panel_set_image_from_source ()"><code class="function">xfce_panel_set_image_from_source()</code></a> instead.</p>
@@ -266,7 +266,7 @@ keys in .desktop files.</p>
 <tbody><tr>
 <td class="parameter_name"><p>source</p></td>
 <td class="parameter_description"><p>source of the image. This can be an absolute path or
-an icon-name or <a href="/usr/share/gtk-doc/html/glib/glib-Standard-Macros.html#NULL:CAPS"><code class="literal">NULL</code></a>. </p></td>
+an icon-name or <code class="literal">NULL</code>. </p></td>
 <td class="parameter_annotations"><span class="annotation">[<acronym title="NULL is OK, both for passing and for returning."><span class="acronym">allow-none</span></acronym>]</span></td>
 </tr></tbody>
 </table></div>
@@ -304,7 +304,7 @@ xfce_panel_image_set_from_pixbuf (<em class="parameter"><code><a class="link" hr
 </tr>
 <tr>
 <td class="parameter_name"><p>pixbuf</p></td>
-<td class="parameter_description"><p>a <span class="type">GdkPixbuf</span>, or <a href="/usr/share/gtk-doc/html/glib/glib-Standard-Macros.html#NULL:CAPS"><code class="literal">NULL</code></a>. </p></td>
+<td class="parameter_description"><p>a <span class="type">GdkPixbuf</span>, or <code class="literal">NULL</code>. </p></td>
 <td class="parameter_annotations"><span class="annotation">[<acronym title="NULL is OK, both for passing and for returning."><span class="acronym">allow-none</span></acronym>]</span></td>
 </tr>
 </tbody>
@@ -317,7 +317,7 @@ xfce_panel_image_set_from_pixbuf (<em class="parameter"><code><a class="link" hr
 <a name="xfce-panel-image-set-from-source"></a><h3>xfce_panel_image_set_from_source ()</h3>
 <pre class="programlisting"><span class="returnvalue">void</span>
 xfce_panel_image_set_from_source (<em class="parameter"><code><a class="link" href="XfcePanelImage.html" title="XfcePanelImage"><span class="type">XfcePanelImage</span></a> *image</code></em>,
-                                  <em class="parameter"><code>const <a href="/usr/share/gtk-doc/html/glib/glib-Basic-Types.html#gchar"><span class="type">gchar</span></a> *source</code></em>);</pre>
+                                  <em class="parameter"><code>const <span class="type">gchar</span> *source</code></em>);</pre>
 <div class="warning">
 <p><code class="literal">xfce_panel_image_set_from_source</code> has been deprecated since version 4.18.1 and should not be used in newly-written code.</p>
 <p>Use <a class="link" href="libxfce4panel-Convenience-Functions.html#xfce-panel-set-image-from-source" title="xfce_panel_set_image_from_source ()"><code class="function">xfce_panel_set_image_from_source()</code></a> instead.</p>
@@ -340,7 +340,7 @@ xfce_panel_image_set_from_source (<em class="parameter"><code><a class="link" hr
 <tr>
 <td class="parameter_name"><p>source</p></td>
 <td class="parameter_description"><p>source of the image. This can be an absolute path or
-an icon-name or <a href="/usr/share/gtk-doc/html/glib/glib-Standard-Macros.html#NULL:CAPS"><code class="literal">NULL</code></a>. </p></td>
+an icon-name or <code class="literal">NULL</code>. </p></td>
 <td class="parameter_annotations"><span class="annotation">[<acronym title="NULL is OK, both for passing and for returning."><span class="acronym">allow-none</span></acronym>]</span></td>
 </tr>
 </tbody>
@@ -353,7 +353,7 @@ an icon-name or <a href="/usr/share/gtk-doc/html/glib/glib-Standard-Macros.html#
 <a name="xfce-panel-image-set-size"></a><h3>xfce_panel_image_set_size ()</h3>
 <pre class="programlisting"><span class="returnvalue">void</span>
 xfce_panel_image_set_size (<em class="parameter"><code><a class="link" href="XfcePanelImage.html" title="XfcePanelImage"><span class="type">XfcePanelImage</span></a> *image</code></em>,
-                           <em class="parameter"><code><a href="/usr/share/gtk-doc/html/glib/glib-Basic-Types.html#gint"><span class="type">gint</span></a> size</code></em>);</pre>
+                           <em class="parameter"><code><span class="type">gint</span> size</code></em>);</pre>
 <div class="warning">
 <p><code class="literal">xfce_panel_image_set_size</code> has been deprecated since version 4.18.1 and should not be used in newly-written code.</p>
 <p>Use <a href="/usr/share/gtk-doc/html/gtk3/GtkImage.html#gtk-image-set-pixel-size"><code class="function">gtk_image_set_pixel_size()</code></a> or set the size from the
@@ -390,7 +390,7 @@ size, see introduction for more details. You can set a <em class="parameter"><co
 <hr>
 <div class="refsect2">
 <a name="xfce-panel-image-get-size"></a><h3>xfce_panel_image_get_size ()</h3>
-<pre class="programlisting"><a href="/usr/share/gtk-doc/html/glib/glib-Basic-Types.html#gint"><span class="returnvalue">gint</span></a>
+<pre class="programlisting"><span class="returnvalue">gint</span>
 xfce_panel_image_get_size (<em class="parameter"><code><a class="link" href="XfcePanelImage.html" title="XfcePanelImage"><span class="type">XfcePanelImage</span></a> *image</code></em>);</pre>
 <div class="warning">
 <p><code class="literal">xfce_panel_image_get_size</code> has been deprecated since version 4.18.1 and should not be used in newly-written code.</p>
@@ -500,6 +500,6 @@ the functions below.</p>
 </div>
 </div>
 <div class="footer">
-<hr>Generated by GTK-Doc V1.33.1</div>
+<hr>Generated by GTK-Doc V1.35.1</div>
 </body>
 </html>

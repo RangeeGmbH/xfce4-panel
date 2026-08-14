@@ -19,28 +19,23 @@
 #ifndef __PANEL_PLUGIN_EXTERNAL_WRAPPER_H__
 #define __PANEL_PLUGIN_EXTERNAL_WRAPPER_H__
 
-#include <gtk/gtk.h>
-#include <libxfce4panel/libxfce4panel.h>
-#include <libxfce4panel/xfce-panel-plugin-provider.h>
-#include <panel/panel-module.h>
+#include "panel-module.h"
+#include "panel-plugin-external.h"
 
 G_BEGIN_DECLS
 
-typedef struct _PanelPluginExternalWrapperClass PanelPluginExternalWrapperClass;
-typedef struct _PanelPluginExternalWrapper      PanelPluginExternalWrapper;
+#define PANEL_TYPE_PLUGIN_EXTERNAL_WRAPPER (panel_plugin_external_wrapper_get_type ())
+G_DECLARE_DERIVABLE_TYPE (PanelPluginExternalWrapper, panel_plugin_external_wrapper, PANEL, PLUGIN_EXTERNAL_WRAPPER, PanelPluginExternal)
 
-#define PANEL_TYPE_PLUGIN_EXTERNAL_WRAPPER            (panel_plugin_external_wrapper_get_type ())
-#define PANEL_PLUGIN_EXTERNAL_WRAPPER(obj)            (G_TYPE_CHECK_INSTANCE_CAST ((obj), PANEL_TYPE_PLUGIN_EXTERNAL_WRAPPER, PanelPluginExternalWrapper))
-#define PANEL_PLUGIN_EXTERNAL_WRAPPER_CLASS(klass)    (G_TYPE_CHECK_CLASS_CAST ((klass), PANEL_TYPE_PLUGIN_EXTERNAL_WRAPPER, PanelPluginExternalWrapperClass))
-#define PANEL_IS_PLUGIN_EXTERNAL_WRAPPER(obj)         (G_TYPE_CHECK_INSTANCE_TYPE ((obj), PANEL_TYPE_PLUGIN_EXTERNAL_WRAPPER))
-#define PANEL_IS_PLUGIN_EXTERNAL_WRAPPER_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE ((klass), PANEL_TYPE_PLUGIN_EXTERNAL_WRAPPER))
-#define PANEL_PLUGIN_EXTERNAL_WRAPPER_GET_CLASS(obj)  (G_TYPE_INSTANCE_GET_CLASS ((obj), PANEL_TYPE_PLUGIN_EXTERNAL_WRAPPER, PanelPluginExternalWrapperClass))
+struct _PanelPluginExternalWrapperClass
+{
+  PanelPluginExternalClass __parent__;
+};
 
-GType      panel_plugin_external_wrapper_get_type (void) G_GNUC_CONST;
-
-GtkWidget *panel_plugin_external_wrapper_new      (PanelModule  *module,
-                                                   gint          unique_id,
-                                                   gchar       **arguments) G_GNUC_MALLOC;
+GtkWidget *
+panel_plugin_external_wrapper_new (PanelModule *module,
+                                   gint unique_id,
+                                   gchar **arguments) G_GNUC_MALLOC;
 
 G_END_DECLS
 
