@@ -120,6 +120,9 @@ static void
 panel_plugin_external_set_locked (XfcePanelPluginProvider *provider,
                                   gboolean locked);
 static void
+panel_plugin_external_set_context_menu_enabled (XfcePanelPluginProvider *provider,
+                                                gboolean enabled);
+static void
 panel_plugin_external_ask_remove (XfcePanelPluginProvider *provider);
 static void
 panel_plugin_external_set_sensitive (PanelPluginExternal *external);
@@ -247,6 +250,7 @@ panel_plugin_external_provider_init (XfcePanelPluginProviderInterface *iface)
   iface->removed = panel_plugin_external_removed;
   iface->remote_event = panel_plugin_external_remote_event;
   iface->set_locked = panel_plugin_external_set_locked;
+  iface->set_context_menu_enabled = panel_plugin_external_set_context_menu_enabled;
   iface->ask_remove = panel_plugin_external_ask_remove;
 }
 
@@ -1072,6 +1076,26 @@ panel_plugin_external_set_locked (XfcePanelPluginProvider *provider,
 
   panel_plugin_external_queue_add (PANEL_PLUGIN_EXTERNAL (provider),
                                    PROVIDER_PROP_TYPE_SET_LOCKED, &value);
+
+  g_value_unset (&value);
+}
+
+
+
+static void
+panel_plugin_external_set_context_menu_enabled (XfcePanelPluginProvider *provider,
+                                                gboolean enabled)
+{
+  GValue value = G_VALUE_INIT;
+
+  panel_return_if_fail (PANEL_IS_PLUGIN_EXTERNAL (provider));
+  panel_return_if_fail (XFCE_IS_PANEL_PLUGIN_PROVIDER (provider));
+
+  g_value_init (&value, G_TYPE_BOOLEAN);
+  g_value_set_boolean (&value, enabled);
+
+  panel_plugin_external_queue_add (PANEL_PLUGIN_EXTERNAL (provider),
+                                   PROVIDER_PROP_TYPE_SET_CONTEXT_MENU_ENABLED, &value);
 
   g_value_unset (&value);
 }

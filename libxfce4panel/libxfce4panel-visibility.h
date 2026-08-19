@@ -298,6 +298,9 @@ extern __typeof(xfce_panel_plugin_provider_remote_event) IA__xfce_panel_plugin_p
 extern __typeof(xfce_panel_plugin_provider_set_locked) IA__xfce_panel_plugin_provider_set_locked __attribute__((visibility("hidden")));
 #define xfce_panel_plugin_provider_set_locked IA__xfce_panel_plugin_provider_set_locked
 
+extern __typeof(xfce_panel_plugin_provider_set_context_menu_enabled) IA__xfce_panel_plugin_provider_set_context_menu_enabled __attribute__((visibility("hidden")));
+#define xfce_panel_plugin_provider_set_context_menu_enabled IA__xfce_panel_plugin_provider_set_context_menu_enabled
+
 #endif /* __XFCE_PANEL_PLUGIN_PROVIDER_H__ */
 
 

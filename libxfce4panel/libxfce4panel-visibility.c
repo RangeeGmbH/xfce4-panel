@@ -307,6 +307,9 @@ extern __typeof(xfce_panel_plugin_provider_remote_event) xfce_panel_plugin_provi
 #undef xfce_panel_plugin_provider_set_locked
 extern __typeof(xfce_panel_plugin_provider_set_locked) xfce_panel_plugin_provider_set_locked __attribute__((alias("IA__xfce_panel_plugin_provider_set_locked"), visibility("default")));
 
+#undef xfce_panel_plugin_provider_set_context_menu_enabled
+extern __typeof(xfce_panel_plugin_provider_set_context_menu_enabled) xfce_panel_plugin_provider_set_context_menu_enabled __attribute__((alias("IA__xfce_panel_plugin_provider_set_context_menu_enabled"), visibility("default")));
+
 #endif /* __XFCE_PANEL_PLUGIN_PROVIDER_C__ */
 
 

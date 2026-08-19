@@ -110,6 +110,10 @@ wrapper_gproxy_set (GDBusProxy *proxy,
           xfce_panel_plugin_provider_set_locked (provider, g_variant_get_boolean (variant));
           break;
 
+        case PROVIDER_PROP_TYPE_SET_CONTEXT_MENU_ENABLED:
+          xfce_panel_plugin_provider_set_context_menu_enabled (provider, g_variant_get_boolean (variant));
+          break;
+
         case PROVIDER_PROP_TYPE_SET_SENSITIVE:
           gtk_widget_set_sensitive (GTK_WIDGET (provider), g_variant_get_boolean (variant));
           break;

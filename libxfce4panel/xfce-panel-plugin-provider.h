@@ -72,6 +72,8 @@ struct _XfcePanelPluginProviderInterface
   void (*set_locked) (XfcePanelPluginProvider *provider,
                       gboolean locked);
   void (*ask_remove) (XfcePanelPluginProvider *provider);
+  void (*set_context_menu_enabled) (XfcePanelPluginProvider *provider,
+                                    gboolean enabled);
 };
 
 /* signals send from the plugin to the panel (possibly through the wrapper) */
@@ -108,6 +110,7 @@ typedef enum /*< skip >*/
   PROVIDER_PROP_TYPE_SET_BACKGROUND_ALPHA, /* gdouble */
   PROVIDER_PROP_TYPE_SET_NROWS, /* gint */
   PROVIDER_PROP_TYPE_SET_LOCKED, /* gboolean */
+  PROVIDER_PROP_TYPE_SET_CONTEXT_MENU_ENABLED, /* gboolean */
   PROVIDER_PROP_TYPE_SET_SENSITIVE, /* gboolean */
   PROVIDER_PROP_TYPE_ACTION_REMOVED, /* none */
   PROVIDER_PROP_TYPE_ACTION_SAVE, /* none */
@@ -222,6 +225,10 @@ xfce_panel_plugin_provider_remote_event (XfcePanelPluginProvider *provider,
 void
 xfce_panel_plugin_provider_set_locked (XfcePanelPluginProvider *provider,
                                        gboolean locked);
+
+void
+xfce_panel_plugin_provider_set_context_menu_enabled (XfcePanelPluginProvider *provider,
+                                                     gboolean enabled);
 
 void
 xfce_panel_plugin_provider_ask_remove (XfcePanelPluginProvider *provider);

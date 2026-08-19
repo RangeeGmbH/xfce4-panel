@@ -94,6 +94,9 @@ xfce_panel_plugin_button_press_event (GtkWidget *widget,
 static gboolean
 xfce_panel_plugin_context_menu_enabled (XfcePanelPlugin *plugin);
 static void
+xfce_panel_plugin_menu_show (GtkWidget *menu,
+                             XfcePanelPlugin *plugin);
+static void
 xfce_panel_plugin_menu_move (XfcePanelPlugin *plugin);
 static void
 xfce_panel_plugin_menu_remove (XfcePanelPlugin *plugin);
@@ -151,6 +154,9 @@ xfce_panel_plugin_set_locked (XfcePanelPluginProvider *provider,
                               gboolean locked);
 static void
 xfce_panel_plugin_ask_remove (XfcePanelPluginProvider *provider);
+static void
+xfce_panel_plugin_set_context_menu_enabled (XfcePanelPluginProvider *provider,
+                                            gboolean enabled);
 
 
 
@@ -221,6 +227,7 @@ struct _XfcePanelPluginPrivate
   guint small : 1;
   XfceScreenPosition screen_position;
   guint locked : 1;
+  guint context_menu_enabled : 1;
   GSList *menu_items;
 
   /* flags for rembering states */
@@ -766,6 +773,7 @@ xfce_panel_plugin_init (XfcePanelPlugin *plugin)
   plugin->priv->panel_lock = 0;
   plugin->priv->flags = 0;
   plugin->priv->locked = TRUE;
+  plugin->priv->context_menu_enabled = TRUE;
   plugin->priv->menu_items = NULL;
   plugin->priv->nrows = 1;
 
@@ -806,6 +814,7 @@ xfce_panel_plugin_provider_init (XfcePanelPluginProviderInterface *iface)
   iface->remote_event = xfce_panel_plugin_remote_event;
   iface->set_locked = xfce_panel_plugin_set_locked;
   iface->ask_remove = xfce_panel_plugin_ask_remove;
+  iface->set_context_menu_enabled = xfce_panel_plugin_set_context_menu_enabled;
 }
 
 
@@ -1035,16 +1044,13 @@ xfce_panel_plugin_realize (GtkWidget *widget)
 static gboolean
 xfce_panel_plugin_context_menu_enabled (XfcePanelPlugin *plugin)
 {
-  GtkWidget *toplevel;
-  gboolean enabled = TRUE;
+  panel_return_val_if_fail (XFCE_IS_PANEL_PLUGIN (plugin), TRUE);
 
-  toplevel = gtk_widget_get_toplevel (GTK_WIDGET (plugin));
-  if (toplevel != NULL
-      && g_object_class_find_property (G_OBJECT_GET_CLASS (toplevel),
-                                       "enable-context-menu") != NULL)
-    g_object_get (G_OBJECT (toplevel), "enable-context-menu", &enabled, NULL);
-
-  return enabled;
+  /* this is pushed down from the panel window (PanelWindow's
+   * "enable-context-menu" property) through the provider interface, so that
+   * it also works for plugins running out-of-process in a wrapper, whose
+   * toplevel is not the panel window and thus does not carry that property */
+  return plugin->priv->context_menu_enabled;
 }
 
 
@@ -1223,6 +1229,23 @@ xfce_panel_plugin_menu_panel_help (XfcePanelPlugin *plugin)
 
 
 
+static void
+xfce_panel_plugin_menu_show (GtkWidget *menu,
+                             XfcePanelPlugin *plugin)
+{
+  panel_return_if_fail (GTK_IS_MENU (menu));
+  panel_return_if_fail (XFCE_IS_PANEL_PLUGIN (plugin));
+
+  /* prevent the menu from actually becoming visible if context menus are
+   * disabled for this panel, regardless of how the plugin triggered the
+   * popup (e.g. via the deprecated xfce_panel_plugin_position_menu() and
+   * gtk_menu_popup(), or gtk_menu_popup_at_pointer() directly) */
+  if (!xfce_panel_plugin_context_menu_enabled (plugin))
+    g_signal_stop_emission_by_name (menu, "show");
+}
+
+
+
 static GtkMenu *
 xfce_panel_plugin_menu_get (XfcePanelPlugin *plugin)
 {
@@ -1240,6 +1263,13 @@ xfce_panel_plugin_menu_get (XfcePanelPlugin *plugin)
 
       menu = gtk_menu_new ();
       gtk_menu_attach_to_widget (GTK_MENU (menu), GTK_WIDGET (plugin), NULL);
+
+      /* last-resort guard: block this menu from actually being displayed
+       * if context menus are disabled, no matter how (or by which, possibly
+       * external/out-of-process) plugin code the popup is triggered, since
+       * this cached menu is the one returned to any caller of this function */
+      g_signal_connect (G_OBJECT (menu), "show",
+                        G_CALLBACK (xfce_panel_plugin_menu_show), plugin);
 
       /* item with plugin name */
       item = gtk_menu_item_new_with_label (xfce_panel_plugin_get_display_name (plugin));
@@ -1742,6 +1772,19 @@ xfce_panel_plugin_ask_remove (XfcePanelPluginProvider *provider)
   panel_return_if_fail (XFCE_IS_PANEL_PLUGIN (provider));
 
   xfce_panel_plugin_menu_remove (XFCE_PANEL_PLUGIN (provider));
+}
+
+
+
+static void
+xfce_panel_plugin_set_context_menu_enabled (XfcePanelPluginProvider *provider,
+                                            gboolean enabled)
+{
+  XfcePanelPlugin *plugin = XFCE_PANEL_PLUGIN (provider);
+
+  panel_return_if_fail (XFCE_IS_PANEL_PLUGIN (provider));
+
+  plugin->priv->context_menu_enabled = !!enabled;
 }
 
 

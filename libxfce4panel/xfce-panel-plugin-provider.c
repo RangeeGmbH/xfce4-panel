@@ -265,6 +265,17 @@ xfce_panel_plugin_provider_set_locked (XfcePanelPluginProvider *provider,
 
 
 void
+xfce_panel_plugin_provider_set_context_menu_enabled (XfcePanelPluginProvider *provider,
+                                                     gboolean enabled)
+{
+  panel_return_if_fail (XFCE_IS_PANEL_PLUGIN_PROVIDER (provider));
+
+  XFCE_PANEL_PLUGIN_PROVIDER_GET_IFACE (provider)->set_context_menu_enabled (provider, enabled);
+}
+
+
+
+void
 xfce_panel_plugin_provider_ask_remove (XfcePanelPluginProvider *provider)
 {
   panel_return_if_fail (XFCE_IS_PANEL_PLUGIN_PROVIDER (provider));

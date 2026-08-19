@@ -239,6 +239,9 @@ static void
 panel_window_plugin_set_dark_mode (GtkWidget *widget,
                                    gpointer user_data);
 static void
+panel_window_plugin_set_context_menu_enabled (GtkWidget *widget,
+                                              gpointer user_data);
+static void
 panel_window_plugin_set_nrows (GtkWidget *widget,
                                gpointer user_data);
 static void
@@ -279,7 +282,8 @@ enum _PluginProp
   PLUGIN_PROP_NROWS,
   PLUGIN_PROP_SIZE,
   PLUGIN_PROP_ICON_SIZE,
-  PLUGIN_PROP_DARK_MODE
+  PLUGIN_PROP_DARK_MODE,
+  PLUGIN_PROP_ENABLE_CONTEXT_MENU
 };
 
 enum _AutohideBehavior
@@ -1015,7 +1019,12 @@ panel_window_set_property (GObject *object,
       break;
 
     case PROP_ENABLE_CONTEXT_MENU:
-      window->enable_context_menu = g_value_get_boolean (value);
+      val_bool = g_value_get_boolean (value);
+      if (window->enable_context_menu != val_bool)
+        {
+          window->enable_context_menu = !!val_bool;
+          panel_window_plugins_update (window, PLUGIN_PROP_ENABLE_CONTEXT_MENU);
+        }
       break;
 
     case PROP_OUTPUT_NAME:
@@ -4095,6 +4104,10 @@ panel_window_plugins_update (PanelWindow *window,
       func = panel_window_plugin_set_dark_mode;
       break;
 
+    case PLUGIN_PROP_ENABLE_CONTEXT_MENU:
+      func = panel_window_plugin_set_context_menu_enabled;
+      break;
+
     default:
       panel_assert_not_reached ();
       return;
@@ -4171,6 +4184,19 @@ panel_window_plugin_set_dark_mode (GtkWidget *widget,
 
   xfce_panel_plugin_provider_set_dark_mode (XFCE_PANEL_PLUGIN_PROVIDER (widget),
                                             PANEL_WINDOW (user_data)->dark_mode);
+}
+
+
+
+static void
+panel_window_plugin_set_context_menu_enabled (GtkWidget *widget,
+                                              gpointer user_data)
+{
+  panel_return_if_fail (XFCE_IS_PANEL_PLUGIN_PROVIDER (widget));
+  panel_return_if_fail (PANEL_IS_WINDOW (user_data));
+
+  xfce_panel_plugin_provider_set_context_menu_enabled (XFCE_PANEL_PLUGIN_PROVIDER (widget),
+                                                       PANEL_WINDOW (user_data)->enable_context_menu);
 }
 
 
@@ -4343,6 +4369,7 @@ panel_window_set_provider_info (PanelWindow *window,
   panel_window_plugin_set_icon_size (provider, window);
   panel_window_plugin_set_dark_mode (provider, window);
   panel_window_plugin_set_nrows (provider, window);
+  panel_window_plugin_set_context_menu_enabled (provider, window);
 }
 
 
